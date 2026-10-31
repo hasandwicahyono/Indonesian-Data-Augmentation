@@ -40,6 +40,8 @@ import seaborn as sns
 from typing import Dict, List, Tuple, Any, Optional
 
 from DatasetsManager import IndonesianDatasetsManager, CustomDataset
+from Augmenter import IndonesianAugmenter
+from run_augmentation_filter import build_augmented_datasets, export_augmented_datasets
 from run_classification_eval import IndoBERTClassifierEvaluator
 
 
@@ -61,6 +63,7 @@ DATASET_CONFIGS = {
         "label_smoothing": 0.05,
         "use_fgm": True,
         "fgm_epsilon": 0.5,
+        "minority_classes": ["negative", "neutral"],
         "description": "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)",
     },
     "MovieOpini": {
@@ -77,6 +80,7 @@ DATASET_CONFIGS = {
         "label_smoothing": 0.10,     # Regularization for low-data regime (140 samples)
         "use_fgm": True,
         "fgm_epsilon": 1.0,
+        "minority_classes": ["negative", "positive"],
         "description": "MovieOpini: Indonesian Movie Tweets (2 classes: negative, positive)",
     },
     "HoASA": {
@@ -93,6 +97,7 @@ DATASET_CONFIGS = {
         "label_smoothing": 0.05,
         "use_fgm": True,
         "fgm_epsilon": 1.0,
+        "minority_classes": ["neg", "pos"],
         "description": "HoASA: Airy Rooms Aspect Reviews (3 classes: neg, neut, pos)",
     },
     "EmoT": {
@@ -109,6 +114,7 @@ DATASET_CONFIGS = {
         "label_smoothing": 0.08,     # Regularizes overlapping emotion boundaries
         "use_fgm": True,
         "fgm_epsilon": 1.0,
+        "minority_classes": ["fear", "love"],
         "description": "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)",
     },
 }
@@ -501,6 +507,8 @@ def plot_cross_dataset_summary(
 def run_benchmark_pipeline(
     target_datasets: List[str],
     plot_only: bool = False,
+    run_generation: bool = False,
+    generation_sample_limit: Optional[int] = None,
     results_dir: str = "data/results",
     figures_dir: str = "data/results/figures",
     augmented_dir: str = "data/augmented/all_text",
@@ -514,10 +522,15 @@ def run_benchmark_pipeline(
     os.makedirs(figures_dir, exist_ok=True)
     manager = IndonesianDatasetsManager()
 
+    mode_desc = "PLOT-ONLY (Visualizations from existing results)" if plot_only else (
+        "FULL END-TO-END PIPELINE (Phase 1 Generation + Phase 2 Filtering + Phase 3 Training + Phase 4 Visualizations)"
+        if run_generation else "BENCHMARK EVALUATION (Phase 3 Training + Phase 4 Visualizations)"
+    )
+
     print("=" * 80)
     print("INDONESIAN DATA AUGMENTATION BENCHMARK INVESTIGATION PIPELINE")
     print(f"Target Datasets: {target_datasets}")
-    print(f"Mode: {'PLOT-ONLY (Visualizations from existing results)' if plot_only else 'FULL BENCHMARK (Train + Eval + Plots)'}")
+    print(f"Mode: {mode_desc}")
     print(f"Results Directory: {results_dir}")
     print(f"Figures Directory: {figures_dir}")
     print("=" * 80)
@@ -542,11 +555,39 @@ def run_benchmark_pipeline(
                 print(f"  [Warning] No existing results excel found for {ds_name}. Skipping...")
                 continue
         else:
-            # Load augmented dataframes
-            aug_dfs = load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
-            if not aug_dfs:
-                print(f"  [Warning] No augmented CSV files found in {augmented_dir} for {ds_name}. Running baseline only.")
+            # Check if Step 1 (Generation) and Step 2 (Filtering) are requested or needed
+            aug_dfs = {} if run_generation else load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
+            
+            if run_generation or not aug_dfs:
+                print(f"\n  >>> STEP 1: Running Text Generation & Similarity Scoring for {ds_name}...")
+                minority_classes = cfg.get("minority_classes", ds.label_list)
+                augmenter = IndonesianAugmenter(
+                    gen_model_name="cahya/gpt2-small-indonesian-522M",
+                    embed_model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
+                )
+                gen_df = augmenter.process_dataset(
+                    ds.train,
+                    sample_limit=generation_sample_limit,
+                    target_labels=minority_classes,
+                )
 
+                print(f"\n  >>> STEP 2: Running Similarity Threshold Filtering & Dataset Export for {ds_name}...")
+                all_text_dfs, new_text_dfs, thresholds = build_augmented_datasets(
+                    df=gen_df,
+                    labels_to_augment=minority_classes,
+                    base_train_df=ds.train,
+                    test_df=ds.test,  # Strict zero-leakage check against test set
+                )
+                base_aug_dir = os.path.dirname(augmented_dir.rstrip("/"))
+                export_augmented_datasets(
+                    dataset_name=ds_name,
+                    all_text_dfs=all_text_dfs,
+                    new_text_dfs=new_text_dfs,
+                    output_dir=base_aug_dir,
+                )
+                aug_dfs = all_text_dfs
+
+            print(f"\n  >>> STEP 3: Fine-Tuning IndoBERT Across All Variants for {ds_name}...")
             epochs = epochs_override if epochs_override is not None else cfg["epochs"]
             batch_size = batch_size_override if batch_size_override is not None else cfg["batch_size"]
 
@@ -680,6 +721,20 @@ if __name__ == "__main__":
         help="Skip model training and generate/update plots from existing evaluation results",
     )
     parser.add_argument(
+        "--run_generation",
+        "--from_scratch",
+        action="store_true",
+        default=False,
+        dest="run_generation",
+        help="Run ALL steps end-to-end from scratch: Phase 1 (GPT-2 generation) -> Phase 2 (Filtering) -> Phase 3 (IndoBERT training) -> Phase 4 (Visualizations)",
+    )
+    parser.add_argument(
+        "--generation_sample_limit",
+        type=int,
+        default=None,
+        help="Limit number of training samples to augment during Phase 1 (e.g. 200 for fast run, None for full)",
+    )
+    parser.add_argument(
         "--results_dir",
         type=str,
         default="data/results",
@@ -731,6 +786,8 @@ if __name__ == "__main__":
     run_benchmark_pipeline(
         target_datasets=selected,
         plot_only=args.plot_only,
+        run_generation=args.run_generation,
+        generation_sample_limit=args.generation_sample_limit,
         results_dir=args.results_dir,
         figures_dir=args.figures_dir,
         augmented_dir=args.augmented_dir,
