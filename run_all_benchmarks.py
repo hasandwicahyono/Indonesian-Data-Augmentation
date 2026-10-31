@@ -1,0 +1,742 @@
+"""
+Unified Benchmark Investigation and Visualization Pipeline.
+Runs and visualizes the complete augmentation and classification pipeline across all 4 Indonesian datasets:
+1. SmSA (doc-sentiment-prosa)
+2. MovieOpini (dataset_tweet_sentiment_opini_film)
+3. HoASA (absa-airy)
+4. EmoT (emotion-twitter)
+
+Features:
+- Executes IndoBERT training and evaluation across 5 variants:
+  * Baseline (Not-Augmented)
+  * ECU-Augmented (Euclidean similarity)
+  * COS-Augmented (Cosine similarity)
+  * JAC-Augmented (Jaccard similarity)
+  * BLEU-Augmented (BLEU score)
+- Automatically saves prediction arrays (y_true, y_pred) to NPZ for auditability.
+- Generates publication-ready visualizations:
+  * 4-metric comparison bar charts (Accuracy, Precision, Recall, Macro-F1) for each dataset.
+  * Side-by-side Confusion Matrix heatmaps (Baseline vs. Best-Augmented) for each dataset.
+  * Multi-panel cross-dataset benchmark summary dashboard.
+- Supports '--plot_only' flag to render or update all visual plots instantly from existing results.
+"""
+
+import os
+import sys
+
+# Ensure KMP duplicate lib is allowed on macOS
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+# Ensure local modules are found
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
+import argparse
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Dict, List, Tuple, Any, Optional
+
+from DatasetsManager import IndonesianDatasetsManager, CustomDataset
+from run_classification_eval import IndoBERTClassifierEvaluator
+
+
+# =====================================================================
+# Dataset Specific Optimal Parameter Configurations
+# =====================================================================
+DATASET_CONFIGS = {
+    "SmSA": {
+        "model_name": "indobenchmark/indobert-base-p1",
+        "max_len": 128,
+        "batch_size": 16,
+        "epochs": 5,
+        "lr": 2e-5,
+        "weight_decay": 0.01,
+        "patience": 2,
+        "early_stopping": True,
+        "use_preprocessing": True,
+        "use_class_weights": True,  # Uses automatic square-root smoothing guard
+        "label_smoothing": 0.05,
+        "use_fgm": True,
+        "fgm_epsilon": 0.5,
+        "description": "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)",
+    },
+    "MovieOpini": {
+        "model_name": "indolem/indobertweet-base-uncased",
+        "max_len": 96,
+        "batch_size": 8,
+        "epochs": 8,
+        "lr": 2e-5,
+        "weight_decay": 0.02,
+        "patience": 3,
+        "early_stopping": True,
+        "use_preprocessing": True,
+        "use_class_weights": False,  # Balanced 50/50 dataset
+        "label_smoothing": 0.10,     # Regularization for low-data regime (140 samples)
+        "use_fgm": True,
+        "fgm_epsilon": 1.0,
+        "description": "MovieOpini: Indonesian Movie Tweets (2 classes: negative, positive)",
+    },
+    "HoASA": {
+        "model_name": "indobenchmark/indobert-base-p1",
+        "max_len": 128,
+        "batch_size": 16,
+        "epochs": 6,
+        "lr": 2e-5,
+        "weight_decay": 0.01,
+        "patience": 2,
+        "early_stopping": True,
+        "use_preprocessing": True,
+        "use_class_weights": False,  # False is critical: preserves 94.75%+ accuracy on 88.6% neut
+        "label_smoothing": 0.05,
+        "use_fgm": True,
+        "fgm_epsilon": 1.0,
+        "description": "HoASA: Airy Rooms Aspect Reviews (3 classes: neg, neut, pos)",
+    },
+    "EmoT": {
+        "model_name": "indolem/indobertweet-base-uncased",
+        "max_len": 128,
+        "batch_size": 16,
+        "epochs": 6,
+        "lr": 2e-5,
+        "weight_decay": 0.01,
+        "patience": 2,
+        "early_stopping": True,
+        "use_preprocessing": True,
+        "use_class_weights": True,   # Boosts minority fear and love classes
+        "label_smoothing": 0.08,     # Regularizes overlapping emotion boundaries
+        "use_fgm": True,
+        "fgm_epsilon": 1.0,
+        "description": "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)",
+    },
+}
+
+
+# =====================================================================
+# Dataset and File Helpers
+# =====================================================================
+def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> CustomDataset:
+    """Loads dataset partitions using IndonesianDatasetsManager."""
+    if dataset_name == "SmSA":
+        return manager.load_smsa()
+    elif dataset_name == "MovieOpini":
+        return manager.load_movie_opini()
+    elif dataset_name == "HoASA":
+        return manager.load_hoasa(aspect_target="general")
+    elif dataset_name == "EmoT":
+        return manager.load_emot()
+    else:
+        raise ValueError(f"Unknown dataset name: {dataset_name}")
+
+
+def load_augmented_datasets(
+    dataset_name: str, augmented_dir: str = "data/augmented/all_text"
+) -> Dict[str, pd.DataFrame]:
+    """Loads all 4 filtered augmented datasets (ECU, COS, JAC, BLEU)."""
+    metrics = ["ECU", "COS", "JAC", "BLEU"]
+    aug_dfs = {}
+    resolved_dir = os.path.abspath(augmented_dir)
+    if not os.path.exists(resolved_dir):
+        # Fallback search from project root or current dir
+        cand = os.path.join(CURRENT_DIR, augmented_dir)
+        if os.path.exists(cand):
+            resolved_dir = cand
+
+    for m in metrics:
+        fname = f"{dataset_name}-Augmented-{m}-ALL-Text-Final.csv"
+        fpath = os.path.join(resolved_dir, fname)
+        if os.path.exists(fpath):
+            aug_dfs[m] = pd.read_csv(fpath)
+            print(f"  Loaded {m}-Augmented data from {fpath} ({len(aug_dfs[m])} rows)")
+        else:
+            print(f"  [Notice] Augmented file not found: {fpath}")
+
+    return aug_dfs
+
+
+def find_existing_results_file(dataset_name: str, results_dir: str) -> Optional[str]:
+    """Searches for existing evaluation Excel file for a dataset."""
+    candidates = [
+        os.path.join(results_dir, f"{dataset_name}_evaluation_results.xlsx"),
+        os.path.join(results_dir, f"{dataset_name}_evaluation_results_1.xlsx"),
+        os.path.join(CURRENT_DIR, "data", "results", f"{dataset_name}_evaluation_results.xlsx"),
+        os.path.join(CURRENT_DIR, "data", "results", f"{dataset_name}_evaluation_results_1.xlsx"),
+    ]
+    for cand in candidates:
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+def clean_variant_name(raw_name: str) -> str:
+    """Standardizes variant names into readable labels."""
+    raw = str(raw_name).strip()
+    if "Baseline" in raw or "NotAugmented" in raw:
+        return "Baseline"
+    elif "ECU" in raw:
+        return "ECU"
+    elif "COS" in raw:
+        return "COS"
+    elif "JAC" in raw:
+        return "JAC"
+    elif "BLEU" in raw:
+        return "BLEU"
+    return raw
+
+
+# =====================================================================
+# Visualization 1: 4-Metric Performance Comparison per Dataset
+# =====================================================================
+def plot_dataset_metric_comparison(
+    results_df: pd.DataFrame,
+    dataset_name: str,
+    output_dir: str = "data/results/figures",
+) -> str:
+    """
+    Creates a publication-ready grouped bar chart for a dataset
+    comparing Baseline, ECU, COS, JAC, and BLEU across:
+    - Accuracy
+    - Macro-Precision
+    - Macro-Recall
+    - Macro-F1
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    df = results_df.copy()
+    df["variant"] = df["dataset_name"].apply(clean_variant_name)
+
+    # Standardize column names
+    col_mapping = {
+        "accuracy": "Accuracy",
+        "macro_precision": "Macro-Precision",
+        "macro_recall": "Macro-Recall",
+        "macro_f1": "Macro-F1",
+    }
+    for old_col, new_col in col_mapping.items():
+        if old_col in df.columns and new_col not in df.columns:
+            df[new_col] = df[old_col]
+
+    metrics = ["Accuracy", "Macro-Precision", "Macro-Recall", "Macro-F1"]
+    available_metrics = [m for m in metrics if m in df.columns]
+
+    # Ensure standard variant order
+    variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU"]
+    ordered_variants = [v for v in variant_order if v in df["variant"].values]
+    if not ordered_variants:
+        ordered_variants = df["variant"].tolist()
+
+    df_plot = df.set_index("variant").reindex(ordered_variants).reset_index()
+
+    # Plot settings
+    plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
+    fig, ax = plt.subplots(figsize=(11, 6), dpi=300)
+
+    x = np.arange(len(ordered_variants))
+    num_metrics = len(available_metrics)
+    width = 0.8 / num_metrics
+
+    # Modern color palette
+    palette = ["#2b5c8f", "#3a86c8", "#5aa469", "#d95f02"]
+
+    for idx, (metric, color) in enumerate(zip(available_metrics, palette)):
+        offset = (idx - (num_metrics - 1) / 2) * width
+        values = df_plot[metric].values
+        bars = ax.bar(x + offset, values, width, label=metric, color=color, edgecolor="black", linewidth=0.6, alpha=0.92)
+
+        # Annotate numeric values above bars
+        for bar, val in zip(bars, values):
+            if not np.isnan(val):
+                ax.annotate(
+                    f"{val:.3f}",
+                    xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8.5,
+                    fontweight="semibold",
+                    rotation=0,
+                )
+
+    # Calculate and annotate best improvement on Macro-F1
+    if "Macro-F1" in df_plot.columns and len(df_plot) > 1:
+        base_f1 = df_plot.loc[df_plot["variant"] == "Baseline", "Macro-F1"].values
+        if len(base_f1) > 0 and base_f1[0] > 0:
+            aug_rows = df_plot[df_plot["variant"] != "Baseline"]
+            if not aug_rows.empty:
+                best_aug_idx = aug_rows["Macro-F1"].idxmax()
+                best_var = df_plot.loc[best_aug_idx, "variant"]
+                best_f1 = df_plot.loc[best_aug_idx, "Macro-F1"]
+                gain = best_f1 - base_f1[0]
+                pct_gain = (gain / base_f1[0]) * 100.0
+                sign = "+" if gain >= 0 else ""
+                ax.text(
+                    0.02,
+                    0.96,
+                    f"Best Variant ({best_var}): Macro-F1 {best_f1:.4f} ({sign}{gain:.4f} | {sign}{pct_gain:.2f}%)",
+                    transform=ax.transAxes,
+                    fontsize=10.5,
+                    fontweight="bold",
+                    color="#1a5276",
+                    bbox=dict(boxstyle="round,pad=0.4", facecolor="#eaf2f8", edgecolor="#aed6f1", alpha=0.95),
+                )
+
+    ax.set_title(f"{dataset_name} — Comprehensive Classification Performance Comparison", fontsize=13, fontweight="bold", pad=14)
+    ax.set_xlabel("Data Augmentation Technique", fontsize=11, fontweight="bold", labelpad=8)
+    ax.set_ylabel("Score (0.0 – 1.0)", fontsize=11, fontweight="bold", labelpad=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(ordered_variants, fontsize=10.5, fontweight="semibold")
+    ax.set_ylim(0.0, 1.08)
+    ax.legend(loc="upper right", frameon=True, framealpha=0.95, fontsize=9.5)
+    ax.grid(axis="y", linestyle="--", alpha=0.5)
+
+    plt.tight_layout()
+    png_path = os.path.join(output_dir, f"{dataset_name}_metrics_comparison.png")
+    pdf_path = os.path.join(output_dir, f"{dataset_name}_metrics_comparison.pdf")
+    plt.savefig(png_path, dpi=300)
+    plt.savefig(pdf_path)
+    plt.close(fig)
+    print(f"  [Figure Saved] {png_path}")
+    return png_path
+
+
+# =====================================================================
+# Visualization 2: Confusion Matrix Heatmaps per Dataset
+# =====================================================================
+def plot_confusion_matrices(
+    y_true_base: np.ndarray,
+    y_pred_base: np.ndarray,
+    y_true_aug: np.ndarray,
+    y_pred_aug: np.ndarray,
+    label_list: List[str],
+    dataset_name: str,
+    aug_variant_name: str = "Best Augmented",
+    output_dir: str = "data/results/figures",
+) -> str:
+    """
+    Plots side-by-side Confusion Matrices comparing Baseline vs. Best Augmented.
+    Displays raw counts and row-normalized percentages in each cell.
+    """
+    from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
+
+    os.makedirs(output_dir, exist_ok=True)
+    num_labels = len(label_list)
+    target_indices = list(range(num_labels))
+
+    # Compute confusion matrices
+    cm_base = confusion_matrix(y_true_base, y_pred_base, labels=target_indices)
+    cm_aug = confusion_matrix(y_true_aug, y_pred_aug, labels=target_indices)
+
+    # Compute row-normalized percentages (safe div by zero)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cm_base_norm = np.nan_to_num(cm_base.astype(float) / cm_base.sum(axis=1)[:, np.newaxis])
+        cm_aug_norm = np.nan_to_num(cm_aug.astype(float) / cm_aug.sum(axis=1)[:, np.newaxis])
+
+    # Compute summary metrics
+    acc_base = accuracy_score(y_true_base, y_pred_base)
+    f1_base = f1_score(y_true_base, y_pred_base, labels=target_indices, average="macro", zero_division=0)
+    acc_aug = accuracy_score(y_true_aug, y_pred_aug)
+    f1_aug = f1_score(y_true_aug, y_pred_aug, labels=target_indices, average="macro", zero_division=0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), dpi=300)
+
+    # Cell annotation formatting: "count \n (percentage)"
+    def make_annot(cm, cm_norm):
+        annot = np.empty_like(cm, dtype=object)
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                annot[i, j] = f"{cm[i, j]}\n({cm_norm[i, j]:.1%})"
+        return annot
+
+    annot_base = make_annot(cm_base, cm_base_norm)
+    annot_aug = make_annot(cm_aug, cm_aug_norm)
+
+    # Baseline Heatmap
+    sns.heatmap(
+        cm_base_norm,
+        annot=annot_base,
+        fmt="",
+        cmap="Blues",
+        cbar=True,
+        xticklabels=label_list,
+        yticklabels=label_list,
+        ax=axes[0],
+        vmin=0.0,
+        vmax=1.0,
+        linewidths=0.5,
+        linecolor="#bdc3c7",
+    )
+    axes[0].set_title(f"Baseline (Not-Augmented)\nAccuracy: {acc_base:.3f} | Macro-F1: {f1_base:.3f}", fontsize=11.5, fontweight="bold", pad=10)
+    axes[0].set_xlabel("Predicted Class", fontsize=10.5, fontweight="semibold")
+    axes[0].set_ylabel("True Ground-Truth Class", fontsize=10.5, fontweight="semibold")
+
+    # Augmented Heatmap
+    sns.heatmap(
+        cm_aug_norm,
+        annot=annot_aug,
+        fmt="",
+        cmap="Greens",
+        cbar=True,
+        xticklabels=label_list,
+        yticklabels=label_list,
+        ax=axes[1],
+        vmin=0.0,
+        vmax=1.0,
+        linewidths=0.5,
+        linecolor="#bdc3c7",
+    )
+    axes[1].set_title(f"{aug_variant_name}\nAccuracy: {acc_aug:.3f} | Macro-F1: {f1_aug:.3f}", fontsize=11.5, fontweight="bold", pad=10)
+    axes[1].set_xlabel("Predicted Class", fontsize=10.5, fontweight="semibold")
+    axes[1].set_ylabel("True Ground-Truth Class", fontsize=10.5, fontweight="semibold")
+
+    plt.suptitle(f"{dataset_name} — Test Set Confusion Matrix Comparison", fontsize=13.5, fontweight="bold", y=1.02)
+    plt.tight_layout()
+
+    png_path = os.path.join(output_dir, f"{dataset_name}_confusion_matrices.png")
+    pdf_path = os.path.join(output_dir, f"{dataset_name}_confusion_matrices.pdf")
+    plt.savefig(png_path, dpi=300, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  [Figure Saved] {png_path}")
+    return png_path
+
+
+# =====================================================================
+# Visualization 3: Cross-Dataset Multi-Panel Summary Dashboard
+# =====================================================================
+def plot_cross_dataset_summary(
+    all_results: Dict[str, pd.DataFrame],
+    output_dir: str = "data/results/figures",
+) -> str:
+    """
+    Builds a 4-panel comprehensive dashboard displaying performance
+    comparisons across all 4 datasets (SmSA, MovieOpini, HoASA, EmoT).
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    datasets = [d for d in ["SmSA", "MovieOpini", "HoASA", "EmoT"] if d in all_results]
+    if not datasets:
+        return ""
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 11), dpi=300)
+    axes = axes.flatten()
+
+    metrics = ["Accuracy", "Macro-Precision", "Macro-Recall", "Macro-F1"]
+    col_mapping = {
+        "accuracy": "Accuracy",
+        "macro_precision": "Macro-Precision",
+        "macro_recall": "Macro-Recall",
+        "macro_f1": "Macro-F1",
+    }
+    palette = ["#2b5c8f", "#3a86c8", "#5aa469", "#d95f02"]
+
+    for i, ds_name in enumerate(datasets):
+        ax = axes[i]
+        df = all_results[ds_name].copy()
+        df["variant"] = df["dataset_name"].apply(clean_variant_name)
+
+        for old_col, new_col in col_mapping.items():
+            if old_col in df.columns and new_col not in df.columns:
+                df[new_col] = df[old_col]
+
+        variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU"]
+        ordered_vars = [v for v in variant_order if v in df["variant"].values]
+        if not ordered_vars:
+            ordered_vars = df["variant"].tolist()
+
+        df_plot = df.set_index("variant").reindex(ordered_vars).reset_index()
+        x = np.arange(len(ordered_vars))
+        width = 0.8 / len(metrics)
+
+        for idx, (m, col) in enumerate(zip(metrics, palette)):
+            if m in df_plot.columns:
+                offset = (idx - (len(metrics) - 1) / 2) * width
+                vals = df_plot[m].values
+                ax.bar(x + offset, vals, width, label=m if i == 0 else "", color=col, edgecolor="black", linewidth=0.5, alpha=0.92)
+
+        # Baseline vs Best F1 text box
+        if "Macro-F1" in df_plot.columns:
+            base_f1 = df_plot.loc[df_plot["variant"] == "Baseline", "Macro-F1"].values
+            aug_rows = df_plot[df_plot["variant"] != "Baseline"]
+            if len(base_f1) > 0 and not aug_rows.empty:
+                best_idx = aug_rows["Macro-F1"].idxmax()
+                best_v = df_plot.loc[best_idx, "variant"]
+                best_f = df_plot.loc[best_idx, "Macro-F1"]
+                gain_pct = ((best_f - base_f1[0]) / base_f1[0]) * 100.0
+                sign = "+" if gain_pct >= 0 else ""
+                ax.text(
+                    0.03,
+                    0.94,
+                    f"Best ({best_v}): F1 {best_f:.3f} ({sign}{gain_pct:.1f}%)",
+                    transform=ax.transAxes,
+                    fontsize=9,
+                    fontweight="bold",
+                    color="#154360",
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#ebf5fb", edgecolor="#aed6f1", alpha=0.9),
+                )
+
+        ax.set_title(f"({chr(65+i)}) {ds_name} Dataset", fontsize=12, fontweight="bold")
+        ax.set_xticks(x)
+        ax.set_xticklabels(ordered_vars, fontsize=9.5, fontweight="semibold")
+        ax.set_ylim(0.0, 1.08)
+        ax.set_ylabel("Score", fontsize=10, fontweight="semibold")
+        ax.grid(axis="y", linestyle="--", alpha=0.45)
+
+    fig.legend(metrics, loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=4, frameon=True, fontsize=11, fontweight="semibold")
+    plt.suptitle("Indonesian NLP Augmentation Benchmark — Cross-Dataset Performance Dashboard", fontsize=14, fontweight="bold", y=1.02)
+    plt.tight_layout()
+
+    out_png = os.path.join(output_dir, "all_datasets_benchmark_comparison.png")
+    out_pdf = os.path.join(output_dir, "all_datasets_benchmark_comparison.pdf")
+    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.savefig(out_pdf, bbox_inches="tight")
+    plt.close(fig)
+    print(f"\n[Dashboard Saved] {out_png}")
+    return out_png
+
+
+# =====================================================================
+# Main Benchmark Pipeline Runner
+# =====================================================================
+def run_benchmark_pipeline(
+    target_datasets: List[str],
+    plot_only: bool = False,
+    results_dir: str = "data/results",
+    figures_dir: str = "data/results/figures",
+    augmented_dir: str = "data/augmented/all_text",
+    device: Optional[str] = None,
+    epochs_override: Optional[int] = None,
+    batch_size_override: Optional[int] = None,
+    seed: int = 42,
+):
+    """Executes the full evaluation pipeline and renders all visualizations."""
+    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(figures_dir, exist_ok=True)
+    manager = IndonesianDatasetsManager()
+
+    print("=" * 80)
+    print("INDONESIAN DATA AUGMENTATION BENCHMARK INVESTIGATION PIPELINE")
+    print(f"Target Datasets: {target_datasets}")
+    print(f"Mode: {'PLOT-ONLY (Visualizations from existing results)' if plot_only else 'FULL BENCHMARK (Train + Eval + Plots)'}")
+    print(f"Results Directory: {results_dir}")
+    print(f"Figures Directory: {figures_dir}")
+    print("=" * 80)
+
+    all_results: Dict[str, pd.DataFrame] = {}
+
+    for ds_name in target_datasets:
+        print(f"\n[{ds_name}] Processing Investigation...")
+        cfg = DATASET_CONFIGS[ds_name]
+        ds = load_dataset_data(manager, ds_name)
+        excel_out_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
+        npz_pred_path = os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz")
+
+        if plot_only:
+            # Locate existing results excel
+            existing_excel = find_existing_results_file(ds_name, results_dir)
+            if existing_excel:
+                print(f"  [Plot-Only] Reading results from: {existing_excel}")
+                results_df = pd.read_excel(existing_excel)
+                all_results[ds_name] = results_df
+            else:
+                print(f"  [Warning] No existing results excel found for {ds_name}. Skipping...")
+                continue
+        else:
+            # Load augmented dataframes
+            aug_dfs = load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
+            if not aug_dfs:
+                print(f"  [Warning] No augmented CSV files found in {augmented_dir} for {ds_name}. Running baseline only.")
+
+            epochs = epochs_override if epochs_override is not None else cfg["epochs"]
+            batch_size = batch_size_override if batch_size_override is not None else cfg["batch_size"]
+
+            evaluator = IndoBERTClassifierEvaluator(
+                model_name=cfg["model_name"],
+                max_len=cfg["max_len"],
+                batch_size=batch_size,
+                epochs=epochs,
+                lr=cfg["lr"],
+                weight_decay=cfg["weight_decay"],
+                device=device,
+                seed=seed,
+                early_stopping=cfg["early_stopping"],
+                patience=cfg["patience"],
+                use_preprocessing=cfg["use_preprocessing"],
+                use_class_weights=cfg["use_class_weights"],
+                label_smoothing=cfg["label_smoothing"],
+                use_fgm=cfg["use_fgm"],
+                fgm_epsilon=cfg["fgm_epsilon"],
+            )
+
+            results_df = evaluator.evaluate_all_variants(
+                base_train_df=ds.train,
+                val_df=ds.val,
+                base_test_df=ds.test,
+                augmented_dfs=aug_dfs,
+                label_list=ds.label_list,
+                dataset_name=ds_name,
+                output_results_path=excel_out_path,
+                seed=seed,
+            )
+            all_results[ds_name] = results_df
+
+        # -------------------------------------------------------------
+        # 1. Generate 4-Metric Performance Comparison Bar Chart
+        # -------------------------------------------------------------
+        print(f"  Generating 4-metric comparison chart for {ds_name}...")
+        plot_dataset_metric_comparison(results_df, ds_name, output_dir=figures_dir)
+
+        # -------------------------------------------------------------
+        # 2. Generate Confusion Matrix Heatmaps
+        # -------------------------------------------------------------
+        print(f"  Generating confusion matrix comparison for {ds_name}...")
+        # Check if predictions NPZ exists
+        npz_cand = npz_pred_path if os.path.exists(npz_pred_path) else os.path.join(results_dir, f"{ds_name}_predictions.npz")
+        if not os.path.exists(npz_cand):
+            # Check fallback name with _1
+            npz_cand_alt = os.path.join(results_dir, f"{ds_name}_evaluation_results_1_predictions.npz")
+            if os.path.exists(npz_cand_alt):
+                npz_cand = npz_cand_alt
+
+        if os.path.exists(npz_cand):
+            try:
+                npz_data = np.load(npz_cand)
+                base_key_true = f"{ds_name}-Baseline-NotAugmented__true"
+                base_key_pred = f"{ds_name}-Baseline-NotAugmented__pred"
+
+                # Find best augmented key
+                best_var_name = "Best Augmented"
+                best_key_true = None
+                best_key_pred = None
+                best_f1 = -1.0
+
+                df_aug = results_df[~results_df["dataset_name"].str.contains("Baseline")].copy()
+                if not df_aug.empty and "macro_f1" in df_aug.columns:
+                    best_row = df_aug.loc[df_aug["macro_f1"].idxmax()]
+                    target_name = best_row["dataset_name"]
+                    best_var_name = clean_variant_name(target_name) + "-Augmented"
+                    t_key = f"{target_name}__true"
+                    p_key = f"{target_name}__pred"
+                    if t_key in npz_data and p_key in npz_data:
+                        best_key_true = t_key
+                        best_key_pred = p_key
+
+                # Fallback to any augmented key
+                if best_key_true is None:
+                    for k in npz_data.files:
+                        if "Augmented" in k and k.endswith("__true"):
+                            best_key_true = k
+                            best_key_pred = k.replace("__true", "__pred")
+                            best_var_name = k.split("__")[0]
+                            break
+
+                if base_key_true in npz_data and best_key_true in npz_data:
+                    plot_confusion_matrices(
+                        y_true_base=npz_data[base_key_true],
+                        y_pred_base=npz_data[base_key_pred],
+                        y_true_aug=npz_data[best_key_true],
+                        y_pred_aug=npz_data[best_key_pred],
+                        label_list=ds.label_list,
+                        dataset_name=ds_name,
+                        aug_variant_name=best_var_name,
+                        output_dir=figures_dir,
+                    )
+            except Exception as e:
+                print(f"  [Notice] Could not generate confusion matrix from {npz_cand}: {e}")
+        else:
+            print(f"  [Notice] Predictions file {npz_cand} not found. Confusion matrix requires model evaluation run to capture test predictions.")
+
+    # -------------------------------------------------------------
+    # 3. Generate Cross-Dataset Multi-Panel Dashboard
+    # -------------------------------------------------------------
+    if len(all_results) > 1:
+        print("\nGenerating Cross-Dataset Benchmark Summary Dashboard...")
+        plot_cross_dataset_summary(all_results, output_dir=figures_dir)
+
+    print("\n" + "=" * 80)
+    print("INVESTIGATION COMPLETE!")
+    print(f"All evaluation result tables saved to: {os.path.abspath(results_dir)}")
+    print(f"All publication-ready figures saved to: {os.path.abspath(figures_dir)}")
+    print("=" * 80)
+
+
+# =====================================================================
+# CLI Entry Point
+# =====================================================================
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run all investigations and generate comparison and confusion matrix visualizations."
+    )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=["SmSA", "MovieOpini", "HoASA", "EmoT"],
+        help="Datasets to evaluate (choices: SmSA, MovieOpini, HoASA, EmoT, all)",
+    )
+    parser.add_argument(
+        "--plot_only",
+        action="store_true",
+        default=False,
+        help="Skip model training and generate/update plots from existing evaluation results",
+    )
+    parser.add_argument(
+        "--results_dir",
+        type=str,
+        default="data/results",
+        help="Directory containing or to store evaluation Excel results",
+    )
+    parser.add_argument(
+        "--figures_dir",
+        type=str,
+        default="data/results/figures",
+        help="Directory to save generated comparison and confusion matrix figures",
+    )
+    parser.add_argument(
+        "--augmented_dir",
+        type=str,
+        default="data/augmented/all_text",
+        help="Directory containing filtered augmented datasets",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Compute device (e.g. 'cuda:0', 'mps', 'cpu')",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=None,
+        help="Override number of training epochs",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Override batch size",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility",
+    )
+
+    args = parser.parse_args()
+
+    selected = args.datasets
+    if "all" in [s.lower() for s in selected]:
+        selected = ["SmSA", "MovieOpini", "HoASA", "EmoT"]
+
+    run_benchmark_pipeline(
+        target_datasets=selected,
+        plot_only=args.plot_only,
+        results_dir=args.results_dir,
+        figures_dir=args.figures_dir,
+        augmented_dir=args.augmented_dir,
+        device=args.device,
+        epochs_override=args.epochs,
+        batch_size_override=args.batch_size,
+        seed=args.seed,
+    )
+
