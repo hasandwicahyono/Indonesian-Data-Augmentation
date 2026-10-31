@@ -488,7 +488,7 @@ def plot_cross_dataset_summary(
         ax.set_ylabel("Score", fontsize=10, fontweight="semibold")
         ax.grid(axis="y", linestyle="--", alpha=0.45)
 
-    fig.legend(metrics, loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=4, frameon=True, fontsize=11, fontweight="semibold")
+    fig.legend(metrics, loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=4, frameon=True, prop={"weight": "semibold", "size": 11})
     plt.suptitle("Indonesian NLP Augmentation Benchmark — Cross-Dataset Performance Dashboard", fontsize=14, fontweight="bold", y=1.02)
     plt.tight_layout()
 
