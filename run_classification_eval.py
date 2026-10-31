@@ -11,6 +11,10 @@ Computes Accuracy, Precision, Recall, Macro-F1, and Paired t-test statistics.
 
 import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+import warnings
+# Silence benign PyTorch DataParallel multi-GPU scalar gathering warning
+warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.parallel.scatter_gather")
+warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension 0.*")
 import copy
 import torch
 import numpy as np
