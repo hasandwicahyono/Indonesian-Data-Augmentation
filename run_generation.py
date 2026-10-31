@@ -53,6 +53,12 @@ def main():
         help="Optional minority classes to focus augmentation on (e.g. fear love, neg pos)",
     )
     parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Compute device (e.g. 'cuda:0', 'mps', 'cpu', 'auto'). If omitted, automatically detects available GPUs.",
+    )
+    parser.add_argument(
         "--list_models",
         action="store_true",
         help="Display comparison table of all candidate generative models and exit",
@@ -83,6 +89,7 @@ def main():
     augmenter = IndonesianAugmenter(
         gen_model_name=args.gen_model,
         embed_model_name=args.embed_model,
+        device=args.device,
     )
 
     out_df = augmenter.process_dataset(

@@ -53,10 +53,10 @@ DATASET_CONFIGS = {
         "model_name": "indobenchmark/indobert-base-p1",
         "max_len": 128,
         "batch_size": 16,
-        "epochs": 5,
+        "epochs": 25,
         "lr": 2e-5,
         "weight_decay": 0.01,
-        "patience": 2,
+        "patience": 5,
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": True,  # Uses automatic square-root smoothing guard
@@ -70,10 +70,10 @@ DATASET_CONFIGS = {
         "model_name": "indolem/indobertweet-base-uncased",
         "max_len": 96,
         "batch_size": 8,
-        "epochs": 8,
+        "epochs": 25,
         "lr": 2e-5,
         "weight_decay": 0.02,
-        "patience": 3,
+        "patience": 5,
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": False,  # Balanced 50/50 dataset
@@ -87,10 +87,10 @@ DATASET_CONFIGS = {
         "model_name": "indobenchmark/indobert-base-p1",
         "max_len": 128,
         "batch_size": 16,
-        "epochs": 6,
+        "epochs": 25,
         "lr": 2e-5,
         "weight_decay": 0.01,
-        "patience": 2,
+        "patience": 5,
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": False,  # False is critical: preserves 94.75%+ accuracy on 88.6% neut
@@ -104,10 +104,10 @@ DATASET_CONFIGS = {
         "model_name": "indolem/indobertweet-base-uncased",
         "max_len": 128,
         "batch_size": 16,
-        "epochs": 6,
+        "epochs": 25,
         "lr": 2e-5,
         "weight_decay": 0.01,
-        "patience": 2,
+        "patience": 5,
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": True,   # Boosts minority fear and love classes
@@ -488,9 +488,17 @@ def plot_cross_dataset_summary(
         ax.set_ylabel("Score", fontsize=10, fontweight="semibold")
         ax.grid(axis="y", linestyle="--", alpha=0.45)
 
-    fig.legend(metrics, loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=4, frameon=True, prop={"weight": "semibold", "size": 11})
+    for j in range(len(datasets), len(axes)):
+        axes[j].set_visible(False)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    if handles:
+        fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=len(labels), frameon=True, prop={"weight": "semibold", "size": 11})
+    else:
+        fig.legend(metrics, loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=len(metrics), frameon=True, prop={"weight": "semibold", "size": 11})
+
     plt.suptitle("Indonesian NLP Augmentation Benchmark — Cross-Dataset Performance Dashboard", fontsize=14, fontweight="bold", y=1.02)
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
 
     out_png = os.path.join(output_dir, "all_datasets_benchmark_comparison.png")
     out_pdf = os.path.join(output_dir, "all_datasets_benchmark_comparison.pdf")
@@ -692,7 +700,7 @@ def run_benchmark_pipeline(
     # -------------------------------------------------------------
     # 3. Generate Cross-Dataset Multi-Panel Dashboard
     # -------------------------------------------------------------
-    if len(all_results) > 1:
+    if all_results:
         print("\nGenerating Cross-Dataset Benchmark Summary Dashboard...")
         plot_cross_dataset_summary(all_results, output_dir=figures_dir)
 
