@@ -220,15 +220,24 @@ class IndonesianAugmenter:
         self.no_repeat_ngram_size = no_repeat_ngram_size if no_repeat_ngram_size is not None else defaults["no_repeat_ngram_size"]
         self.do_sample = do_sample if do_sample is not None else defaults["do_sample"]
 
-        # Resolve device
-        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        # Resolve device and multi-GPU configuration
+        self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        self.use_device_map = False
+
         if device is None:
-            if num_gpus > 0:
+            if self.num_gpus > 1:
+                # Distribute model across multiple GPUs automatically via Hugging Face accelerate
+                self.device = "auto"
+                self.use_device_map = True
+            elif self.num_gpus == 1:
                 self.device = 0
             elif torch.backends.mps.is_available():
                 self.device = "mps"
             else:
                 self.device = -1
+        elif isinstance(device, str) and device.lower() in ("auto", "balanced", "sequential"):
+            self.device = device.lower()
+            self.use_device_map = True
         else:
             self.device = device
 
@@ -253,7 +262,11 @@ class IndonesianAugmenter:
     def _init_models(self):
         """Initializes generator and embedder models."""
         gen_desc = f"{self.model_meta['generation']} ({self.model_meta['parameters']})" if self.model_meta else "Custom"
-        print(f"Loading Generative Model: {self.gen_model_name} [{gen_desc}] on device: {self.device}")
+        if self.use_device_map:
+            device_desc = f"Multi-GPU (device_map='{self.device}', {self.num_gpus} GPUs detected)"
+        else:
+            device_desc = str(self.device)
+        print(f"Loading Generative Model: {self.gen_model_name} [{gen_desc}] on device: {device_desc}")
         
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self.gen_model_name, trust_remote_code=True)
@@ -261,25 +274,40 @@ class IndonesianAugmenter:
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
 
+            pipeline_kwargs: Dict[str, Any] = {
+                "model": self.gen_model_name,
+                "tokenizer": self.tokenizer,
+                "pad_token_id": pad_id,
+                "trust_remote_code": True,
+            }
+            if self.use_device_map:
+                pipeline_kwargs["device_map"] = self.device
+            else:
+                pipeline_kwargs["device"] = self.device
+
             self.gen_pipeline = pipeline(
                 "text-generation",
-                model=self.gen_model_name,
-                tokenizer=self.tokenizer,
-                device=self.device,
-                pad_token_id=pad_id,
-                trust_remote_code=True,
+                **pipeline_kwargs
             )
         except Exception as e:
             print(f"Warning: Could not load {self.gen_model_name} ({e}).")
             print("Falling back to Hugging Face Indonesian GPT2 pipeline.")
+            fallback_kwargs: Dict[str, Any] = {
+                "model": "flax-community/indonesian-gpt2",
+            }
+            if self.use_device_map:
+                fallback_kwargs["device_map"] = self.device
+            else:
+                fallback_kwargs["device"] = self.device
             self.gen_pipeline = pipeline(
                 "text-generation",
-                model="flax-community/indonesian-gpt2",
-                device=self.device,
+                **fallback_kwargs
             )
 
         print(f"Loading Sentence Embedding Model: {self.embed_model_name}")
-        if isinstance(self.device, str) and (self.device.startswith("cuda") or self.device in ("mps", "cpu")):
+        if self.use_device_map or self.device == "auto":
+            embed_device = "cuda:0" if self.num_gpus > 0 else "cpu"
+        elif isinstance(self.device, str) and (self.device.startswith("cuda") or self.device in ("mps", "cpu")):
             embed_device = self.device
         elif isinstance(self.device, int) and self.device >= 0:
             embed_device = f"cuda:{self.device}"

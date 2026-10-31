@@ -549,6 +549,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_class_weights", action="store_true", default=False, help="Enable class weighting")
     parser.add_argument("--label_smoothing", type=float, default=0.08, help="Label smoothing value")
     parser.add_argument("--use_fgm", action="store_true", default=True, help="Enable FGM adversarial training")
+    parser.add_argument("--device", type=str, default=None, help="Compute device (e.g. 'cuda:0', 'mps', 'cpu', 'auto'). If omitted, automatically detects and leverages all available GPUs via DataParallel.")
     parser.add_argument("--augmented_dir", type=str, default="data/augmented/all_text", help="Directory containing augmented CSVs")
     parser.add_argument("--output_path", type=str, default=None, help="Path to save evaluation Excel")
     args = parser.parse_args()
@@ -589,6 +590,7 @@ if __name__ == "__main__":
         use_class_weights=args.use_class_weights,
         label_smoothing=args.label_smoothing,
         use_fgm=args.use_fgm,
+        device=args.device,
     )
 
     evaluator.evaluate_all_variants(

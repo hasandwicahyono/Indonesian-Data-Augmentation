@@ -565,6 +565,7 @@ def run_benchmark_pipeline(
                 augmenter = IndonesianAugmenter(
                     gen_model_name=gen_model,
                     embed_model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
+                    device=device,
                 )
                 gen_df = augmenter.process_dataset(
                     ds.train,
@@ -768,7 +769,7 @@ if __name__ == "__main__":
         "--device",
         type=str,
         default=None,
-        help="Compute device (e.g. 'cuda:0', 'mps', 'cpu')",
+        help="Compute device (e.g. 'cuda:0', 'mps', 'cpu', 'auto'). If omitted, automatically detects and leverages all available GPUs via torch.nn.DataParallel (training) and device_map='auto' (generation).",
     )
     parser.add_argument(
         "--epochs",
