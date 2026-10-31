@@ -52,8 +52,8 @@ DATASET_CONFIGS = {
     "SmSA": {
         "model_name": "indobenchmark/indobert-base-p1",
         "max_len": 128,
-        "batch_size": 16,
-        "epochs": 25,
+        "batch_size": 64,
+        "epochs": 50,
         "lr": 2e-5,
         "weight_decay": 0.01,
         "patience": 5,
@@ -69,8 +69,8 @@ DATASET_CONFIGS = {
     "MovieOpini": {
         "model_name": "indolem/indobertweet-base-uncased",
         "max_len": 96,
-        "batch_size": 8,
-        "epochs": 25,
+        "batch_size": 64,
+        "epochs": 50,
         "lr": 2e-5,
         "weight_decay": 0.02,
         "patience": 5,
@@ -86,14 +86,18 @@ DATASET_CONFIGS = {
     "HoASA": {
         "model_name": "indobenchmark/indobert-base-p1",
         "max_len": 128,
-        "batch_size": 16,
-        "epochs": 25,
+        "batch_size": 64,
+        "epochs": 50,
         "lr": 2e-5,
         "weight_decay": 0.01,
         "patience": 5,
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": False,  # False is critical: preserves 94.75%+ accuracy on 88.6% neut
+        "use_logit_adjustment": True,      # Logit Adjustment (Menon et al., ICML 2020) for minority negative recall
+        "logit_adj_tau": 0.8,
+        "eval_logit_adj_tau": 0.0,
+        "target_oversample": {"neg": 8},   # 8x Negative Oversampler
         "label_smoothing": 0.05,
         "use_fgm": True,
         "fgm_epsilon": 1.0,
@@ -103,14 +107,24 @@ DATASET_CONFIGS = {
     "EmoT": {
         "model_name": "indolem/indobertweet-base-uncased",
         "max_len": 128,
-        "batch_size": 16,
-        "epochs": 25,
-        "lr": 2e-5,
+        "batch_size": 64,
+        "epochs": 50,
+        "lr": 1e-5,
         "weight_decay": 0.01,
         "patience": 5,
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": True,   # Boosts minority fear and love classes
+        "use_logit_adjustment": False,
+        "logit_adj_tau": 1.0,
+        "eval_logit_adj_tau": 0.0,
+        "target_oversample": None,
+        "run_ensemble": True,
+        "ensemble_models": [
+            {"model_name": "indolem/indobertweet-base-uncased", "weight": 0.50},
+            {"model_name": "indobenchmark/indobert-base-p1", "weight": 0.30},
+            {"model_name": "cahya/indobert-base-indonesian-522M", "weight": 0.20},
+        ],
         "label_smoothing": 0.08,     # Regularizes overlapping emotion boundaries
         "use_fgm": True,
         "fgm_epsilon": 1.0,
@@ -181,6 +195,8 @@ def clean_variant_name(raw_name: str) -> str:
     raw = str(raw_name).strip()
     if "Baseline" in raw or "NotAugmented" in raw:
         return "Baseline"
+    elif "Ensemble" in raw:
+        return "Ensemble"
     elif "ECU" in raw:
         return "ECU"
     elif "COS" in raw:
@@ -227,7 +243,7 @@ def plot_dataset_metric_comparison(
     available_metrics = [m for m in metrics if m in df.columns]
 
     # Ensure standard variant order
-    variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU"]
+    variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU", "Ensemble"]
     ordered_variants = [v for v in variant_order if v in df["variant"].values]
     if not ordered_variants:
         ordered_variants = df["variant"].tolist()
@@ -445,7 +461,7 @@ def plot_cross_dataset_summary(
             if old_col in df.columns and new_col not in df.columns:
                 df[new_col] = df[old_col]
 
-        variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU"]
+        variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU", "Ensemble"]
         ordered_vars = [v for v in variant_order if v in df["variant"].values]
         if not ordered_vars:
             ordered_vars = df["variant"].tolist()
@@ -525,6 +541,7 @@ def run_benchmark_pipeline(
     epochs_override: Optional[int] = None,
     batch_size_override: Optional[int] = None,
     seed: int = 42,
+    run_ensemble: bool = True,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
     os.makedirs(results_dir, exist_ok=True)
@@ -617,6 +634,11 @@ def run_benchmark_pipeline(
                 label_smoothing=cfg["label_smoothing"],
                 use_fgm=cfg["use_fgm"],
                 fgm_epsilon=cfg["fgm_epsilon"],
+                use_logit_adjustment=cfg.get("use_logit_adjustment", False),
+                logit_adj_tau=cfg.get("logit_adj_tau", 0.8),
+                eval_logit_adj_tau=cfg.get("eval_logit_adj_tau", 0.0),
+                target_oversample=cfg.get("target_oversample", None),
+                ensemble_configs=cfg.get("ensemble_models", None) if (run_ensemble and cfg.get("run_ensemble", False)) else None,
             )
 
             results_df = evaluator.evaluate_all_variants(
@@ -797,6 +819,18 @@ if __name__ == "__main__":
         default=42,
         help="Random seed for reproducibility",
     )
+    parser.add_argument(
+        "--run_ensemble",
+        action="store_true",
+        default=True,
+        help="Enable heterogeneous multi-model ensemble pipeline for supported datasets (e.g. EmoT)",
+    )
+    parser.add_argument(
+        "--no_ensemble",
+        action="store_false",
+        dest="run_ensemble",
+        help="Disable heterogeneous multi-model ensemble pipeline",
+    )
 
     args = parser.parse_args()
 
@@ -822,5 +856,6 @@ if __name__ == "__main__":
         epochs_override=args.epochs,
         batch_size_override=args.batch_size,
         seed=args.seed,
+        run_ensemble=args.run_ensemble,
     )
 

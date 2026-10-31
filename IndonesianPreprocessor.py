@@ -19,7 +19,11 @@ class IndonesianPreprocessor:
         normalize_elongation: bool = True,
         normalize_slang: bool = True,
         remove_extra_whitespace: bool = True,
+        map_emojis: bool = True,
+        map_emoticons: bool = True,
         slang_dict: Optional[Dict[str, str]] = None,
+        emoji_dict: Optional[Dict[str, str]] = None,
+        emoticon_dict: Optional[Dict[str, str]] = None,
     ):
         self.lower = lower
         self.remove_urls = remove_urls
@@ -28,6 +32,46 @@ class IndonesianPreprocessor:
         self.normalize_elongation = normalize_elongation
         self.normalize_slang = normalize_slang
         self.remove_extra_whitespace = remove_extra_whitespace
+        self.map_emojis = map_emojis
+        self.map_emoticons = map_emoticons
+
+        # Emoji semantic mapping for Indonesian emotion and sentiment analysis
+        self.emoji_dict = emoji_dict or {
+            # Anger / Marah
+            "😡": " _emosi_marah_ ", "😠": " _emosi_marah_ ", "🤬": " _emosi_marah_ ", "👿": " _emosi_marah_ ",
+            "💢": " _emosi_marah_ ", "😤": " _emosi_marah_ ", "🖕": " _emosi_marah_ ", "😾": " _emosi_marah_ ",
+            # Sadness / Sedih
+            "😭": " _emosi_sedih_ ", "😢": " _emosi_sedih_ ", "😞": " _emosi_sedih_ ", "😔": " _emosi_sedih_ ",
+            "💔": " _emosi_sedih_ ", "😿": " _emosi_sedih_ ", "🥺": " _emosi_sedih_ ", "😥": " _emosi_sedih_ ",
+            "😓": " _emosi_sedih_ ", "😪": " _emosi_sedih_ ", "🥀": " _emosi_sedih_ ",
+            # Fear / Takut / Cemas
+            "😱": " _emosi_takut_ ", "😨": " _emosi_takut_ ", "😰": " _emosi_takut_ ", "😧": " _emosi_takut_ ",
+            "🥶": " _emosi_takut_ ", "😖": " _emosi_takut_ ", "😬": " _emosi_takut_ ", "😳": " _emosi_takut_ ",
+            # Love / Cinta / Sayang
+            "❤️": " _emosi_cinta_ ", "💖": " _emosi_cinta_ ", "💕": " _emosi_cinta_ ", "💓": " _emosi_cinta_ ",
+            "🥰": " _emosi_cinta_ ", "😍": " _emosi_cinta_ ", "😚": " _emosi_cinta_ ", "😻": " _emosi_cinta_ ",
+            "😘": " _emosi_cinta_ ", "💗": " _emosi_cinta_ ", "💘": " _emosi_cinta_ ", "💙": " _emosi_cinta_ ",
+            "💜": " _emosi_cinta_ ", "💛": " _emosi_cinta_ ", "💚": " _emosi_cinta_ ", "🤍": " _emosi_cinta_ ",
+            # Happy / Bahagia / Senang
+            "🤣": " _emosi_bahagia_ ", "😂": " _emosi_bahagia_ ", "😄": " _emosi_bahagia_ ", "😆": " _emosi_bahagia_ ",
+            "😊": " _emosi_bahagia_ ", "🥳": " _emosi_bahagia_ ", "😁": " _emosi_bahagia_ ", "😹": " _emosi_bahagia_ ",
+            "😃": " _emosi_bahagia_ ", "🙂": " _emosi_bahagia_ ", "😀": " _emosi_bahagia_ ", "✨": " _emosi_bahagia_ ",
+            "🎉": " _emosi_bahagia_ ", "👏": " _emosi_bahagia_ ", "👍": " _emosi_bahagia_ ",
+        }
+
+        # ASCII emoticons mapping
+        self.emoticon_dict = emoticon_dict or {
+            ":)": " _emosi_bahagia_ ", ":-)": " _emosi_bahagia_ ", ":D": " _emosi_bahagia_ ",
+            ":-D": " _emosi_bahagia_ ", "xD": " _emosi_bahagia_ ", "XD": " _emosi_bahagia_ ",
+            "xd": " _emosi_bahagia_ ", "^^": " _emosi_bahagia_ ", "^_^": " _emosi_bahagia_ ",
+            ":(": " _emosi_sedih_ ", ":-(": " _emosi_sedih_ ", ":'(": " _emosi_sedih_ ",
+            ":'-(": " _emosi_sedih_ ", "T_T": " _emosi_sedih_ ", "T.T": " _emosi_sedih_ ",
+            "T-T": " _emosi_sedih_ ", ";-;": " _emosi_sedih_ ", ":<": " _emosi_sedih_ ",
+            ":O": " _emosi_takut_ ", ":-O": " _emosi_takut_ ", ":o": " _emosi_takut_ ",
+            ":-o": " _emosi_takut_ ", ">_<": " _emosi_takut_ ",
+            ">:[": " _emosi_marah_ ", ">:(": " _emosi_marah_ ", ":@": " _emosi_marah_ ",
+            "<3": " _emosi_cinta_ ", "</3": " _emosi_sedih_ ", ":*": " _emosi_cinta_ ",
+        }
 
         # Default common Indonesian slang dictionary for social media text
         self.slang_dict = slang_dict or {
@@ -101,6 +145,18 @@ class IndonesianPreprocessor:
         # Remove or normalize user mentions
         if self.remove_mentions:
             text = self.mention_pattern.sub(" ", text)
+
+        # Map Unicode emojis to Indonesian emotion semantic tags
+        if self.map_emojis and self.emoji_dict:
+            for emoji_char, sem_tag in self.emoji_dict.items():
+                if emoji_char in text:
+                    text = text.replace(emoji_char, sem_tag)
+
+        # Map ASCII emoticons to Indonesian emotion semantic tags
+        if self.map_emoticons and self.emoticon_dict:
+            tokens = text.split()
+            tokens = [self.emoticon_dict.get(t, t) for t in tokens]
+            text = " ".join(tokens)
 
         # Handle hashtags (extract word without # symbol)
         if self.remove_hashtags:

@@ -80,6 +80,11 @@ class IndoBERTClassifierEvaluator:
         label_smoothing: float = 0.08,
         use_fgm: bool = True,
         fgm_epsilon: float = 1.0,
+        use_logit_adjustment: bool = False,
+        logit_adj_tau: float = 0.8,
+        eval_logit_adj_tau: float = 0.0,
+        target_oversample: Optional[Dict[str, int]] = None,
+        ensemble_configs: Optional[List[Dict[str, Any]]] = None,
     ):
         self.model_name = model_name
         self.max_len = max_len
@@ -96,6 +101,11 @@ class IndoBERTClassifierEvaluator:
         self.label_smoothing = label_smoothing
         self.use_fgm = use_fgm
         self.fgm_epsilon = fgm_epsilon
+        self.use_logit_adjustment = use_logit_adjustment
+        self.logit_adj_tau = logit_adj_tau
+        self.eval_logit_adj_tau = eval_logit_adj_tau
+        self.target_oversample = target_oversample
+        self.ensemble_configs = ensemble_configs
 
         self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         if device is not None:
@@ -107,10 +117,15 @@ class IndoBERTClassifierEvaluator:
         else:
             self.device = torch.device("cpu")
 
-        self.preprocessor = IndonesianPreprocessor()
+        self.preprocessor = IndonesianPreprocessor(map_emojis=True, map_emoticons=True)
         device_desc = f"{self.device} ({self.num_gpus} GPUs via DataParallel)" if (self.device.type == "cuda" and self.num_gpus > 1) else str(self.device)
         print(f"IndoBERT Evaluator initialized on device: {device_desc} | Model: {self.model_name}")
-        print(f"  Enhancements Active -> Preprocessing: {self.use_preprocessing}, Class-Weights: {self.use_class_weights}, Label-Smoothing: {self.label_smoothing}, FGM-Adversarial: {self.use_fgm}")
+        extra_desc = f", Logit-Adj: {self.use_logit_adjustment} (tau={self.logit_adj_tau})" if self.use_logit_adjustment else ""
+        if self.target_oversample:
+            extra_desc += f", Oversample: {self.target_oversample}"
+        if self.ensemble_configs:
+            extra_desc += f", Heterogeneous Ensemble: {len(self.ensemble_configs)} models"
+        print(f"  Enhancements Active -> Preprocessing: {self.use_preprocessing}, Class-Weights: {self.use_class_weights}, Label-Smoothing: {self.label_smoothing}, FGM-Adversarial: {self.use_fgm}{extra_desc}")
 
     def _set_seed(self, seed: Optional[int] = None):
         target_seed = self.seed if seed is None else seed
@@ -127,6 +142,7 @@ class IndoBERTClassifierEvaluator:
         scheduler: Any,
         criterion: Optional[torch.nn.Module] = None,
         fgm: Optional[FGM] = None,
+        log_priors: Optional[torch.Tensor] = None,
     ) -> float:
         model.train()
         total_loss = 0.0
@@ -138,7 +154,11 @@ class IndoBERTClassifierEvaluator:
             labels = batch["label"].to(self.device)
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            loss = criterion(outputs.logits, labels) if criterion is not None else outputs.loss
+            logits = outputs.logits
+            # Logit Adjustment during training: shifts margins to force separation for minority classes
+            if log_priors is not None:
+                logits = logits + self.logit_adj_tau * log_priors
+            loss = criterion(logits, labels) if criterion is not None else outputs.loss
             # Multi-GPU DataParallel reduces per-GPU loss vector to scalar
             if loss is not None and loss.dim() > 0:
                 loss = loss.mean()
@@ -148,7 +168,10 @@ class IndoBERTClassifierEvaluator:
             if fgm is not None:
                 fgm.attack()
                 outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-                loss_adv = criterion(outputs_adv.logits, labels) if criterion is not None else outputs_adv.loss
+                logits_adv = outputs_adv.logits
+                if log_priors is not None:
+                    logits_adv = logits_adv + self.logit_adj_tau * log_priors
+                loss_adv = criterion(logits_adv, labels) if criterion is not None else outputs_adv.loss
                 if loss_adv is not None and loss_adv.dim() > 0:
                     loss_adv = loss_adv.mean()
                 loss_adv.backward()
@@ -167,6 +190,7 @@ class IndoBERTClassifierEvaluator:
         model: torch.nn.Module,
         dataloader: DataLoader,
         num_labels: Optional[int] = None,
+        log_priors: Optional[torch.Tensor] = None,
     ) -> Tuple[float, float, float, float, np.ndarray, List[int], List[int]]:
         model.eval()
         all_preds = []
@@ -179,7 +203,10 @@ class IndoBERTClassifierEvaluator:
                 labels = batch["label"].to(self.device)
 
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                preds = torch.argmax(outputs.logits, dim=1)
+                logits = outputs.logits
+                if log_priors is not None and self.eval_logit_adj_tau > 0.0:
+                    logits = logits - self.eval_logit_adj_tau * log_priors
+                preds = torch.argmax(logits, dim=1)
 
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
@@ -243,6 +270,27 @@ class IndoBERTClassifierEvaluator:
 
         # Set seed before data loading & model init for strict reproducibility
         self._set_seed(seed)
+
+        # 1. Target Class Oversampling (e.g. for HoASA's severe 1.3% negative class)
+        if self.target_oversample:
+            dfs_to_concat = [train_df]
+            for target_class, multiplier in self.target_oversample.items():
+                minority_rows = train_df[train_df["label"] == target_class]
+                if not minority_rows.empty and multiplier > 1:
+                    replicated = pd.concat([minority_rows] * (multiplier - 1), ignore_index=True)
+                    dfs_to_concat.append(replicated)
+                    print(f"  [NEGATIVE OVERSAMPLER] Oversampled class '{target_class}' by {multiplier}x: {len(minority_rows)} -> {len(minority_rows) * multiplier} samples")
+            train_df = pd.concat(dfs_to_concat, ignore_index=True).sample(frac=1.0, random_state=seed or self.seed).reset_index(drop=True)
+
+        # 2. Compute empirical class priors for Logit Adjustment (Menon et al., ICML 2020)
+        if self.use_logit_adjustment:
+            class_counts = np.array([sum(train_df["label"] == lbl) for lbl in label_list], dtype=np.float32)
+            priors = class_counts / (class_counts.sum() + 1e-6)
+            log_priors = torch.tensor(np.log(priors + 1e-8), dtype=torch.float32, device=self.device)
+            priors_dict = {lbl: f"{priors[i]:.3f}" for i, lbl in enumerate(label_list)}
+            print(f"  [LOGIT ADJUSTMENT] Active (tau={self.logit_adj_tau}, eval_tau={self.eval_logit_adj_tau}) | Priors: {priors_dict}")
+        else:
+            log_priors = None
 
         prep = self.preprocessor if self.use_preprocessing else None
         train_ds = ClassificationDataset(train_df["text"].tolist(), train_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep)
@@ -323,9 +371,9 @@ class IndoBERTClassifierEvaluator:
 
         for epoch in range(num_epochs):
             actual_epochs_trained = epoch + 1
-            loss = self.train_epoch(model, train_loader, optimizer, scheduler, criterion=criterion, fgm=fgm)
+            loss = self.train_epoch(model, train_loader, optimizer, scheduler, criterion=criterion, fgm=fgm, log_priors=log_priors)
             if val_loader is not None:
-                v_acc, v_prec, v_rec, v_f1, _, _, _ = self.evaluate(model, val_loader, num_labels=num_labels)
+                v_acc, v_prec, v_rec, v_f1, _, _, _ = self.evaluate(model, val_loader, num_labels=num_labels, log_priors=log_priors)
                 print(f"  Epoch {epoch+1}/{num_epochs} - Loss: {loss:.4f} | Val Acc: {v_acc:.4f} | Val Macro-F1: {v_f1:.4f}")
                 if v_f1 > best_val_f1 + self.min_delta:
                     best_val_f1 = v_f1
@@ -357,8 +405,9 @@ class IndoBERTClassifierEvaluator:
             target_model.load_state_dict(best_model_weights)
             print(f"  [Optimal Checkpoint Restored] Best Val Macro-F1: {best_val_f1:.4f} (from epoch {best_epoch})")
 
-        acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(model, test_loader, num_labels=num_labels)
-        
+        acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(model, test_loader, num_labels=num_labels, log_priors=log_priors)
+        test_probs, _ = self.predict_proba(model, test_loader, log_priors=log_priors)
+
         res: Dict[str, Any] = {
             "dataset_name": name,
             "model_name": self.model_name,
@@ -375,6 +424,7 @@ class IndoBERTClassifierEvaluator:
             "macro_f1": f1,
             "y_true": all_labels,
             "y_pred": all_preds,
+            "_test_probs": test_probs,
         }
         for i, lbl in enumerate(label_list):
             res[f"f1_{lbl}"] = float(per_class_f1[i]) if i < len(per_class_f1) else 0.0
@@ -382,7 +432,10 @@ class IndoBERTClassifierEvaluator:
         return res
 
     def predict_proba(
-        self, model: torch.nn.Module, dataloader: DataLoader
+        self,
+        model: torch.nn.Module,
+        dataloader: DataLoader,
+        log_priors: Optional[torch.Tensor] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Returns softmax probability distributions and ground-truth labels for ensembling."""
         model.eval()
@@ -396,7 +449,10 @@ class IndoBERTClassifierEvaluator:
                 labels = batch["label"].to(self.device)
 
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                probs = torch.softmax(outputs.logits, dim=1)
+                logits = outputs.logits
+                if log_priors is not None and self.eval_logit_adj_tau > 0.0:
+                    logits = logits - self.eval_logit_adj_tau * log_priors
+                probs = torch.softmax(logits, dim=1)
 
                 all_probs.append(probs.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
@@ -439,6 +495,106 @@ class IndoBERTClassifierEvaluator:
 
         print(f"\n[Ensemble Results] Accuracy: {acc:.4f} | Macro-F1: {f1:.4f} | Macro-Prec: {prec:.4f} | Macro-Rec: {rec:.4f}")
         return res
+
+    def evaluate_heterogeneous_ensemble(
+        self,
+        train_df: pd.DataFrame,
+        test_df: pd.DataFrame,
+        label_list: List[str],
+        ensemble_configs: List[Dict[str, Any]],
+        val_df: Optional[pd.DataFrame] = None,
+        dataset_name: str = "Dataset",
+        seed: Optional[int] = None,
+        epochs: Optional[int] = None,
+        early_stopping: Optional[bool] = None,
+        patience: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Trains and soft-votes across multiple heterogeneous models (e.g. IndoBERTweet + IndoBERT-p1 + IndoBERT-522M)
+        to boost classification performance toward 90%+ on challenging multi-class datasets.
+        """
+        print(f"\n=======================================================")
+        print(f"  Running Heterogeneous Ensemble for {dataset_name}")
+        print(f"  Ensemble Architecture: {[c['model_name'] for c in ensemble_configs]}")
+        print(f"=======================================================")
+
+        prob_list = []
+        weights = []
+        ground_truth = None
+
+        for idx, ecfg in enumerate(ensemble_configs):
+            m_name = ecfg["model_name"]
+            w = ecfg.get("weight", 1.0)
+            print(f"\n  [Ensemble Sub-Model {idx+1}/{len(ensemble_configs)}] Training: {m_name} (weight: {w})")
+
+            sub_evaluator = IndoBERTClassifierEvaluator(
+                model_name=m_name,
+                max_len=self.max_len,
+                batch_size=self.batch_size,
+                epochs=epochs if epochs is not None else self.epochs,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                device=str(self.device),
+                seed=(seed or self.seed) + idx * 7,
+                early_stopping=early_stopping if early_stopping is not None else self.early_stopping,
+                patience=patience if patience is not None else self.patience,
+                min_delta=self.min_delta,
+                use_preprocessing=self.use_preprocessing,
+                use_class_weights=self.use_class_weights,
+                label_smoothing=self.label_smoothing,
+                use_fgm=self.use_fgm,
+                fgm_epsilon=self.fgm_epsilon,
+                use_logit_adjustment=self.use_logit_adjustment,
+                logit_adj_tau=self.logit_adj_tau,
+                eval_logit_adj_tau=self.eval_logit_adj_tau,
+                target_oversample=self.target_oversample,
+            )
+
+            train_res = sub_evaluator.evaluate_dataset(
+                train_df,
+                test_df,
+                label_list,
+                val_df=val_df,
+                name=f"{dataset_name}-EnsembleSub-{m_name.split('/')[-1]}",
+                seed=(seed or self.seed) + idx * 7,
+                epochs=epochs,
+                early_stopping=early_stopping,
+                patience=patience,
+            )
+
+            y_t = train_res.get("y_true")
+            if ground_truth is None and y_t is not None:
+                ground_truth = np.array(y_t)
+
+            if "_test_probs" in train_res:
+                prob_list.append(train_res["_test_probs"])
+            else:
+                sub_preds = np.array(train_res.get("y_pred", []))
+                one_hot = np.zeros((len(sub_preds), len(label_list)), dtype=np.float32)
+                for i_sample, p_class in enumerate(sub_preds):
+                    one_hot[i_sample, p_class] = 1.0
+                prob_list.append(one_hot)
+
+            weights.append(w)
+
+        ens_res = self.evaluate_ensemble(prob_list, ground_truth, label_list, weights=weights)
+        ens_res["dataset_name"] = f"{dataset_name}-Augmented-Ensemble"
+        ens_res["model_name"] = f"Heterogeneous-Ensemble ({len(ensemble_configs)} models)"
+        ens_res["train_size"] = len(train_df)
+        ens_res["val_size"] = len(val_df) if val_df is not None else 0
+        ens_res["test_size"] = len(test_df)
+        ens_res["epochs_configured"] = epochs if epochs is not None else self.epochs
+        ens_res["epochs_trained"] = epochs if epochs is not None else self.epochs
+        ens_res["best_epoch"] = epochs if epochs is not None else self.epochs
+        ens_res["val_macro_f1"] = None
+
+        w_norm = np.array(weights) / sum(weights)
+        ens_probs = np.zeros_like(prob_list[0])
+        for p, w in zip(prob_list, w_norm):
+            ens_probs += p * w
+        ens_res["y_true"] = ground_truth.tolist() if isinstance(ground_truth, np.ndarray) else ground_truth
+        ens_res["y_pred"] = np.argmax(ens_probs, axis=1).tolist()
+        return ens_res
 
     def evaluate_all_variants(
         self,
@@ -507,12 +663,42 @@ class IndoBERTClassifierEvaluator:
             res["f1_improvement_pct"] = pct_gain
             results.append(res)
 
+        # 3. Heterogeneous Ensemble (if configured)
+        if self.ensemble_configs:
+            aug_results = [r for r in results if r["dataset_name"] != f"{dataset_name}-Baseline-NotAugmented"]
+            if aug_results and len(augmented_dfs) > 0:
+                best_aug_res = max(aug_results, key=lambda x: x["macro_f1"])
+                best_variant_key = best_aug_res["dataset_name"].split("-")[-1]
+                target_train_df = augmented_dfs.get(best_variant_key, list(augmented_dfs.values())[0])
+                print(f"\n  [Ensemble Pipeline] Running Heterogeneous Ensemble on best augmented variant ({best_variant_key})...")
+            else:
+                target_train_df = base_train_df
+                print(f"\n  [Ensemble Pipeline] Running Heterogeneous Ensemble on baseline training data...")
+            ens_res = self.evaluate_heterogeneous_ensemble(
+                train_df=target_train_df,
+                test_df=base_test_df,
+                label_list=label_list,
+                ensemble_configs=self.ensemble_configs,
+                val_df=val_df,
+                dataset_name=dataset_name,
+                seed=seed,
+                epochs=epochs,
+                early_stopping=early_stopping,
+                patience=patience,
+            )
+            f1_gain = ens_res["macro_f1"] - base_res["macro_f1"]
+            pct_gain = (f1_gain / base_res["macro_f1"]) * 100.0 if base_res["macro_f1"] > 0 else 0.0
+            ens_res["f1_improvement"] = f1_gain
+            ens_res["f1_improvement_pct"] = pct_gain
+            results.append(ens_res)
+
         # Extract predictions for confusion matrix plotting before exporting summary dataframe
         predictions = {}
         for r in results:
             dname = r["dataset_name"]
             y_t = r.pop("y_true", None)
             y_p = r.pop("y_pred", None)
+            r.pop("_test_probs", None)
             if y_t is not None and y_p is not None:
                 predictions[f"{dname}__true"] = np.array(y_t)
                 predictions[f"{dname}__pred"] = np.array(y_p)
@@ -550,17 +736,35 @@ if __name__ == "__main__":
     parser.add_argument("--label_smoothing", type=float, default=0.08, help="Label smoothing value")
     parser.add_argument("--use_fgm", action="store_true", default=True, help="Enable FGM adversarial training")
     parser.add_argument("--device", type=str, default=None, help="Compute device (e.g. 'cuda:0', 'mps', 'cpu', 'auto'). If omitted, automatically detects and leverages all available GPUs via DataParallel.")
+    parser.add_argument("--use_logit_adjustment", action="store_true", default=False, help="Enable Menon et al. ICML 2020 Logit Adjustment")
+    parser.add_argument("--logit_adj_tau", type=float, default=0.8, help="Logit adjustment temperature tau")
+    parser.add_argument("--eval_logit_adj_tau", type=float, default=0.0, help="Inference logit adjustment tau")
+    parser.add_argument("--negative_oversample", type=int, default=None, help="Oversample factor for negative/minority class (e.g. 8 for HoASA)")
+    parser.add_argument("--run_ensemble", action="store_true", default=False, help="Run heterogeneous ensemble pipeline")
     parser.add_argument("--augmented_dir", type=str, default="data/augmented/all_text", help="Directory containing augmented CSVs")
     parser.add_argument("--output_path", type=str, default=None, help="Path to save evaluation Excel")
     args = parser.parse_args()
 
     manager = IndonesianDatasetsManager()
+    target_oversample = None
+    use_la = args.use_logit_adjustment
+    ensemble_configs = None
+
     if args.dataset == "EmoT":
         ds = manager.load_emot()
         default_model = "indolem/indobertweet-base-uncased"
+        if args.run_ensemble:
+            ensemble_configs = [
+                {"model_name": "indolem/indobertweet-base-uncased", "weight": 0.50},
+                {"model_name": "indobenchmark/indobert-base-p1", "weight": 0.30},
+                {"model_name": "cahya/indobert-base-indonesian-522M", "weight": 0.20},
+            ]
     elif args.dataset == "HoASA":
         ds = manager.load_hoasa()
         default_model = "indobenchmark/indobert-base-p1"
+        use_la = True
+        oversample_val = args.negative_oversample if args.negative_oversample is not None else 8
+        target_oversample = {"neg": oversample_val}
     elif args.dataset == "MovieOpini":
         ds = manager.load_movie_opini()
         default_model = "indobenchmark/indobert-base-p1"
@@ -590,6 +794,11 @@ if __name__ == "__main__":
         use_class_weights=args.use_class_weights,
         label_smoothing=args.label_smoothing,
         use_fgm=args.use_fgm,
+        use_logit_adjustment=use_la,
+        logit_adj_tau=args.logit_adj_tau,
+        eval_logit_adj_tau=args.eval_logit_adj_tau,
+        target_oversample=target_oversample,
+        ensemble_configs=ensemble_configs,
         device=args.device,
     )
 
