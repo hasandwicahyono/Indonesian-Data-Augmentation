@@ -24,6 +24,15 @@ from SimilarityMeasures import (
 )
 
 
+def _is_accelerate_available() -> bool:
+    """Checks if the Hugging Face accelerate library is installed for multi-GPU device_map."""
+    try:
+        import accelerate  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 # =====================================================================
 # Generative Models Registry: First-Generation (2020–2021) vs. Contemporary (2024)
 # =====================================================================
@@ -223,21 +232,31 @@ class IndonesianAugmenter:
         # Resolve device and multi-GPU configuration
         self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         self.use_device_map = False
+        accelerate_ready = _is_accelerate_available()
 
         if device is None:
-            if self.num_gpus > 1:
+            if self.num_gpus > 1 and accelerate_ready:
                 # Distribute model across multiple GPUs automatically via Hugging Face accelerate
                 self.device = "auto"
                 self.use_device_map = True
-            elif self.num_gpus == 1:
+            elif self.num_gpus > 0:
                 self.device = 0
+                if self.num_gpus > 1 and not accelerate_ready:
+                    print(
+                        f"Notice: {self.num_gpus} GPUs detected. 'accelerate' package is not installed in this environment; "
+                        f"defaulting text generation to GPU 0. (Run 'pip install accelerate' to enable multi-GPU generation sharding)."
+                    )
             elif torch.backends.mps.is_available():
                 self.device = "mps"
             else:
                 self.device = -1
         elif isinstance(device, str) and device.lower() in ("auto", "balanced", "sequential"):
-            self.device = device.lower()
-            self.use_device_map = True
+            if accelerate_ready:
+                self.device = device.lower()
+                self.use_device_map = True
+            else:
+                print(f"Warning: device='{device}' requires 'accelerate'. Defaulting text generation to GPU 0 / CPU.")
+                self.device = 0 if self.num_gpus > 0 else -1
         else:
             self.device = device
 
@@ -268,41 +287,44 @@ class IndonesianAugmenter:
             device_desc = str(self.device)
         print(f"Loading Generative Model: {self.gen_model_name} [{gen_desc}] on device: {device_desc}")
         
+        self.tokenizer = AutoTokenizer.from_pretrained(self.gen_model_name, trust_remote_code=True)
+        pad_id = self.tokenizer.eos_token_id or 0
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        pipeline_kwargs: Dict[str, Any] = {
+            "model": self.gen_model_name,
+            "tokenizer": self.tokenizer,
+            "pad_token_id": pad_id,
+            "trust_remote_code": True,
+        }
+        if self.use_device_map:
+            pipeline_kwargs["device_map"] = self.device
+        else:
+            pipeline_kwargs["device"] = self.device
+
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.gen_model_name, trust_remote_code=True)
-            pad_id = self.tokenizer.eos_token_id or 0
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-
-            pipeline_kwargs: Dict[str, Any] = {
-                "model": self.gen_model_name,
-                "tokenizer": self.tokenizer,
-                "pad_token_id": pad_id,
-                "trust_remote_code": True,
-            }
-            if self.use_device_map:
-                pipeline_kwargs["device_map"] = self.device
-            else:
-                pipeline_kwargs["device"] = self.device
-
             self.gen_pipeline = pipeline(
                 "text-generation",
                 **pipeline_kwargs
             )
         except Exception as e:
-            print(f"Warning: Could not load {self.gen_model_name} ({e}).")
-            print("Falling back to Hugging Face Indonesian GPT2 pipeline.")
-            fallback_kwargs: Dict[str, Any] = {
-                "model": "flax-community/indonesian-gpt2",
-            }
             if self.use_device_map:
-                fallback_kwargs["device_map"] = self.device
+                print(f"Warning: Loading with device_map='{self.device}' failed ({e}).")
+                fallback_device = 0 if self.num_gpus > 0 else -1
+                print(f"Retrying loading '{self.gen_model_name}' on single device (device={fallback_device})...")
+                self.use_device_map = False
+                self.device = fallback_device
+                self.gen_pipeline = pipeline(
+                    "text-generation",
+                    model=self.gen_model_name,
+                    tokenizer=self.tokenizer,
+                    device=self.device,
+                    pad_token_id=pad_id,
+                    trust_remote_code=True,
+                )
             else:
-                fallback_kwargs["device"] = self.device
-            self.gen_pipeline = pipeline(
-                "text-generation",
-                **fallback_kwargs
-            )
+                raise RuntimeError(f"Failed to load generative model '{self.gen_model_name}': {e}") from e
 
         print(f"Loading Sentence Embedding Model: {self.embed_model_name}")
         if self.use_device_map or self.device == "auto":
