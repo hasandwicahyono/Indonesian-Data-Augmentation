@@ -60,10 +60,14 @@ DATASET_CONFIGS = {
         "early_stopping": True,
         "use_preprocessing": True,
         "use_class_weights": True,  # Uses automatic square-root smoothing guard
+        "use_logit_adjustment": True,        # Logit Adjustment (Menon et al., ICML 2020) for neutral margin
+        "logit_adj_tau": 0.6,
+        "eval_logit_adj_tau": 0.3,          # Rebalances prior shift (train 10.4% vs test 17.6%)
+        "target_oversample": {"neutral": 2}, # 2x Neutral Oversampler to balance neutral volume
         "label_smoothing": 0.05,
         "use_fgm": True,
         "fgm_epsilon": 0.5,
-        "minority_classes": ["negative", "neutral"],
+        "minority_classes": ["neutral"],     # Dedicate Phase 1 GPT-2 augmentation budget exclusively to neutral
         "description": "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)",
     },
     "MovieOpini": {

@@ -61,16 +61,22 @@ class IndonesianPreprocessor:
 
         # ASCII emoticons mapping
         self.emoticon_dict = emoticon_dict or {
+            # Happy / Bahagia / Senang
             ":)": " _emosi_bahagia_ ", ":-)": " _emosi_bahagia_ ", ":D": " _emosi_bahagia_ ",
             ":-D": " _emosi_bahagia_ ", "xD": " _emosi_bahagia_ ", "XD": " _emosi_bahagia_ ",
             "xd": " _emosi_bahagia_ ", "^^": " _emosi_bahagia_ ", "^_^": " _emosi_bahagia_ ",
+            # Sadness / Sedih
             ":(": " _emosi_sedih_ ", ":-(": " _emosi_sedih_ ", ":'(": " _emosi_sedih_ ",
             ":'-(": " _emosi_sedih_ ", "T_T": " _emosi_sedih_ ", "T.T": " _emosi_sedih_ ",
             "T-T": " _emosi_sedih_ ", ";-;": " _emosi_sedih_ ", ":<": " _emosi_sedih_ ",
+            "</3": " _emosi_sedih_ ",
+            # Fear / Takut / Cemas
             ":O": " _emosi_takut_ ", ":-O": " _emosi_takut_ ", ":o": " _emosi_takut_ ",
             ":-o": " _emosi_takut_ ", ">_<": " _emosi_takut_ ",
+            # Anger / Marah
             ">:[": " _emosi_marah_ ", ">:(": " _emosi_marah_ ", ":@": " _emosi_marah_ ",
-            "<3": " _emosi_cinta_ ", "</3": " _emosi_sedih_ ", ":*": " _emosi_cinta_ ",
+            # Love / Cinta / Sayang
+            "<3": " _emosi_cinta_ ", ":*": " _emosi_cinta_ ",
         }
 
         # Default common Indonesian slang dictionary for social media text

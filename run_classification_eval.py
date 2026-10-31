@@ -279,7 +279,7 @@ class IndoBERTClassifierEvaluator:
                 if not minority_rows.empty and multiplier > 1:
                     replicated = pd.concat([minority_rows] * (multiplier - 1), ignore_index=True)
                     dfs_to_concat.append(replicated)
-                    print(f"  [NEGATIVE OVERSAMPLER] Oversampled class '{target_class}' by {multiplier}x: {len(minority_rows)} -> {len(minority_rows) * multiplier} samples")
+                    print(f"  [TARGET OVERSAMPLER] Oversampled class '{target_class}' by {multiplier}x: {len(minority_rows)} -> {len(minority_rows) * multiplier} samples")
             train_df = pd.concat(dfs_to_concat, ignore_index=True).sample(frac=1.0, random_state=seed or self.seed).reset_index(drop=True)
 
         # 2. Compute empirical class priors for Logit Adjustment (Menon et al., ICML 2020)
@@ -740,6 +740,7 @@ if __name__ == "__main__":
     parser.add_argument("--logit_adj_tau", type=float, default=0.8, help="Logit adjustment temperature tau")
     parser.add_argument("--eval_logit_adj_tau", type=float, default=0.0, help="Inference logit adjustment tau")
     parser.add_argument("--negative_oversample", type=int, default=None, help="Oversample factor for negative/minority class (e.g. 8 for HoASA)")
+    parser.add_argument("--neutral_oversample", type=int, default=None, help="Oversample factor for neutral class (e.g. 2 for SmSA)")
     parser.add_argument("--run_ensemble", action="store_true", default=False, help="Run heterogeneous ensemble pipeline")
     parser.add_argument("--augmented_dir", type=str, default="data/augmented/all_text", help="Directory containing augmented CSVs")
     parser.add_argument("--output_path", type=str, default=None, help="Path to save evaluation Excel")
@@ -748,6 +749,8 @@ if __name__ == "__main__":
     manager = IndonesianDatasetsManager()
     target_oversample = None
     use_la = args.use_logit_adjustment
+    tau_to_use = args.logit_adj_tau
+    eval_tau_to_use = args.eval_logit_adj_tau
     ensemble_configs = None
 
     if args.dataset == "EmoT":
@@ -771,6 +774,13 @@ if __name__ == "__main__":
     elif args.dataset == "SmSA":
         ds = manager.load_smsa()
         default_model = "indobenchmark/indobert-base-p1"
+        use_la = True
+        oversample_val = args.neutral_oversample if args.neutral_oversample is not None else 2
+        target_oversample = {"neutral": oversample_val}
+        if tau_to_use == 0.8 and not args.use_logit_adjustment:
+            tau_to_use = 0.6
+        if eval_tau_to_use == 0.0:
+            eval_tau_to_use = 0.3
 
     model_to_use = args.model_name if args.model_name != "indobenchmark/indobert-base-p1" else default_model
     out_excel = args.output_path or f"data/results/{args.dataset}_evaluation_results.xlsx"
@@ -795,8 +805,8 @@ if __name__ == "__main__":
         label_smoothing=args.label_smoothing,
         use_fgm=args.use_fgm,
         use_logit_adjustment=use_la,
-        logit_adj_tau=args.logit_adj_tau,
-        eval_logit_adj_tau=args.eval_logit_adj_tau,
+        logit_adj_tau=tau_to_use,
+        eval_logit_adj_tau=eval_tau_to_use,
         target_oversample=target_oversample,
         ensemble_configs=ensemble_configs,
         device=args.device,
