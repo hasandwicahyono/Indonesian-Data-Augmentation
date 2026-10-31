@@ -38,6 +38,7 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 import argparse
+import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -48,6 +49,7 @@ from DatasetsManager import IndonesianDatasetsManager, CustomDataset
 from Augmenter import IndonesianAugmenter
 from run_augmentation_filter import build_augmented_datasets, export_augmented_datasets
 from run_classification_eval import IndoBERTClassifierEvaluator
+from ImbalanceCalibrator import AutoImbalanceCalibrator
 
 
 # =====================================================================
@@ -551,6 +553,7 @@ def run_benchmark_pipeline(
     batch_size_override: Optional[int] = None,
     seed: int = 42,
     run_ensemble: bool = True,
+    auto_calibrate: bool = True,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
     os.makedirs(results_dir, exist_ok=True)
@@ -574,8 +577,27 @@ def run_benchmark_pipeline(
 
     for ds_name in target_datasets:
         print(f"\n[{ds_name}] Processing Investigation...")
-        cfg = DATASET_CONFIGS[ds_name]
+        cfg = copy.deepcopy(DATASET_CONFIGS[ds_name])
         ds = load_dataset_data(manager, ds_name)
+
+        # Dynamic Auto-Calibration of Imbalance Parameters
+        if auto_calibrate:
+            batch_size_probe = batch_size_override if batch_size_override is not None else cfg["batch_size"]
+            cal = AutoImbalanceCalibrator.calibrate(
+                train_df=ds.train,
+                label_list=ds.label_list,
+                val_df=ds.val,
+                batch_size=batch_size_probe,
+            )
+            if cal["minority_classes"]:
+                cfg["minority_classes"] = cal["minority_classes"]
+            cfg["use_logit_adjustment"] = cal["use_logit_adjustment"]
+            cfg["logit_adj_tau"] = cal["logit_adj_tau"]
+            cfg["eval_logit_adj_tau"] = cal["eval_logit_adj_tau"]
+            cfg["target_oversample"] = cal["target_oversample"]
+            cfg["label_smoothing"] = cal["label_smoothing"]
+            cfg["use_class_weights"] = cal["use_class_weights"]
+
         excel_out_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
         npz_pred_path = os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz")
 
@@ -840,6 +862,18 @@ if __name__ == "__main__":
         dest="run_ensemble",
         help="Disable heterogeneous multi-model ensemble pipeline",
     )
+    parser.add_argument(
+        "--auto_calibrate",
+        action="store_true",
+        default=True,
+        help="Automatically detect minority classes, calibrate logit adjustment tau, oversampling, and regularization",
+    )
+    parser.add_argument(
+        "--no_auto_calibrate",
+        action="store_false",
+        dest="auto_calibrate",
+        help="Disable automatic imbalance calibration and fallback to hardcoded configs",
+    )
 
     args = parser.parse_args()
 
@@ -866,5 +900,6 @@ if __name__ == "__main__":
         batch_size_override=args.batch_size,
         seed=args.seed,
         run_ensemble=args.run_ensemble,
+        auto_calibrate=args.auto_calibrate,
     )
 

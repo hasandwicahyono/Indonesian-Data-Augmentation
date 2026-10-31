@@ -38,6 +38,7 @@ from sklearn.model_selection import StratifiedKFold
 
 from ClassificationDataset import ClassificationDataset
 from IndonesianPreprocessor import IndonesianPreprocessor
+from ImbalanceCalibrator import AutoImbalanceCalibrator
 
 
 class FGM:
@@ -745,6 +746,8 @@ if __name__ == "__main__":
     parser.add_argument("--eval_logit_adj_tau", type=float, default=0.0, help="Inference logit adjustment tau")
     parser.add_argument("--negative_oversample", type=int, default=None, help="Oversample factor for negative/minority class (e.g. 8 for HoASA)")
     parser.add_argument("--neutral_oversample", type=int, default=None, help="Oversample factor for neutral class (e.g. 2 for SmSA)")
+    parser.add_argument("--auto_calibrate", action="store_true", default=True, help="Automatically detect minority classes, calibrate logit adjustment tau, oversampling, and regularization")
+    parser.add_argument("--no_auto_calibrate", action="store_false", dest="auto_calibrate", help="Disable automatic imbalance calibration")
     parser.add_argument("--run_ensemble", action="store_true", default=False, help="Run heterogeneous ensemble pipeline")
     parser.add_argument("--augmented_dir", type=str, default="data/augmented/all_text", help="Directory containing augmented CSVs")
     parser.add_argument("--output_path", type=str, default=None, help="Path to save evaluation Excel")
@@ -785,6 +788,25 @@ if __name__ == "__main__":
             tau_to_use = 0.6
         if eval_tau_to_use == 0.0:
             eval_tau_to_use = 0.3
+
+    # Dynamic Auto-Calibration of Imbalance Parameters
+    if args.auto_calibrate:
+        cal = AutoImbalanceCalibrator.calibrate(
+            train_df=ds.train,
+            label_list=ds.label_list,
+            val_df=ds.val,
+            batch_size=args.batch_size,
+        )
+        if not args.use_logit_adjustment and cal["use_logit_adjustment"]:
+            use_la = True
+            tau_to_use = cal["logit_adj_tau"]
+            eval_tau_to_use = cal["eval_logit_adj_tau"]
+        if target_oversample is None and cal["target_oversample"]:
+            target_oversample = cal["target_oversample"]
+        if args.label_smoothing == 0.08:
+            args.label_smoothing = cal["label_smoothing"]
+        if not args.use_class_weights:
+            args.use_class_weights = cal["use_class_weights"]
 
     model_to_use = args.model_name if args.model_name != "indobenchmark/indobert-base-p1" else default_model
     out_excel = args.output_path or f"data/results/{args.dataset}_evaluation_results.xlsx"
