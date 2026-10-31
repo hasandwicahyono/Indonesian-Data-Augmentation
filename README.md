@@ -85,9 +85,16 @@ Indonesian-Data-Augmentation/
 ### Phase 1: Text Generation & Similarity Scoring
 Generate continuation sequences for dataset records using an Indonesian causal language model and compute embeddings:
 ```bash
-python run_generation.py --dataset SmSA --sample_limit 500
+# Display all candidate models in the registry (First-Gen 2020-2021 vs. Contemporary 2024)
+python run_generation.py --list_models
+
+# Run generation with First-Gen baseline (cahya/gpt2-small-indonesian-522M)
+python run_generation.py --dataset SmSA --gen_model gpt2-small --sample_limit 500
+
+# Run generation with Contemporary Foundation model (sail/Sailor-0.5B or Qwen/Qwen2.5-0.5B)
+python run_generation.py --dataset SmSA --gen_model sailor-0.5b --sample_limit 500
 ```
-Outputs intermediate data with `ecu_similarity`, `cos_similarity`, `jacc_similarity`, and `bleu_sim_1` to `data/raw/SmSA-Augmented-raw.csv`.
+Outputs intermediate data with `ecu_similarity`, `cos_similarity`, `jacc_similarity`, and `bleu_sim_1` to `data/raw/`.
 
 ### Phase 2: Similarity Threshold Filtering & Class Augmentation
 Calculate average metric thresholds and augment only under-represented minority classes:

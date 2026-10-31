@@ -1,16 +1,20 @@
 """
 CLI script to run Phase 1: Text Generation & Similarity Scoring on Indonesian Datasets.
-Supports: SmSA, EmoT, HoASA, MovieOpini.
+Supports both First-Generation (2020–2021) and Contemporary Foundation (2024) models:
+- First-Gen: gpt2-small, gpt2-flax, gpt2-medium
+- Contemporary: sailor-0.5b, qwen2.5-0.5b, smollm2-135m, seallms-1.5b
 """
 
 import os
 import argparse
 from DatasetsManager import IndonesianDatasetsManager
-from Augmenter import IndonesianAugmenter
+from Augmenter import IndonesianAugmenter, GENERATIVE_MODELS_REGISTRY
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate augmentations and similarity scores for Indonesian datasets.")
+    parser = argparse.ArgumentParser(
+        description="Generate augmentations and similarity scores for Indonesian datasets across generative models."
+    )
     parser.add_argument(
         "--dataset",
         type=str,
@@ -22,7 +26,7 @@ def main():
         "--gen_model",
         type=str,
         default="cahya/gpt2-small-indonesian-522M",
-        help="Pretrained Indonesian generative model",
+        help="HuggingFace model ID or preset alias: gpt2-small, gpt2-flax, gpt2-medium, sailor-0.5b, qwen2.5-0.5b, smollm2-135m, seallms-1.5b",
     )
     parser.add_argument(
         "--embed_model",
@@ -48,7 +52,17 @@ def main():
         default=None,
         help="Optional minority classes to focus augmentation on (e.g. fear love, neg pos)",
     )
+    parser.add_argument(
+        "--list_models",
+        action="store_true",
+        help="Display comparison table of all candidate generative models and exit",
+    )
     args = parser.parse_args()
+
+    if args.list_models:
+        print("\nCandidate Generative Models for Indonesian Text Augmentation:")
+        IndonesianAugmenter.display_model_comparisons()
+        return
 
     os.makedirs(args.output_dir, exist_ok=True)
     manager = IndonesianDatasetsManager()
@@ -79,9 +93,11 @@ def main():
         target_labels=args.target_labels,
     )
 
-    out_file = os.path.join(args.output_dir, f"{args.dataset}-Augmented-raw.csv")
+    # Sanitize model tag for file naming
+    model_tag = args.gen_model.split("/")[-1].replace("-indonesian-522M", "").replace("-indonesian", "")
+    out_file = os.path.join(args.output_dir, f"{args.dataset}-Augmented-{model_tag}-raw.csv")
     out_df.to_csv(out_file, index=False)
-    print(f"Phase 1 complete! Saved generated and similarity-scored data to: {out_file}")
+    print(f"\nPhase 1 complete! Saved generated and similarity-scored data to: {out_file}")
 
 
 if __name__ == "__main__":

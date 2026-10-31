@@ -508,6 +508,7 @@ def run_benchmark_pipeline(
     target_datasets: List[str],
     plot_only: bool = False,
     run_generation: bool = False,
+    gen_model: str = "cahya/gpt2-small-indonesian-522M",
     generation_sample_limit: Optional[int] = None,
     results_dir: str = "data/results",
     figures_dir: str = "data/results/figures",
@@ -562,7 +563,7 @@ def run_benchmark_pipeline(
                 print(f"\n  >>> STEP 1: Running Text Generation & Similarity Scoring for {ds_name}...")
                 minority_classes = cfg.get("minority_classes", ds.label_list)
                 augmenter = IndonesianAugmenter(
-                    gen_model_name="cahya/gpt2-small-indonesian-522M",
+                    gen_model_name=gen_model,
                     embed_model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
                 )
                 gen_df = augmenter.process_dataset(
@@ -735,6 +736,17 @@ if __name__ == "__main__":
         help="Limit number of training samples to augment during Phase 1 (e.g. 200 for fast run, None for full)",
     )
     parser.add_argument(
+        "--gen_model",
+        type=str,
+        default="cahya/gpt2-small-indonesian-522M",
+        help="Generative backbone model or alias (e.g. 'gpt2-small', 'sailor-0.5b', 'qwen2.5-0.5b', 'smollm2-135m')",
+    )
+    parser.add_argument(
+        "--list_models",
+        action="store_true",
+        help="Print full comparison table of candidate generative models and exit",
+    )
+    parser.add_argument(
         "--results_dir",
         type=str,
         default="data/results",
@@ -779,6 +791,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if args.list_models:
+        print("\nCandidate Generative Models Comparison (First-Gen 2020–2021 vs. Contemporary 2024):")
+        IndonesianAugmenter.display_model_comparisons()
+        sys.exit(0)
+
     selected = args.datasets
     if "all" in [s.lower() for s in selected]:
         selected = ["SmSA", "MovieOpini", "HoASA", "EmoT"]
@@ -787,6 +804,7 @@ if __name__ == "__main__":
         target_datasets=selected,
         plot_only=args.plot_only,
         run_generation=args.run_generation,
+        gen_model=args.gen_model,
         generation_sample_limit=args.generation_sample_limit,
         results_dir=args.results_dir,
         figures_dir=args.figures_dir,
