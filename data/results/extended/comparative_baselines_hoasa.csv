@@ -1,7 +1,7 @@
 Method / Augmentation,Aug Size,Accuracy,Macro-Prec,Macro-Rec,Macro-F1,F1 Gain
 Baseline (Unaugmented),2493,0.9336,0.6966,0.7559,0.7231,---
-"EDA (Wei & Zou, 2019)",2313,0.9261,0.7071,0.7649,0.7361,+1.80%
-Back-Translation (MarianMT),2293,0.9317,0.7161,0.7747,0.7463,+3.21%
+"EDA (Wei & Zou, 2019)",760,0.9091,0.5427,0.5861,0.5621,-22.27%
+Back-Translation (MarianMT),760,0.8811,0.5089,0.5751,0.5348,-26.04%
 Proposed (ECU-Augmented + AIC),2705,0.9441,0.7112,0.6873,0.6933,-4.13%
 Proposed (COS-Augmented + AIC),2637,0.9371,0.6768,0.6845,0.679,-6.10%
 Proposed (JAC-Augmented + AIC),2653,0.9336,0.6705,0.6832,0.6748,-6.68%

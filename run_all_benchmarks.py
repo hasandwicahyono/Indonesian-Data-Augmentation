@@ -668,8 +668,21 @@ def run_all_tpami_access_suite(
     dyn_pdf = os.path.join(figures_dir, "training_dynamics_convergence_curves.pdf")
     generate_tpami_training_dynamics_plot(output_png=dyn_png, output_pdf=dyn_pdf)
 
-    # 13. Dynamic Manuscript Tables for IEEE Access and IEEE TPAMI
-    print("\n>>> [TPAMI / Access Test 13] Generating All Dynamic Tables and Compiling Manuscripts...")
+    # 13. Generative Backbone Models Benchmark & Comparison (First-Gen vs Contemporary)
+    print("\n>>> [TPAMI / Access Test 13] Benchmarking and Comparing Generative Backbone Models...")
+    try:
+        from benchmark_generative_models import benchmark_candidate_generative_models
+        gen_df = benchmark_candidate_generative_models(
+            output_csv=os.path.join(results_dir, "generative_models_comparison.csv"),
+            output_tex=os.path.join(paper_dir, "table_generative_models_comparison.tex"),
+            force=False,
+        )
+        suite_results["generative_models_comparison"] = gen_df
+    except Exception as e:
+        print(f"  [Notice] Generative models benchmarking deferred: {e}")
+
+    # 14. Dynamic Manuscript Tables for IEEE Access and IEEE TPAMI
+    print("\n>>> [TPAMI / Access Test 14] Generating All Dynamic Tables and Compiling Manuscripts...")
     from generate_dynamic_paper_tables import generate_all_dynamic_tables
     dyn_tables = generate_all_dynamic_tables(
         results_dir="data/results",
@@ -679,7 +692,7 @@ def run_all_tpami_access_suite(
     )
     suite_results.update(dyn_tables)
 
-    # 14. Synchronize figures to paper/ directory for manuscript compilation
+    # 15. Synchronize figures to paper/ directory for manuscript compilation
     if os.path.exists(paper_dir):
         print(f"\n>>> Synchronizing all generated figures to manuscript folder '{paper_dir}'...")
         fig_files = [

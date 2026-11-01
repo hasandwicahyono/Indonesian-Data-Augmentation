@@ -226,30 +226,40 @@ class IndonesianBackTranslator:
             self._initialized = False
 
     def translate(self, text: str) -> str:
+        return self.translate_batch([text])[0]
+
+    def translate_batch(self, texts: List[str], batch_size: int = 32) -> List[str]:
         self._lazy_init()
         if not self._initialized:
             # High-fidelity semantic paraphrase rule
-            words = text.split()
-            out = []
-            for w in words:
-                syns = INDONESIAN_SYNONYMS.get(w.lower())
-                if syns and random.random() < 0.35:
-                    out.append(random.choice(syns))
-                else:
-                    out.append(w)
-            return " ".join(out)
+            results = []
+            for text in texts:
+                words = text.split()
+                out = []
+                for w in words:
+                    syns = INDONESIAN_SYNONYMS.get(w.lower())
+                    if syns and random.random() < 0.35:
+                        out.append(random.choice(syns))
+                    else:
+                        out.append(w)
+                results.append(" ".join(out))
+            return results
 
         import torch
-        # Forward translation: id -> en
+        results = []
         with torch.no_grad():
-            inputs = self._id2en_tok([text], return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
-            translated = self._id2en_model.generate(**inputs, max_length=128)
-            en_text = self._id2en_tok.batch_decode(translated, skip_special_tokens=True)[0]
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i : i + batch_size]
+                # Forward: id -> en
+                inputs = self._id2en_tok(batch, return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
+                translated_en = self._id2en_model.generate(**inputs, max_length=128)
+                en_texts = self._id2en_tok.batch_decode(translated_en, skip_special_tokens=True)
 
-            # Backward translation: en -> id
-            inputs_en = self._en2id_tok([en_text], return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
-            translated_id = self._en2id_model.generate(**inputs_en, max_length=128)
-            id_text = self._en2id_tok.batch_decode(translated_id, skip_special_tokens=True)[0]
+                # Backward: en -> id
+                inputs_en = self._en2id_tok(en_texts, return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
+                translated_id = self._en2id_model.generate(**inputs_en, max_length=128)
+                id_texts = self._en2id_tok.batch_decode(translated_id, skip_special_tokens=True)
+                results.extend(id_texts)
 
-        return id_text
+        return results
 

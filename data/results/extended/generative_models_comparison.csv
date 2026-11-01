@@ -1,0 +1,4 @@
+Model Key,Model ID,Generation Era,Release,Parameters,Architecture,Latency (ms),Throughput (tok/s),Distinct-1,Distinct-2,Entropy,Cosine Sim,Jaccard Sim,BLEU-2
+gpt2-small,cahya/gpt2-small-indonesian-522M,First-Generation (2020),2020,117M,GPT-2 Decoder-Only,319.55,100.14,0.7509,0.9888,7.4535,0.0767,0.0191,0.0103
+gpt2-flax,flax-community/gpt2-small-indonesian,First-Generation (2021),2021,124M,GPT-2 Decoder-Only,235.61,135.82,0.6556,0.9561,7.391,0.255,0.0517,0.0149
+smollm2-135m,HuggingFaceTB/SmolLM2-135M,Contemporary Foundation (2024),2024,135M,"Modern Compact Decoder (RoPE, GQA)",315.28,93.83,0.8133,0.9928,6.7903,0.0126,0.0029,0.0013

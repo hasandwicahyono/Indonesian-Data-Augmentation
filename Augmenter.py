@@ -22,6 +22,7 @@ from SimilarityMeasures import (
     calculate_bleu_scores,
     distance_to_similarity,
 )
+from benchmark_generative_models import benchmark_candidate_generative_models
 
 
 def _is_accelerate_available() -> bool:
@@ -277,6 +278,26 @@ class IndonesianAugmenter:
         for alias, info in GENERATIVE_MODELS_REGISTRY.items():
             print(f"{alias:<14} | {info['release_year']:<7} | {info['generation']:<26} | {info['parameters']:<7} | {info['architecture']:<22} | {info['model_id']}")
         print("=" * 105)
+
+    @classmethod
+    def benchmark_generative_models(
+        cls,
+        models: Optional[List[str]] = None,
+        prompts: Optional[List[str]] = None,
+        device: Optional[str] = None,
+        output_csv: str = "data/results/extended/generative_models_comparison.csv",
+        output_tex: str = "paper/table_generative_models_comparison.tex",
+        force: bool = False,
+    ) -> pd.DataFrame:
+        """Benchmarks all candidate generative models on throughput, latency, lexical diversity and similarity."""
+        return benchmark_candidate_generative_models(
+            models=models,
+            prompts=prompts,
+            device=device,
+            output_csv=output_csv,
+            output_tex=output_tex,
+            force=force,
+        )
 
     def _init_models(self):
         """Initializes generator and embedder models."""

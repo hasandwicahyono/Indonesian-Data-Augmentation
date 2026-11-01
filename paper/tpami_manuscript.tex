@@ -136,7 +136,14 @@ An autoregressive language model $\mathcal{M}_{\text{gen}}$ parameterized by wei
 \begin{equation}
     P_\Theta(x \mid x^{\text{prompt}}) = \prod_{t=L_p+1}^{|x|} P_\Theta(w_t \mid w_{<t})
 \end{equation}
-Beam search with length-normalized nucleus sampling generates a synthetic continuation $\hat{x}_i^{\text{gen}} \sim P_\Theta(\cdot \mid x_i^{\text{prompt}})$, constructing the candidate augmented sequence $\tilde{x}_i = x_i \circ \hat{x}_i^{\text{gen}}$. The complete augmented candidate sequence inherits the ground-truth class label $y_i$ of the seed prompt, expanding the effective dataset size for underrepresented classes. In our implementation, decoding uses beam width $B=5$, repetition penalty $r=2.5$, no-repeat $n$-gram size $n=3$, top-$p=0.95$, and temperature $T=1.0$. However, because autoregressive sampling cannot inherently guarantee category consistency, these raw candidates must be rigorously audited before inclusion in the training set.
+Beam search with length-normalized nucleus sampling generates a synthetic continuation $\hat{x}_i^{\text{gen}} \sim P_\Theta(\cdot \mid x_i^{\text{prompt}})$, constructing the candidate augmented sequence $\tilde{x}_i = x_i \circ \hat{x}_i^{\text{gen}}$. The complete augmented candidate sequence inherits the ground-truth class label $y_i$ of the seed prompt, expanding the effective dataset size for underrepresented classes. In our implementation, decoding uses beam width $B=5$, repetition penalty $r=2.5$, no-repeat $n$-gram size $n=3$, top-$p=0.95$, and temperature $T=1.0$. To empirically justify the choice of generative backbone, Table \ref{tab:generative_models} provides a comprehensive evaluation of candidate first-generation and contemporary foundation architectures across inference throughput, sample latency, lexical diversity, and semantic preservation. However, because autoregressive sampling cannot inherently guarantee category consistency, these raw candidates must be rigorously audited before inclusion in the training set.
+
+\begin{table*}[!t]
+\caption{Empirical Benchmarking of Candidate Generative Backbone Models for Indonesian Sequence Augmentation Across Architectural Eras, Computational Latency, Lexical Diversity, and Semantic Fidelity}
+\label{tab:generative_models}
+\centering
+\input{table_generative_models_comparison.tex}
+\end{table*}
 
 \subsection{Dual-Space Projection and Manifold Drift Bound}
 \label{subsec:drift_bound}

@@ -13,35 +13,55 @@ from typing import List, Tuple, Union
 from nltk.translate.bleu_score import sentence_bleu, corpus_bleu, SmoothingFunction
 
 
-def euclidean_distance(x: List[float], y: List[float]) -> float:
+def _to_numpy(v: Union[List[float], np.ndarray, any]) -> np.ndarray:
+    """Helper to safely convert list, numpy array or torch tensor to flat 1D numpy array."""
+    if v is None:
+        return np.array([], dtype=np.float32)
+    if hasattr(v, "detach"):
+        v = v.detach().cpu().numpy()
+    elif not isinstance(v, np.ndarray):
+        v = np.asarray(v, dtype=np.float32)
+    return v.flatten()
+
+
+def euclidean_distance(x: Union[List[float], np.ndarray, any], y: Union[List[float], np.ndarray, any]) -> float:
     """Calculates Euclidean distance between two embedding vectors."""
-    if len(x) == 0 or len(y) == 0:
+    arr_x = _to_numpy(x)
+    arr_y = _to_numpy(y)
+    if arr_x.size == 0 or arr_y.size == 0:
         return 0.0
-    return float(math.sqrt(sum(pow(a - b, 2) for a, b in zip(x, y))))
+    dist = float(np.linalg.norm(arr_x - arr_y))
+    return float(round(dist, 4))
 
 
 def distance_to_similarity(distance: float) -> float:
     """Converts a distance metric into an exponential similarity score [0, 1]."""
     try:
-        return float(1.0 / math.exp(distance))
+        return float(1.0 / math.exp(float(distance)))
     except OverflowError:
         return 0.0
 
 
-def squared_sum(x: List[float]) -> float:
+def squared_sum(x: Union[List[float], np.ndarray, any]) -> float:
     """Returns the square root of the sum of squares."""
-    return math.sqrt(sum(a * a for a in x))
+    arr = _to_numpy(x)
+    return float(np.linalg.norm(arr))
 
 
-def cos_similarity(x: List[float], y: List[float]) -> float:
+def cos_similarity(x: Union[List[float], np.ndarray, any], y: Union[List[float], np.ndarray, any]) -> float:
     """Calculates cosine similarity between two embedding vectors."""
-    if len(x) == 0 or len(y) == 0:
+    arr_x = _to_numpy(x)
+    arr_y = _to_numpy(y)
+    if arr_x.size == 0 or arr_y.size == 0:
         return 0.0
-    denom = squared_sum(x) * squared_sum(y)
-    if denom == 0:
+    norm_x = float(np.linalg.norm(arr_x))
+    norm_y = float(np.linalg.norm(arr_y))
+    denom = norm_x * norm_y
+    if denom == 0.0:
         return 0.0
-    numerator = sum(a * b for a, b in zip(x, y))
-    return float(round(numerator / float(denom), 4))
+    cos_val = float(np.dot(arr_x, arr_y) / denom)
+    cos_val = max(-1.0, min(1.0, cos_val))
+    return float(round(cos_val, 4))
 
 
 def jaccard_similarity(text1: Union[str, List[str]], text2: Union[str, List[str]]) -> float:
