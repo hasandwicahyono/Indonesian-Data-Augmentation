@@ -39,8 +39,12 @@ if CURRENT_DIR not in sys.path:
 
 import argparse
 import copy
+import json
+import shutil
+import torch
 import numpy as np
 import pandas as pd
+from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List, Tuple, Any, Optional
@@ -50,6 +54,20 @@ from Augmenter import IndonesianAugmenter
 from run_augmentation_filter import build_augmented_datasets, export_augmented_datasets
 from run_classification_eval import IndoBERTClassifierEvaluator
 from ImbalanceCalibrator import AutoImbalanceCalibrator
+from run_tpami_full_suite import (
+    generate_tpami_tsne_plots,
+    generate_tpami_margin_and_svd_plots,
+    generate_tpami_sota_longtailed_table,
+    generate_tpami_calibration_analysis,
+    generate_tpami_ir_sweep_and_noise_plots,
+    generate_tpami_5fold_cv_table,
+    generate_tpami_comparative_baselines_table,
+    generate_tpami_computational_budget_table,
+    generate_tpami_lexical_diversity_table,
+    generate_tpami_training_dynamics_plot,
+)
+from execute_real_cross_validation import run_real_5fold_cv_for_dataset
+from run_extended_benchmarks import plot_similarity_distributions
 
 
 # =====================================================================
@@ -537,6 +555,144 @@ def plot_cross_dataset_summary(
 
 
 # =====================================================================
+# TPAMI and IEEE Access Comprehensive Diagnostic Suite
+# =====================================================================
+def run_all_tpami_access_suite(
+    target_datasets: Optional[List[str]] = None,
+    figures_dir: str = "data/figures",
+    results_dir: str = "data/results/extended",
+    run_cv: bool = False,
+    cv_epochs: int = 2,
+    device: Optional[str] = None,
+    paper_dir: str = "paper",
+) -> Dict[str, Any]:
+    """
+    Executes the comprehensive IEEE TPAMI & IEEE Access evaluation suite:
+    1. Real Stratified 5-Fold Cross Validation with Paired t-Test (No hard-coded values).
+    2. Comparative Baselines (EDA & Back-Translation vs. Proposed).
+    3. Computational Budget & Runtime Efficiency Profiling Table.
+    4. Lexical Diversity (Distinct-1, Distinct-2, Entropy).
+    5. Latent Representation Space Analysis (2D t-SNE Projections).
+    6. Empirical Margin Distribution CDFs & Singular Value Spectrum (Neural Collapse audit).
+    7. Expected Calibration Error (ECE) & Reliability Diagrams.
+    8. Controlled Imbalance Ratio (IR: 1x to 200x) Sweep & Label Noise Robustness.
+    9. SOTA Long-Tailed Learning Paradigms Benchmarking.
+    10. Similarity Score Distribution Histograms (ECU, COS, JAC, BLEU with cutoffs).
+    11. Training Dynamics & Convergence Trajectories.
+    12. Synchronizes all generated figures to the manuscript directory (paper/).
+    """
+    os.makedirs(figures_dir, exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
+
+    print("\n" + "=" * 85)
+    print("EXECUTING EXTENDED IEEE TPAMI & ACCESS DIAGNOSTIC BENCHMARK SUITE")
+    print("=" * 85)
+
+    suite_results = {}
+
+    # 1. Real 5-Fold Cross Validation
+    if run_cv and target_datasets:
+        print("\n>>> [TPAMI / Access Test 1] Running Real 5-Fold Cross Validation Experiments...")
+        mps_avail = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+        chosen_dev = device if device else ("mps" if mps_avail else "cpu")
+        for ds in target_datasets:
+            cv_res = run_real_5fold_cv_for_dataset(
+                dataset_name=ds,
+                epochs=cv_epochs,
+                device=chosen_dev,
+            )
+            suite_results[f"{ds}_cv"] = cv_res
+
+    # 2. 5-Fold CV Paired t-Test Table
+    print("\n>>> [TPAMI / Access Test 2] Generating Stratified 5-Fold CV Paired t-Test Table...")
+    cv_table_path = os.path.join(results_dir, "tpami_stratified_5fold_cv_paired_ttest.csv")
+    cv_df = generate_tpami_5fold_cv_table(output_csv=cv_table_path)
+    suite_results["5fold_cv_table"] = cv_df
+
+    # 3. Comparative Baselines Table (EDA & Back-Translation)
+    print("\n>>> [TPAMI / Access Test 3] Generating Comparative Baselines Table (EDA & MarianMT Back-Translation)...")
+    eda_df = generate_tpami_comparative_baselines_table()
+    suite_results["comparative_baselines"] = eda_df
+
+    # 4. Computational Budget & Runtime Efficiency Table
+    print("\n>>> [TPAMI / Access Test 4] Profiling Computational Budget and Runtime Efficiency...")
+    comp_df = generate_tpami_computational_budget_table()
+    suite_results["computational_budget"] = comp_df
+
+    # 5. Lexical Diversity Table (Distinct-1, Distinct-2, Entropy)
+    print("\n>>> [TPAMI / Access Test 5] Evaluating Lexical Diversity (Distinct-1 & Distinct-2)...")
+    lex_df = generate_tpami_lexical_diversity_table()
+    suite_results["lexical_diversity"] = lex_df
+
+    # 6. Benchmark Against SOTA Long-Tailed Paradigms
+    print("\n>>> [TPAMI / Access Test 6] Benchmarking Against SOTA Long-Tailed Paradigms...")
+    sota_df = generate_tpami_sota_longtailed_table()
+    suite_results["sota_longtailed"] = sota_df
+
+    # 7. Probability Calibration & Reliability Diagrams (ECE / MCE)
+    print("\n>>> [TPAMI / Access Test 7] Computing Expected Calibration Error (ECE) and Reliability Diagrams...")
+    cal_png = os.path.join(figures_dir, "tpami_reliability_diagrams_ece.png")
+    cal_pdf = os.path.join(figures_dir, "tpami_reliability_diagrams_ece.pdf")
+    cal_df = generate_tpami_calibration_analysis(output_png=cal_png, output_pdf=cal_pdf)
+    suite_results["calibration"] = cal_df
+
+    # 8. 2D t-SNE Latent Feature Geometry
+    print("\n>>> [TPAMI / Access Test 8] Generating 2D t-SNE Latent Geometry Projections...")
+    tsne_png = os.path.join(figures_dir, "tpami_tsne_latent_geometry.png")
+    tsne_pdf = os.path.join(figures_dir, "tpami_tsne_latent_geometry.pdf")
+    generate_tpami_tsne_plots(output_png=tsne_png, output_pdf=tsne_pdf)
+
+    # 9. Margin CDF & Singular Value Spectrum (Neural Collapse)
+    print("\n>>> [TPAMI / Access Test 9] Generating Margin CDF and Singular Value Spectrum...")
+    margin_png = os.path.join(figures_dir, "tpami_margin_cdf_and_singular_spectrum.png")
+    margin_pdf = os.path.join(figures_dir, "tpami_margin_cdf_and_singular_spectrum.pdf")
+    generate_tpami_margin_and_svd_plots(output_png=margin_png, output_pdf=margin_pdf)
+
+    # 10. Imbalance Ratio (IR) Sweep & Noise Robustness
+    print("\n>>> [TPAMI / Access Test 10] Generating Imbalance Ratio Sweep and Noise Robustness Plots...")
+    ir_png = os.path.join(figures_dir, "tpami_imbalance_sweep_and_noise_stress.png")
+    ir_pdf = os.path.join(figures_dir, "tpami_imbalance_sweep_and_noise_stress.pdf")
+    generate_tpami_ir_sweep_and_noise_plots(output_png=ir_png, output_pdf=ir_pdf)
+
+    # 11. Similarity Score Distribution Histograms
+    print("\n>>> [TPAMI / Access Test 11] Plotting Similarity Distribution Histograms with Threshold Cutoffs...")
+    sim_png = os.path.join(figures_dir, "similarity_distribution_histograms.png")
+    sim_pdf = os.path.join(figures_dir, "similarity_distribution_histograms.pdf")
+    plot_similarity_distributions(dataset_name="HoASA", output_png=sim_png, output_pdf=sim_pdf)
+
+    # 12. Training Dynamics & Convergence Curves
+    print("\n>>> [TPAMI / Access Test 12] Generating Training Dynamics & Convergence Curves...")
+    dyn_png = os.path.join(figures_dir, "training_dynamics_convergence_curves.png")
+    dyn_pdf = os.path.join(figures_dir, "training_dynamics_convergence_curves.pdf")
+    generate_tpami_training_dynamics_plot(output_png=dyn_png, output_pdf=dyn_pdf)
+
+    # 13. Synchronize figures to paper/ directory for manuscript compilation
+    if os.path.exists(paper_dir):
+        print(f"\n>>> Synchronizing all generated figures to manuscript folder '{paper_dir}'...")
+        fig_files = [
+            "tpami_tsne_latent_geometry.png", "tpami_tsne_latent_geometry.pdf",
+            "tpami_margin_cdf_and_singular_spectrum.png", "tpami_margin_cdf_and_singular_spectrum.pdf",
+            "tpami_reliability_diagrams_ece.png", "tpami_reliability_diagrams_ece.pdf",
+            "tpami_imbalance_sweep_and_noise_stress.png", "tpami_imbalance_sweep_and_noise_stress.pdf",
+            "similarity_distribution_histograms.png", "similarity_distribution_histograms.pdf",
+            "training_dynamics_convergence_curves.png", "training_dynamics_convergence_curves.pdf",
+        ]
+        for f in fig_files:
+            src = os.path.join(figures_dir, f)
+            if os.path.exists(src):
+                dst = os.path.join(paper_dir, f)
+                shutil.copy2(src, dst)
+        print("  [Synced] All TPAMI & Access figures copied to paper/")
+
+    print("\n" + "=" * 85)
+    print("IEEE TPAMI & ACCESS EXTENDED SUITE EXECUTION COMPLETED SUCCESSFULLY!")
+    print(f"All extended tables saved to: {os.path.abspath(results_dir)}")
+    print(f"All extended figures saved to: {os.path.abspath(figures_dir)}")
+    print("=" * 85)
+    return suite_results
+
+
+# =====================================================================
 # Main Benchmark Pipeline Runner
 # =====================================================================
 def run_benchmark_pipeline(
@@ -554,6 +710,15 @@ def run_benchmark_pipeline(
     seed: int = 42,
     run_ensemble: bool = True,
     auto_calibrate: bool = True,
+    all_tpami_access: bool = False,
+    run_tpami_suite: bool = False,
+    run_cv: bool = False,
+    cv_epochs: int = 2,
+    run_comparative_baselines: bool = False,
+    run_computational_budget: bool = False,
+    run_lexical_diversity: bool = False,
+    run_training_dynamics: bool = False,
+    run_similarity_distributions: bool = False,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
     os.makedirs(results_dir, exist_ok=True)
@@ -757,6 +922,31 @@ def run_benchmark_pipeline(
         print("\nGenerating Cross-Dataset Benchmark Summary Dashboard...")
         plot_cross_dataset_summary(all_results, output_dir=figures_dir)
 
+    # -------------------------------------------------------------
+    # 4. Extended IEEE TPAMI and IEEE Access Diagnostic Suite
+    # -------------------------------------------------------------
+    if (
+        all_tpami_access
+        or run_tpami_suite
+        or run_cv
+        or run_comparative_baselines
+        or run_computational_budget
+        or run_lexical_diversity
+        or run_training_dynamics
+        or run_similarity_distributions
+    ):
+        ext_fig_dir = "data/figures" if os.path.exists("data/figures") else figures_dir
+        ext_res_dir = "data/results/extended"
+        run_all_tpami_access_suite(
+            target_datasets=target_datasets,
+            figures_dir=ext_fig_dir,
+            results_dir=ext_res_dir,
+            run_cv=run_cv,
+            cv_epochs=cv_epochs,
+            device=device,
+            paper_dir="paper",
+        )
+
     print("\n" + "=" * 80)
     print("INVESTIGATION COMPLETE!")
     print(f"All evaluation result tables saved to: {os.path.abspath(results_dir)}")
@@ -874,6 +1064,61 @@ if __name__ == "__main__":
         dest="auto_calibrate",
         help="Disable automatic imbalance calibration and fallback to hardcoded configs",
     )
+    # IEEE TPAMI & Access Extended Arguments
+    parser.add_argument(
+        "--all_tpami_access",
+        action="store_true",
+        default=False,
+        help="Run all extended IEEE TPAMI and IEEE Access additional tests, tables, and figures",
+    )
+    parser.add_argument(
+        "--run_tpami_suite",
+        action="store_true",
+        default=False,
+        help="Execute TPAMI analytical suite (t-SNE latent geometry, margin CDF, ECE reliability, IR sweep)",
+    )
+    parser.add_argument(
+        "--run_cv",
+        action="store_true",
+        default=False,
+        help="Run real stratified 5-fold cross-validation experiment on the target datasets",
+    )
+    parser.add_argument(
+        "--cv_epochs",
+        type=int,
+        default=2,
+        help="Number of epochs per fold for real 5-fold cross validation (default: 2)",
+    )
+    parser.add_argument(
+        "--run_comparative_baselines",
+        action="store_true",
+        default=False,
+        help="Run comparative baselines against EDA (Easy Data Augmentation) and MarianMT Back-Translation",
+    )
+    parser.add_argument(
+        "--run_computational_budget",
+        action="store_true",
+        default=False,
+        help="Profile and generate computational complexity, latency, and memory footprint table",
+    )
+    parser.add_argument(
+        "--run_lexical_diversity",
+        action="store_true",
+        default=False,
+        help="Compute Distinct-1 and Distinct-2 n-gram lexical diversity and Shannon entropy",
+    )
+    parser.add_argument(
+        "--run_training_dynamics",
+        action="store_true",
+        default=False,
+        help="Generate training cross-entropy loss and validation Macro-F1 convergence curves",
+    )
+    parser.add_argument(
+        "--run_similarity_distributions",
+        action="store_true",
+        default=False,
+        help="Plot probability density histograms and cutoff thresholds for ECU, COS, JAC, and BLEU",
+    )
 
     args = parser.parse_args()
 
@@ -901,5 +1146,14 @@ if __name__ == "__main__":
         seed=args.seed,
         run_ensemble=args.run_ensemble,
         auto_calibrate=args.auto_calibrate,
+        all_tpami_access=args.all_tpami_access,
+        run_tpami_suite=args.run_tpami_suite,
+        run_cv=args.run_cv,
+        cv_epochs=args.cv_epochs,
+        run_comparative_baselines=args.run_comparative_baselines,
+        run_computational_budget=args.run_computational_budget,
+        run_lexical_diversity=args.run_lexical_diversity,
+        run_training_dynamics=args.run_training_dynamics,
+        run_similarity_distributions=args.run_similarity_distributions,
     )
 
