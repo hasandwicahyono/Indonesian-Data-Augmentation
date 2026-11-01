@@ -222,7 +222,9 @@ def find_existing_results_file(dataset_name: str, results_dir: str) -> Optional[
 def clean_variant_name(raw_name: str) -> str:
     """Standardizes variant names into readable labels."""
     raw = str(raw_name).strip()
-    if "Baseline" in raw or "NotAugmented" in raw:
+    if "Raw" in raw or "ERM" in raw:
+        return "Raw-ERM"
+    elif "Baseline" in raw or "NotAugmented" in raw:
         return "Baseline"
     elif "Ensemble" in raw:
         return "Ensemble"
@@ -272,7 +274,7 @@ def plot_dataset_metric_comparison(
     available_metrics = [m for m in metrics if m in df.columns]
 
     # Ensure standard variant order
-    variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU", "Ensemble"]
+    variant_order = ["Raw-ERM", "Baseline", "ECU", "COS", "JAC", "BLEU", "Ensemble"]
     ordered_variants = [v for v in variant_order if v in df["variant"].values]
     if not ordered_variants:
         ordered_variants = df["variant"].tolist()
@@ -490,7 +492,7 @@ def plot_cross_dataset_summary(
             if old_col in df.columns and new_col not in df.columns:
                 df[new_col] = df[old_col]
 
-        variant_order = ["Baseline", "ECU", "COS", "JAC", "BLEU", "Ensemble"]
+        variant_order = ["Raw-ERM", "Baseline", "ECU", "COS", "JAC", "BLEU", "Ensemble"]
         ordered_vars = [v for v in variant_order if v in df["variant"].values]
         if not ordered_vars:
             ordered_vars = df["variant"].tolist()
@@ -860,14 +862,22 @@ def run_benchmark_pipeline(
         # -------------------------------------------------------------
         print(f"  Generating confusion matrix comparison for {ds_name}...")
         # Check if predictions NPZ exists
-        npz_cand = npz_pred_path if os.path.exists(npz_pred_path) else os.path.join(results_dir, f"{ds_name}_predictions.npz")
-        if not os.path.exists(npz_cand):
-            # Check fallback name with _1
-            npz_cand_alt = os.path.join(results_dir, f"{ds_name}_evaluation_results_1_predictions.npz")
-            if os.path.exists(npz_cand_alt):
-                npz_cand = npz_cand_alt
+        npz_candidates = [
+            npz_pred_path,
+            os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz"),
+            os.path.join(results_dir, f"{ds_name}_predictions.npz"),
+            os.path.join(results_dir, f"{ds_name}_evaluation_results_1_predictions.npz"),
+            os.path.join(CURRENT_DIR, "data", "results", f"{ds_name}_evaluation_results_predictions.npz"),
+            os.path.join(CURRENT_DIR, "data", "results", f"{ds_name}_predictions.npz"),
+            os.path.join(CURRENT_DIR, "data", "results", f"{ds_name}_evaluation_results_1_predictions.npz"),
+        ]
+        npz_cand = None
+        for cand in npz_candidates:
+            if cand and os.path.exists(cand):
+                npz_cand = cand
+                break
 
-        if os.path.exists(npz_cand):
+        if npz_cand and os.path.exists(npz_cand):
             try:
                 npz_data = np.load(npz_cand)
                 base_key_true = f"{ds_name}-Baseline-NotAugmented__true"

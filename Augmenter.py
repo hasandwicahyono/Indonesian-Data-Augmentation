@@ -338,7 +338,7 @@ class IndonesianAugmenter:
         self.embed_model = SentenceTransformer(self.embed_model_name, device=embed_device)
 
     def generate_continuation(self, text: str) -> str:
-        """Generates continuation text using causal language model."""
+        """Generates continuation text using causal language model with sentence boundary truncation."""
         clean_text = self.preprocessor.preprocess(text)
         prompt = clean_text[:self.max_length]
 
@@ -358,7 +358,15 @@ class IndonesianAugmenter:
         try:
             output = self.gen_pipeline(prompt, **gen_kwargs)
             full_gen = output[0]["generated_text"]
-            return full_gen
+            
+            # Sentence Boundary Truncation: truncate open trailing fragments
+            if len(full_gen) > len(prompt):
+                suffix = full_gen[len(prompt):].strip()
+                last_punct = max(suffix.rfind("."), suffix.rfind("!"), suffix.rfind("?"))
+                if last_punct > 5:
+                    suffix = suffix[: last_punct + 1].strip()
+                full_gen = prompt + " " + suffix
+            return full_gen.strip()
         except Exception as e:
             print(f"Generation error: {e}")
             return prompt

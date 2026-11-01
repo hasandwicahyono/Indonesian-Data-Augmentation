@@ -614,19 +614,39 @@ class IndoBERTClassifierEvaluator:
         epochs: Optional[int] = None,
         early_stopping: Optional[bool] = None,
         patience: Optional[int] = None,
+        evaluate_raw_erm: bool = True,
     ) -> pd.DataFrame:
         """
         Runs comprehensive benchmark comparing:
-        - Baseline (Not-Augmented)
-        - ECU-Augmented
+        - Baseline (Raw-ERM without calibration, if evaluate_raw_erm is True)
+        - Baseline (Calibrated with AIC: Logit Adjustment + Oversampling + FGM)
+        - ECU-Augmented (Quality-verified, anti-hallucination filtered)
         - COS-Augmented
         - JAC-Augmented
         - BLEU-Augmented
+        - Heterogeneous Ensemble (if configured)
         Computes Paired comparison statistics matching the paper.
         """
+        from run_augmentation_filter import is_hallucinatory_or_corrupt
+
+        # Quality Sanitization: ensure no hallucinatory Wikipedia/corrupted samples pollute augmented training
+        base_text_set = set(str(t).strip() for t in base_train_df["text"].dropna())
+        cleaned_aug_dfs = {}
+        for metric, aug_df in augmented_dfs.items():
+            if "text" in aug_df.columns:
+                is_base = aug_df["text"].astype(str).str.strip().isin(base_text_set)
+                is_corrupt = aug_df["text"].apply(is_hallucinatory_or_corrupt)
+                dropped = is_corrupt & (~is_base)
+                if dropped.sum() > 0:
+                    print(f"  [QUALITY FILTER] Sanitized {dropped.sum()} hallucinated candidate(s) from {metric} augmented training set.")
+                clean_aug = aug_df[is_base | (~is_corrupt)].copy().reset_index(drop=True)
+                cleaned_aug_dfs[metric] = clean_aug
+            else:
+                cleaned_aug_dfs[metric] = aug_df
+
         # Validate baseline vs augmented size sanity
-        min_aug_size = min(len(df) for df in augmented_dfs.values()) if augmented_dfs else 0
-        if len(base_train_df) > min_aug_size:
+        min_aug_size = min(len(df) for df in cleaned_aug_dfs.values()) if cleaned_aug_dfs else 0
+        if len(base_train_df) > min_aug_size and min_aug_size > 0:
             print(
                 f"  [SANITY WARNING] base_train_df ({len(base_train_df)}) is larger than "
                 f"augmented dataset ({min_aug_size})! For valid comparison, baseline training set "
@@ -635,7 +655,46 @@ class IndoBERTClassifierEvaluator:
 
         results = []
 
-        # 1. Baseline
+        # 1. Baseline: Raw ERM (if calibration is active, evaluate uncalibrated ERM first for true comparative baseline)
+        raw_erm_res = None
+        if evaluate_raw_erm and (self.use_logit_adjustment or self.target_oversample or self.use_fgm):
+            print(f"\n>>> [DISENTANGLED BASELINE 1/2] Evaluating Standard Raw ERM Baseline (No Calibrator, No Augmentation)...")
+            raw_evaluator = IndoBERTClassifierEvaluator(
+                model_name=self.model_name,
+                max_len=self.max_len,
+                batch_size=self.batch_size,
+                epochs=epochs if epochs is not None else self.epochs,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                device=str(self.device),
+                seed=seed,
+                early_stopping=early_stopping if early_stopping is not None else self.early_stopping,
+                patience=patience if patience is not None else self.patience,
+                min_delta=self.min_delta,
+                use_preprocessing=self.use_preprocessing,
+                use_class_weights=False,
+                label_smoothing=0.0,
+                use_fgm=False,
+                use_logit_adjustment=False,
+                logit_adj_tau=0.0,
+                eval_logit_adj_tau=0.0,
+                target_oversample=None,
+            )
+            raw_erm_res = raw_evaluator.evaluate_dataset(
+                base_train_df,
+                base_test_df,
+                label_list,
+                val_df=val_df,
+                name=f"{dataset_name}-Baseline-RawERM",
+                seed=seed,
+                epochs=epochs,
+                early_stopping=early_stopping,
+                patience=patience,
+            )
+            results.append(raw_erm_res)
+
+        # 2. Baseline: Calibrated Baseline (Not-Augmented with AIC)
+        print(f"\n>>> [DISENTANGLED BASELINE 2/2] Evaluating Calibrated Baseline (With AIC: Logit Adj + Oversampler + FGM)...")
         base_res = self.evaluate_dataset(
             base_train_df,
             base_test_df,
@@ -647,10 +706,18 @@ class IndoBERTClassifierEvaluator:
             early_stopping=early_stopping,
             patience=patience,
         )
+        if raw_erm_res is not None:
+            aic_gain = base_res["macro_f1"] - raw_erm_res["macro_f1"]
+            aic_pct = (aic_gain / raw_erm_res["macro_f1"]) * 100.0 if raw_erm_res["macro_f1"] > 0 else 0.0
+            base_res["f1_improvement"] = aic_gain
+            base_res["f1_improvement_pct"] = aic_pct
         results.append(base_res)
 
-        # 2. Augmented sets
-        for metric, aug_train in augmented_dfs.items():
+        # Reference baseline for calculating augmentation gain (compare against calibrated baseline)
+        ref_base_res = base_res
+
+        # 3. Augmented sets (Quality-verified, anti-hallucination filtered)
+        for metric, aug_train in cleaned_aug_dfs.items():
             res = self.evaluate_dataset(
                 aug_train,
                 base_test_df,
@@ -662,19 +729,19 @@ class IndoBERTClassifierEvaluator:
                 early_stopping=early_stopping,
                 patience=patience,
             )
-            f1_gain = res["macro_f1"] - base_res["macro_f1"]
-            pct_gain = (f1_gain / base_res["macro_f1"]) * 100.0 if base_res["macro_f1"] > 0 else 0.0
+            f1_gain = res["macro_f1"] - ref_base_res["macro_f1"]
+            pct_gain = (f1_gain / ref_base_res["macro_f1"]) * 100.0 if ref_base_res["macro_f1"] > 0 else 0.0
             res["f1_improvement"] = f1_gain
             res["f1_improvement_pct"] = pct_gain
             results.append(res)
 
-        # 3. Heterogeneous Ensemble (if configured)
+        # 4. Heterogeneous Ensemble (if configured)
         if self.ensemble_configs:
-            aug_results = [r for r in results if r["dataset_name"] != f"{dataset_name}-Baseline-NotAugmented"]
-            if aug_results and len(augmented_dfs) > 0:
+            aug_results = [r for r in results if "Augmented" in r["dataset_name"] and not r["dataset_name"].endswith("Ensemble")]
+            if aug_results and len(cleaned_aug_dfs) > 0:
                 best_aug_res = max(aug_results, key=lambda x: x["macro_f1"])
                 best_variant_key = best_aug_res["dataset_name"].split("-")[-1]
-                target_train_df = augmented_dfs.get(best_variant_key, list(augmented_dfs.values())[0])
+                target_train_df = cleaned_aug_dfs.get(best_variant_key, list(cleaned_aug_dfs.values())[0])
                 print(f"\n  [Ensemble Pipeline] Running Heterogeneous Ensemble on best augmented variant ({best_variant_key})...")
             else:
                 target_train_df = base_train_df
@@ -691,8 +758,8 @@ class IndoBERTClassifierEvaluator:
                 early_stopping=early_stopping,
                 patience=patience,
             )
-            f1_gain = ens_res["macro_f1"] - base_res["macro_f1"]
-            pct_gain = (f1_gain / base_res["macro_f1"]) * 100.0 if base_res["macro_f1"] > 0 else 0.0
+            f1_gain = ens_res["macro_f1"] - ref_base_res["macro_f1"]
+            pct_gain = (f1_gain / ref_base_res["macro_f1"]) * 100.0 if ref_base_res["macro_f1"] > 0 else 0.0
             ens_res["f1_improvement"] = f1_gain
             ens_res["f1_improvement_pct"] = pct_gain
             results.append(ens_res)

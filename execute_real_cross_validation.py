@@ -133,10 +133,13 @@ def run_real_5fold_cv_for_dataset(
         fold_results["baseline_acc"].append(base_acc)
         print(f"  Fold {fold_idx + 1} Baseline: Macro-F1 = {base_f1:.4f}, Accuracy = {base_acc:.4f} ({dt_base:.1f}s)")
 
-        # 2. Build fold-specific augmented training set (strict zero leakage into test_fold)
+        # 2. Build fold-specific augmented training set (strict zero leakage into test_fold & anti-hallucination check)
+        from run_augmentation_filter import is_hallucinatory_or_corrupt
         test_texts_set = set(test_fold["text"].astype(str).tolist())
         aug_clean = aug_full_df[~aug_full_df["text"].astype(str).isin(test_texts_set)].reset_index(drop=True)
-        # Combine train_fold with augmented samples
+        # Purge any hallucinatory candidate
+        aug_clean = aug_clean[~aug_clean["text"].apply(is_hallucinatory_or_corrupt)].reset_index(drop=True)
+        # Combine train_fold with clean augmented samples
         aug_train_fold = pd.concat([train_fold, aug_clean], ignore_index=True).drop_duplicates(subset=["text"]).reset_index(drop=True)
 
         # 2. Train & evaluate Augmented
