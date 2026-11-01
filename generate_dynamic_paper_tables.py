@@ -275,9 +275,9 @@ def generate_access_per_class_f1_table(
         # Collect data for dataframe
         ds_records = []
         for vname, r in rows_to_process:
-            f1_neg = float(r.get("f1_negative", 0.0))
-            f1_neut = float(r.get("f1_neutral", 0.0))
-            f1_pos = float(r.get("f1_positive", 0.0))
+            f1_neg = float(r.get("f1_negative", r.get("f1_neg", 0.0)))
+            f1_neut = float(r.get("f1_neutral", r.get("f1_neut", 0.0)))
+            f1_pos = float(r.get("f1_positive", r.get("f1_pos", 0.0)))
             rec = {
                 "Dataset": ds_name,
                 "Variant": vname,
