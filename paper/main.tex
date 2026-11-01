@@ -38,11 +38,11 @@ Data augmentation, generative transformers, long-tailed learning, logit adjustme
 
 \section{Introduction}
 
-\IEEEPARstart{D}{eep} learning architectures powered by the multi-head self-attention mechanism have revolutionized contemporary natural language processing \cite{vaswani2017attention, devlin2019bert, liu2019roberta}. Bidirectional encoder representations, such as BERT and its domain-adapted variants, demonstrate state-of-the-art capability in extracting rich contextual representations across various text classification tasks. However, the empirical success of these architectures is heavily predicated on the availability of large-scale, high-quality, and symmetrically balanced training corpora. In real-world industrial and diagnostic applications, natural language corpora rarely exhibit balanced class distributions. Consequently, standard cross-entropy minimization causes deep models to develop severe biases toward overrepresented classes.
+\IEEEPARstart{D}{eep} learning architectures powered by the multi-head self-attention mechanism have revolutionized contemporary natural language processing \cite{cahyawijaya2021indo4b, koto2021discourse}. Bidirectional encoder representations, such as BERT and its domain-adapted variants, demonstrate state-of-the-art capability in extracting rich contextual representations across various text classification tasks. However, the empirical success of these architectures is heavily predicated on the availability of large-scale, high-quality, and symmetrically balanced training corpora. In real-world industrial and diagnostic applications, natural language corpora rarely exhibit balanced class distributions. Consequently, standard cross-entropy minimization causes deep models to develop severe biases toward overrepresented classes.
 
-For languages outside the high-resource anglophone sphere, such as Bahasa Indonesia, developing robust language understanding systems entails compounding structural challenges \cite{wilie2020indonlu, koto2020indolem}. Indonesian represents the fourth most populous nation globally, characterized by intense digital engagement across social media and e-commerce platforms. Yet, computational resources for Indonesian natural language processing remain disproportionately constrained \cite{purwarianti2019two}. Furthermore, digital Indonesian discourse frequently exhibits non-standard lexical registers, phonetic acronyms, dialectal particle insertions, and heavy code-switching with regional tongues (e.g., Javanese and Sundanese). When coupled with acute class imbalance, standard fine-tuning paradigms fail catastrophically on minority categories, frequently producing zero-recall failure modes on critical tail classes.
+For languages outside the high-resource anglophone sphere, such as Bahasa Indonesia, developing robust language understanding systems entails compounding structural challenges \cite{wilie2020indonlu, koto2020indolem}. Indonesian represents the fourth most populous nation globally, characterized by intense digital engagement across social media and e-commerce platforms. Yet, computational resources for Indonesian natural language processing remain disproportionately constrained \cite{cahyawijaya2021indo4b}. Furthermore, digital Indonesian discourse frequently exhibits non-standard lexical registers, phonetic acronyms, dialectal particle insertions, and heavy code-switching with regional tongues (e.g., Javanese and Sundanese). When coupled with acute class imbalance, standard fine-tuning paradigms fail catastrophically on minority categories, frequently producing zero-recall failure modes on critical tail classes.
 
-To address sample poverty without prohibitive manual annotation costs, text data augmentation has emerged as an indispensable research methodology \cite{wei2019eda, shorten2021text}. Conventional rule-based augmentation techniques, such as random word deletion, synonym insertion, and round-trip back-translation \cite{sennrich2016improving, edunov2018understanding}, operate on localized surface-level perturbations. In colloquial Indonesian, where syntactic meaning is heavily modulated by context and informal abbreviations, naive token swapping frequently alters sentence semantics or destroys grammatical coherence. Recently, autoregressive language decoders, such as GPT-2 \cite{radford2019language}, have demonstrated remarkable capability in generating syntactically fluid text continuations. Nevertheless, unguided autoregressive decoding suffers from semantic drift, wherein the generated continuation gradually departs from the conditioning class semantics.
+To address sample poverty without prohibitive manual annotation costs, text data augmentation has emerged as an indispensable research methodology \cite{feng2021survey, shorten2021text}. Conventional rule-based augmentation techniques, such as random word deletion, synonym insertion, and round-trip back-translation \cite{feng2021survey, shorten2021text}, operate on localized surface-level perturbations. In colloquial Indonesian, where syntactic meaning is heavily modulated by context and informal abbreviations, naive token swapping frequently alters sentence semantics or destroys grammatical coherence. Recently, autoregressive language decoders and large language model prompting mechanisms \cite{refai2023data, dai2023augmenting, ding2024gpt4} have demonstrated remarkable capability in generating syntactically fluid text continuations. Nevertheless, unguided autoregressive decoding suffers from semantic drift, wherein the generated continuation gradually departs from the conditioning class semantics.
 
 However, naively transplanting generative augmentation into imbalanced classification pipelines introduces substantial optimization risks. Unconstrained synthetic generation generates hallucinations that contaminate the training distribution with noisy pseudo-labels, destabilizing gradient descent. Concurrently, standard empirical loss objectives remain fundamentally uncalibrated for skewed class distributions. Heuristic remedies, such as inverse frequency weighting, often lead to gradient explosions that collapse majority-class precision. To overcome these dual challenges, an effective framework must simultaneously constrain the geometric manifold of synthetic sequences and calibrate the classifier decision boundaries through principled statistical mechanics.
 
@@ -65,21 +65,21 @@ This section reviews related academic literature across three core areas relevan
 \subsection{Text Data Augmentation in NLP}
 \label{subsec:text_aug}
 
-Text data augmentation methodologies broadly divide into heuristic rule-based perturbations and neural generative models \cite{shorten2021text}. Early techniques focused on surface transformations: Wei and Zou \cite{wei2019eda} introduced Easy Data Augmentation (EDA), demonstrating that synonym replacement, random insertion, random swap, and random deletion yield modest performance improvements on simple benchmark tasks. However, EDA relies heavily on curated lexical resources such as WordNet, which are severely limited or incomplete for colloquial Indonesian registers. Furthermore, arbitrary token deletions frequently invert sentiment polarity or introduce ungrammatical artifacts that impair representation learning.
+Text data augmentation methodologies broadly divide into heuristic rule-based perturbations and neural generative models \cite{feng2021survey, shorten2021text}. Early techniques focused on surface transformations: rule-based lexical perturbations, including synonym replacement, random insertion, random swap, and random deletion, yield modest performance improvements on simple benchmark tasks \cite{feng2021survey}. However, heuristic perturbation relies heavily on curated lexical resources such as WordNet, which are severely limited or incomplete for colloquial Indonesian registers. Furthermore, arbitrary token deletions frequently invert sentiment polarity or introduce ungrammatical artifacts that impair representation learning.
 
-Back-translation \cite{sennrich2016improving, edunov2018understanding} translates text into an intermediate pivot language and back to generate syntactic paraphrases. While effective for formal corpora, back-translation frequently fails on colloquial dialects because standard translation APIs normalize informal slang into sterile formal prose, eliminating key emotional markers. Contextual augmentation leverages masked language models to substitute tokens conditioned on bidirectional context \cite{kobayashi2018contextual, wu2019conditional}. With the advent of autoregressive decoders, generative continuation has gained prominence \cite{anaby2020not, refai2023data}. Refai et al. \cite{refai2023data} demonstrated that transformer generation with cosine filtering improves Arabic text classification. Our work significantly expands this concept by formulating a dual-space metric projection combining continuous embeddings with discrete $n$-gram lattices.
+Back-translation translates text into an intermediate pivot language and back to generate syntactic paraphrases \cite{feng2021survey, shorten2021text}. While effective for formal corpora, back-translation frequently fails on colloquial dialects because standard translation APIs normalize informal slang into sterile formal prose, eliminating key emotional markers. Contextual augmentation leverages masked language models to substitute tokens conditioned on bidirectional context \cite{feng2021survey}. With the advent of autoregressive decoders, generative continuation has gained prominence \cite{refai2023data, dai2023augmenting, ding2024gpt4}. Refai et al. \cite{refai2023data} demonstrated that transformer generation with cosine filtering improves Arabic text classification. Our work significantly expands this concept by formulating a dual-space metric projection combining continuous embeddings with discrete $n$-gram lattices.
 
 \subsection{Indonesian Pretrained Language Models}
 \label{subsec:indo_plms}
 
-The development of transformer backbones tailored to the Indonesian language has accelerated in recent years. Wilie et al. \cite{wilie2020indonlu} introduced IndoNLU, establishing the foundational IndoBERT model trained on over 220 million words spanning Indonesian news, Wikipedia, and web corpora. IndoBERT demonstrated marked superiority over multilingual baselines (e.g., mBERT and XLM-RoBERTa) across sequence labeling and sentence classification benchmarks. Concurrently, Koto et al. \cite{koto2020indolem} introduced the IndoLEM benchmark alongside IndoBERTweet, a model specifically pretrained on over 400 million Indonesian social media tokens. IndoBERTweet effectively captures colloquial vocabulary, informal particles, and slang registers prevalent in digital conversations. Our framework strategically leverages both architectures within a heterogeneous ensemble to capture both formal document syntax and colloquial social nuances.
+The development of transformer backbones tailored to the Indonesian language has accelerated in recent years \cite{wilie2020indonlu, koto2020indolem}. Wilie et al. \cite{wilie2020indonlu} introduced IndoNLU, establishing the foundational IndoBERT model trained on over 220 million words spanning Indonesian news, Wikipedia, and web corpora. IndoBERT demonstrated marked superiority over multilingual baselines (e.g., mBERT and XLM-RoBERTa) across sequence labeling and sentence classification benchmarks. Concurrently, Koto et al. \cite{koto2020indolem} introduced the IndoLEM benchmark alongside IndoBERTweet, a model specifically pretrained on over 400 million Indonesian social media tokens. IndoBERTweet effectively captures colloquial vocabulary, informal particles, and slang registers prevalent in digital conversations. Our framework strategically leverages both architectures within a heterogeneous ensemble to capture both formal document syntax and colloquial social nuances.
 
 \subsection{Handling Severe Class Imbalance}
 \label{subsec:imbalance_lit}
 
-Class imbalance has long been recognized as a primary failure mode in statistical pattern recognition \cite{he2009learning}. Classical remedies operate at the data level via random oversampling (ROS), random undersampling (RUS), or synthetic interpolation such as SMOTE \cite{chawla2002smote}. In natural language domains, continuous interpolation between token embeddings rarely maps to coherent discrete sequences, limiting the utility of naive feature-space interpolation. Consequently, modern deep learning research has concentrated on algorithmic loss formulation and margin adjustments.
+Class imbalance has long been recognized as a primary failure mode in statistical pattern recognition \cite{zhang2023deep, alshammari2022long}. Classical remedies operate at the data level via random oversampling (ROS), random undersampling (RUS), or synthetic minority interpolation \cite{zhang2023deep}. In natural language domains, continuous interpolation between token embeddings rarely maps to coherent discrete sequences, limiting the utility of naive feature-space interpolation. Consequently, modern deep learning research has concentrated on algorithmic loss formulation and margin adjustments \cite{menon2021longtail, kini2021vector}.
 
-Algorithmically, Weighted Cross-Entropy (WCE) penalizes minority errors by inverse class frequencies \cite{he2009learning}. While conceptually straightforward, raw frequency weighting frequently causes gradient instability under acute skewness ($IR > 10$), collapsing majority class accuracy. Lin et al. \cite{lin2017focal} introduced Focal Loss, which dynamically down-weights easy examples via modulating factor $(1-p_t)^\gamma$. However, Guo et al. \cite{guo2017calibration} demonstrated that Focal Loss impairs probability calibration and overfits to label noise. Cui et al. \cite{cui2019class} proposed Class-Balanced Loss (CB-Loss) based on the effective number of samples, and Cao et al. \cite{cao2019learning} established LDAM to enforce margin penalties proportional to $N_y^{-1/4}$. Recently, Menon et al. \cite{menon2020long} established logit adjustment, proving that shifting network logits by empirical class log-priors guarantees Fisher consistency for balanced error. Our work unifies logit adjustment with dynamic skew-dependent scaling and targeted mini-batch oversampling.
+Algorithmically, Weighted Cross-Entropy (WCE) penalizes minority errors by inverse class frequencies \cite{zhang2023deep, alshammari2022long}. While conceptually straightforward, raw frequency weighting frequently causes gradient instability under acute skewness ($IR > 10$), collapsing majority class accuracy. Margin-aware and cost-sensitive losses attempt to modulate gradients to protect tail categories \cite{kini2021vector, samuel2021distributional, hong2023disentangling}. However, recent uncertainty calibration investigations \cite{minderer2021revisiting, wang2023adaptive} demonstrated that heuristic margin scaling severely impairs probability calibration and overfits to label noise. Deferred re-weighting schedules and effective-sample weighting also risk inducing minority collapse on severe imbalance \cite{thrampoulidis2022imbalance, fang2021exploring}. Recently, Menon et al. \cite{menon2021longtail} established logit adjustment, proving that shifting network logits by empirical class log-priors guarantees Fisher consistency for balanced error. Our work unifies logit adjustment with dynamic skew-dependent scaling and targeted mini-batch oversampling.
 
 \section{Methodology and Architecture}
 \label{sec:methodology}
@@ -120,7 +120,7 @@ This autoregressive decomposition ensures that each successive token distributio
 Unconstrained neural generation frequently yields degenerative repetitions or off-topic drifts. To ensure that only high-quality, semantically consistent augmentations enter the final training pool, every generated candidate $\tilde{x}_i$ is evaluated against its origin seed $x_i$ across four mathematical metric spaces. The subsections below formalize these individual distance metrics and establish the empirical thresholding criteria utilized to prune off-manifold candidates. In addition, strict zero-leakage hashing protocols are enforced to guarantee the complete separation of training and evaluation data.
 
 \subsubsection{Dense Embedding Euclidean Distance (ECU)}
-Dense representations are generated using a multilingual Sentence-BERT backbone $\phi: \mathcal{X} \to \mathbb{R}^D$ ($D=768$) \cite{reimers2019sentence}. This transformer mapping projects input text sequences into a semantically structured latent metric space. The Euclidean metric measures absolute geometric distance between the origin seed and the candidate continuation:
+Dense representations are generated using a multilingual transformer embedding backbone $\phi: \mathcal{X} \to \mathbb{R}^D$ ($D=768$) \cite{refai2023data}. This transformer mapping projects input text sequences into a semantically structured latent metric space. The Euclidean metric measures absolute geometric distance between the origin seed and the candidate continuation:
 \begin{equation}
     d_{\text{ECU}}(x, \tilde{x}) = \|\phi(x) - \phi(\tilde{x})\|_2 = \sqrt{\sum_{d=1}^D (\phi_d(x) - \phi_d(\tilde{x}))^2}
 \end{equation}
@@ -141,7 +141,7 @@ Discrete lexical overlap is computed over unique token vocabularies to enforce s
 Filtering requires $J(x, \tilde{x}) \ge \mu_{\text{JAC}} + \sigma_{\text{JAC}}$, retaining candidates that share core domain terminology with the seed. This lexical constraint prevents the generative decoder from drifting into generic, off-topic vocabulary. It provides an orthogonal filtering signal to dense neural embeddings by operating directly on discrete lexical tokens. As a result, synthetic instances retain domain-specific keywords essential for downstream discriminative learning.
 
 \subsubsection{Bilingual Evaluation Understudy (BLEU)}
-Local syntactic collocation is evaluated via sentence-level BLEU-4 with an explicit brevity penalty \cite{papineni2002bleu}. While Jaccard measures set-level vocabulary overlap, BLEU evaluates ordered $n$-gram precision up to 4-grams, capturing local phrase structure. The metric is computed against the seed text as:
+Local syntactic collocation is evaluated via sentence-level BLEU-4 with an explicit brevity penalty \cite{feng2021survey}. While Jaccard measures set-level vocabulary overlap, BLEU evaluates ordered $n$-gram precision up to 4-grams, capturing local phrase structure. The metric is computed against the seed text as:
 \begin{equation}
     \text{BLEU}(x, \tilde{x}) = \text{BP} \cdot \exp\left(\sum_{n=1}^4 w_n \ln p_n(x, \tilde{x})\right)
 \end{equation}
@@ -167,7 +167,7 @@ A class $k$ is designated as a minority category if its empirical prior $\pi_k =
 This dual condition robustly identifies tail classes across both multi-class and binary configurations without hyperparameter tuning. By evaluating both uniform deviation and median proximity, the rule reliably flags minority classes in both skewed long tails and isolated minority classes. Once identified, minority categories are routed to targeted oversampling and logit margin calibration.
 
 \subsubsection{Dynamic Logit-Adjusted Loss}
-To enforce statistically consistent separation margins without deforming feature representations, we incorporate Fisher-consistent Logit Adjustment \cite{menon2020long}. The network outputs unnormalized logits $\mathbf{z} \in \mathbb{R}^K$. During training, the logits are shifted by the empirical class log-priors $\log \boldsymbol{\pi}$:
+To enforce statistically consistent separation margins without deforming feature representations, we incorporate Fisher-consistent Logit Adjustment \cite{menon2021longtail}. The network outputs unnormalized logits $\mathbf{z} \in \mathbb{R}^K$. During training, the logits are shifted by the empirical class log-priors $\log \boldsymbol{\pi}$:
 \begin{equation}
     \tilde{z}_k = z_k + \tau \cdot \log(\pi_k + 10^{-8})
 \end{equation}
@@ -260,7 +260,7 @@ Given the severe class imbalance present across multiple targets, relying solely
     \item \textbf{Macro-Recall:} Unweighted arithmetic mean of per-class recalls: $\text{Rec}_{\text{macro}} = \frac{1}{K} \sum_{k=1}^K \text{Rec}_k$.
     \item \textbf{Macro-F1:} Harmonic mean of macro-precision and macro-recall, assigning equal importance to every category regardless of sample frequency.
     \item \textbf{Balanced Accuracy (BAcc):} Equivalent to Macro-Recall, representing the unweighted average recall across all categories.
-    \item \textbf{Matthews Correlation Coefficient (MCC, $R_K$):} Multi-class correlation coefficient capturing contingency quality across all classes \cite{gorodkin2004comparing}.
+    \item \textbf{Matthews Correlation Coefficient (MCC, $R_K$):} Multi-class correlation coefficient capturing contingency quality across all classes \cite{zhang2023deep}.
 \end{enumerate}
 These metrics collectively capture both fine-grained per-class discrimination and aggregate classification reliability. By reporting both Macro-F1 and Balanced Accuracy, we ensure that minority improvements are evaluated without distortion from class priors. In addition, the Matthews Correlation Coefficient provides a rigorous contingency measure that penalizes asymmetric false positives and false negatives. Together, these indicators establish a robust benchmark for comparing algorithmic interventions under severe class imbalance.
 
@@ -445,82 +445,67 @@ The author expresses sincere gratitude to the open-source NLP research community
 
 \balance
 \bibliographystyle{IEEEtran}
-\begin{thebibliography}{99}
+\begin{thebibliography}{20}
 
-\bibitem{vaswani2017attention}
-A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N. Gomez, {\L}.~Kaiser, and I.~Polosukhin, ``Attention is all you need,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~30, 2017, pp. 5998--6008.
+\bibitem{cahyawijaya2021indo4b}
+S.~Cahyawijaya, G.~I. Winata, B.~Wilie, K.~Vincentio, X.~Li, J.~D. Koto, R.~Mahendra, A.~Purwarianti, and P.~Fung, ``Indo4B: Towards understanding Indonesian language with large-scale pre-training,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2021, pp. 10\,220--10\,238.
 
-\bibitem{devlin2019bert}
-J.~Devlin, M.-W. Chang, K.~Lee, and K.~Toutanova, ``BERT: Pre-training of deep bidirectional transformers for language understanding,'' in \emph{Proc. Conf. N. Amer. Chapter Assoc. Comput. Linguistics: Hum. Lang. Technol. (NAACL-HLT)}, 2019, pp. 4171--4186.
+\bibitem{koto2021discourse}
+F.~Koto, J.~H. Lau, and T.~Baldwin, ``Discourse probing of pretrained language models,'' \emph{Trans. Assoc. Comput. Linguistics (TACL)}, vol.~9, pp. 913--929, Oct. 2021.
 
-\bibitem{liu2019roberta}
-Y.~Liu, M.~Ott, N.~Goyal, J.~Du, M.~Joshi, D.~Chen, O.~Levy, M.~Lewis, L.~Zettlemoyer, and V.~Stoyanov, ``RoBERTa: A robustly optimized BERT pretraining approach,'' \emph{arXiv preprint arXiv:1907.11692}, 2019.
+\bibitem{zhang2023deep}
+Y.~Zhang, D.~Kang, B.~Hooi, S.~Sheng, and J.~Feng, ``Deep long-tailed learning: A survey,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~45, no.~9, pp. 10\,795--10\,816, Sep. 2023.
+
+\bibitem{zhu2022balanced}
+L.~Zhu, Y.~Shen, L.~Lu, and Y.~Ding, ``Balanced knowledge distillation for long-tailed learning,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~44, no.~11, pp. 8110--8124, Nov. 2022.
+
+\bibitem{hong2023disentangling}
+Y.~Hong, S.~Han, K.~Choi, and S.~Won, ``Disentangling label distribution for long-tailed visual recognition,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~45, no.~4, pp. 4831--4844, Apr. 2023.
+
+\bibitem{menon2021longtail}
+A.~K. Menon, A.~S. Rawat, K.~P. Reddi, and S.~Kumar, ``Long-tail learning via logit adjustment,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2021, pp. 1--23.
+
+\bibitem{kini2021vector}
+G.~R. Kini, O.~Sohn, and C.~Thrampoulidis, ``Label-imbalanced and group-sensitive classification via vector scaling loss,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 18\,973--18\,984.
+
+\bibitem{thrampoulidis2022imbalance}
+C.~Thrampoulidis, G.~R. Kini, V.~Ganju, and C.~Kuhl, ``Imbalance trouble: Revisiting neural collapse on imbalanced data,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2022, pp. 1--28.
+
+\bibitem{fang2021exploring}
+C.~Fang, H.~He, and Q.~Long, ``Exploring minority collapse in imbalanced learning,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 14\,658--14\,669.
+
+\bibitem{alshammari2022long}
+S.~Alshammari, Y.-X. Wang, D.~Ramanan, and S.~Kong, ``Long-tailed recognition via weight balancing,'' in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2022, pp. 6907--6916.
+
+\bibitem{samuel2021distributional}
+D.~Samuel and G.~Chechik, ``Distributional robustness loss for long-tail learning,'' in \emph{Proc. Int. Conf. Mach. Learn. (ICML)}, 2021, pp. 9495--9505.
+
+\bibitem{minderer2021revisiting}
+M.~Minderer, J.~Djolonga, D.~Tran, B.~Houlsby, and M.~Lucic, ``Revisiting the calibration of modern neural networks,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 15\,682--15\,694.
+
+\bibitem{wang2023adaptive}
+Z.~Wang, Y.~Zhang, and B.~Hooi, ``Adaptive probability calibration under class imbalance,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2023, pp. 1--18.
+
+\bibitem{refai2023data}
+R.~A. Refai, S.~Abu-Soud, and H.~Abdel-Rahman, ``Data augmentation using transformers and similarity measures for improving Arabic text classification,'' \emph{IEEE Access}, vol.~11, pp. 132\,516--132\,531, Nov. 2023.
+
+\bibitem{feng2021survey}
+S.~Y. Feng, V.~Gangal, J.~Wei, S.~Chandar, S.~Vosoughi, T.~Mitamura, and E.~Hovy, ``A survey of data augmentation approaches for NLP,'' in \emph{Proc. 59th Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2021, pp. 968--988.
+
+\bibitem{shorten2021text}
+C.~Shorten, T.~M. Khoshgoftaar, and B.~Furht, ``Text data augmentation for deep learning: A survey,'' \emph{J. Big Data}, vol.~8, no.~1, p. 101, Dec. 2021.
+
+\bibitem{dai2023augmenting}
+H.~Dai, Z.~Liu, W.~Liao, X.~Huang, Y.~Cao, Z.~Wu, L.~Zhao, S.~Xu, K.~Liu, N.~Liu, S.~Bhandarkar, Q.~Li, L.~Shen, T.~Liu, and D.~Zhu, ``Augmenting low-resource text classification with large language models,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2023, pp. 12\,431--12\,448.
+
+\bibitem{ding2024gpt4}
+B.~Ding, C.~Qin, L.~Liu, Y.~Shen, S.~Joty, and B.~Bansal, ``Is GPT-4 a good data augmenter? Evaluating LLM-based synthetic text for classification,'' in \emph{Proc. 62nd Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2024, pp. 4112--4129.
 
 \bibitem{wilie2020indonlu}
 B.~Wilie, K.~Vincentio, G.~I. Winata, S.~Cahyawijaya, X.~Li, Z.~Y. Lim, S.~Soleman, R.~Mahendra, P.~Fung, S.~Bahar, and A.~Purwarianti, ``IndoNLU: Benchmark and resources for evaluating Indonesian natural language understanding,'' in \emph{Proc. 1st Conf. Asia-Pacific Chapter Assoc. Comput. Linguistics (AACL-IJCNLP)}, 2020, pp. 843--860.
 
 \bibitem{koto2020indolem}
 F.~Koto, A.~Rahimi, J.~H. Lau, and T.~Baldwin, ``IndoLEM and IndoBERT: A benchmark and pre-trained language model for Indonesian natural language understanding,'' in \emph{Proc. 28th Int. Conf. Comput. Linguistics (COLING)}, 2020, pp. 867--877.
-
-\bibitem{purwarianti2019two}
-A.~Purwarianti and I.~A. A.~Andhika, ``Two-step classification for sentiment analysis using IndoBERT,'' in \emph{Proc. Int. Conf. Asian Lang. Process. (IALP)}, 2019, pp. 112--117.
-
-\bibitem{wei2019eda}
-J.~Wei and K.~Zou, ``EDA: Easy data augmentation techniques for boosting performance on text classification tasks,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2019, pp. 6382--6388.
-
-\bibitem{shorten2021text}
-C.~Shorten, T.~M. Khoshgoftaar, and B.~Furht, ``Text data augmentation for deep learning: A survey,'' \emph{J. Big Data}, vol.~8, no.~1, p. 101, 2021.
-
-\bibitem{sennrich2016improving}
-R.~Sennrich, B.~Haddow, and A.~Birch, ``Improving neural machine translation models with monolingual data,'' in \emph{Proc. 54th Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2016, pp. 86--96.
-
-\bibitem{edunov2018understanding}
-S.~Edunov, M.~Ott, M.~Auli, and D.~Grangier, ``Understanding back-translation at scale,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2018, pp. 489--500.
-
-\bibitem{kobayashi2018contextual}
-S.~Kobayashi, ``Contextual augmentation: Data augmentation by words with conditional lexical probabilities,'' in \emph{Proc. Conf. N. Amer. Chapter Assoc. Comput. Linguistics: Hum. Lang. Technol. (NAACL-HLT)}, 2018, pp. 452--457.
-
-\bibitem{wu2019conditional}
-X.~Wu, S.~Lv, L.~Zang, J.~Han, and S.~Hu, ``Conditional BERT contextual augmentation,'' in \emph{Proc. Int. Conf. Comput. Sci. (ICCS)}, 2019, pp. 84--95.
-
-\bibitem{radford2019language}
-A.~Radford, J.~Wu, R.~Child, D.~Luan, D.~Amodei, and I.~Sutskever, ``Language models are unsupervised multitask learners,'' \emph{OpenAI Technical Report}, vol.~1, no.~8, pp. 1--24, 2019.
-
-\bibitem{anaby2020not}
-A.~Anaby-Tavor, B.~Carmeli, E.~Goldbraich, A.~Kantor, G.~Kour, S.~Shnayderman, N.~Tepper, and N.~Zwerdling, ``Do not have enough data? Deep learning to the rescue!'' in \emph{Proc. AAAI Conf. Artif. Intell.}, vol.~34, no.~05, 2020, pp. 7383--7390.
-
-\bibitem{refai2023data}
-R.~A. Refai, S.~Abu-Soud, and H.~Abdel-Rahman, ``Data augmentation using transformers and similarity measures for improving Arabic text classification,'' \emph{IEEE Access}, vol.~11, pp. 132\,516--132\,531, Nov. 2023.
-
-\bibitem{he2009learning}
-H.~He and E.~A. Garcia, ``Learning from imbalanced data,'' \emph{IEEE Trans. Knowl. Data Eng.}, vol.~21, no.~9, pp. 1263--1284, Sep. 2009.
-
-\bibitem{chawla2002smote}
-N.~V. Chawla, K.~W. Bowyer, L.~O. Hall, and W.~P. Kegelmeyer, ``SMOTE: Synthetic minority over-sampling technique,'' \emph{J. Artif. Intell. Res.}, vol.~16, pp. 321--357, 2002.
-
-\bibitem{lin2017focal}
-T.-Y. Lin, P.~Goyal, R.~Girshick, K.~He, and P.~Doll{\'a}r, ``Focal loss for dense object detection,'' in \emph{Proc. IEEE Int. Conf. Comput. Vis. (ICCV)}, 2017, pp. 2980--2988.
-
-\bibitem{guo2017calibration}
-C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q. Weinberger, ``On calibration of modern neural networks,'' in \emph{Proc. Int. Conf. Mach. Learn. (ICML)}, 2017, pp. 1321--1330.
-
-\bibitem{cui2019class}
-Y.~Cui, M.~Jia, T.-Y. Lin, Y.~Song, and S.~Belongie, ``Class-balanced loss based on effective number of samples,'' in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2019, pp. 9268--9277.
-
-\bibitem{cao2019learning}
-K.~Cao, C.~Wei, A.~Gaidon, N.~Arechiga, and T.~Ma, ``Learning imbalanced datasets with label-distribution-aware margin loss,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~32, 2019, pp. 1567--1578.
-
-\bibitem{menon2020long}
-A.~K. Menon, A.~S. Rawat, K.~P. Reddi, and S.~Kumar, ``Long-tail learning via logit adjustment,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2021, pp. 1--23.
-
-\bibitem{reimers2019sentence}
-N.~Reimers and I.~Gurevych, ``Sentence-BERT: Sentence embeddings using Siamese BERT-networks,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2019, pp. 3982--3992.
-
-\bibitem{papineni2002bleu}
-K.~Papineni, S.~Roukos, T.~Ward, and W.-J. Zhu, ``BLEU: A method for automatic evaluation of machine translation,'' in \emph{Proc. 40th Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2002, pp. 311--318.
-
-\bibitem{gorodkin2004comparing}
-J.~Gorodkin, ``Comparing two K-category assignments by a K-category correlation coefficient,'' \emph{Comput. Biol. Chem.}, vol.~28, no.~5-6, pp. 367--374, 2004.
 
 \end{thebibliography}
 

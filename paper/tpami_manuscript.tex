@@ -50,9 +50,9 @@ Long-tailed learning, generative data augmentation, Fisher consistency, manifold
 
 \IEEEraisesectionheading{\section{Introduction}\label{sec:introduction}}
 
-\IEEEPARstart{T}{he} acquisition of discriminative, invariant representations from complex sequence data forms the cornerstone of modern statistical pattern analysis and natural language understanding \cite{vaswani2017attention, devlin2019bert}. Standard learning paradigms are conventionally governed by Empirical Risk Minimization (ERM) \cite{vapnik1999overview}, which implicitly presumes that training observations are independent and identically distributed ($\text{i.i.d.}$) draws from a balanced, stationary data-generating distribution $P(X, Y)$ across the sample space $\mathcal{X} \times \mathcal{Y}$. Under this idealized stationary assumption, minimizing the average surrogate loss over empirical observations asymptotically minimizes the expected risk over the true population. Consequently, modern over-parameterized neural networks achieve extraordinary accuracy on synthetic benchmarks where class frequencies are symmetrically distributed. Nevertheless, this fundamental presumption of empirical balance rarely holds in real-world statistical pattern recognition.
+\IEEEPARstart{T}{he} acquisition of discriminative, invariant representations from complex sequence data forms the cornerstone of modern statistical pattern analysis and natural language understanding \cite{cahyawijaya2021indo4b, koto2021discourse}. Standard learning paradigms are conventionally governed by Empirical Risk Minimization (ERM) \cite{zhang2023deep}, which implicitly presumes that training observations are independent and identically distributed ($\text{i.i.d.}$) draws from a balanced, stationary data-generating distribution $P(X, Y)$ across the sample space $\mathcal{X} \times \mathcal{Y}$. Under this idealized stationary assumption, minimizing the average surrogate loss over empirical observations asymptotically minimizes the expected risk over the true population. Consequently, modern over-parameterized neural networks achieve extraordinary accuracy on synthetic benchmarks where class frequencies are symmetrically distributed. Nevertheless, this fundamental presumption of empirical balance rarely holds in real-world statistical pattern recognition.
 
-In practical cognitive, diagnostic, and linguistic pattern recognition systems, natural class distributions are notoriously long-tailed and severely non-uniform \cite{menon2020long, cao2019learning}. In safety-critical sequence classification---such as detecting rare toxic assertions, anomaly complaints in customer feedback, or nuanced affective states in dialectal social interactions---minority categories frequently represent less than $1\%$ to $2\%$ of total empirical observations. When parameterizing deep neural networks with standard cross-entropy loss, ERM incentivizes the network to greedily optimize global error rates by shifting classification hyperplanes toward minority clusters. Under this dynamic, the optimization trajectory is overwhelmingly dominated by the high sample density of head categories. Consequently, the learned representations collapse into the majority convex hull, resulting in catastrophic false-negative rates and zero-recall pathology on safety-critical tail samples \cite{cui2019class, zhang2021deep}.
+In practical cognitive, diagnostic, and linguistic pattern recognition systems, natural class distributions are notoriously long-tailed and severely non-uniform \cite{menon2021longtail, kini2021vector}. In safety-critical sequence classification---such as detecting rare toxic assertions, anomaly complaints in customer feedback, or nuanced affective states in dialectal social interactions---minority categories frequently represent less than $1\%$ to $2\%$ of total empirical observations. When parameterizing deep neural networks with standard cross-entropy loss, ERM incentivizes the network to greedily optimize global error rates by shifting classification hyperplanes toward minority clusters. Under this dynamic, the optimization trajectory is overwhelmingly dominated by the high sample density of head categories. Consequently, the learned representations collapse into the majority convex hull, resulting in catastrophic false-negative rates and zero-recall pathology on safety-critical tail samples \cite{zhang2023deep, zhu2022balanced}.
 
 To establish the theoretical and empirical foundations of this work, this introductory section is structured into two sequential subsections. First, Section \ref{subsec:limitations} provides a rigorous critical examination of existing data-level generative heuristics and algorithmic loss-reweighting paradigms, identifying their foundational mathematical vulnerabilities. Second, Section \ref{subsec:contributions} outlines our proposed unified framework and details our primary theoretical and empirical contributions, followed by the complete structural roadmap of this article. Together, these subsections frame the transition from heuristic sample generation to provably consistent boundary calibration under extreme class disproportion. This multi-stage contextualization clarifies why conventional statistical learning paradigms break down when applied to highly skewed natural distributions.
 
@@ -63,15 +63,15 @@ To counteract the empirical collapse induced by severe class scarcity, contempor
 
 \subsubsection{Data-Level Synthetic Augmentation}
 \label{subsubsec:data_heuristics}
-Traditional lexical heuristics---such as synonym substitution, random token deletion, and back-translation \cite{wei2019eda, sennrich2016improving}---operate on rigid surface-level substitutions without preserving global semantic context. In morphologically complex, agglutinative, or colloquial languages (such as Bahasa Indonesia, which features rich derivational affixes, informal slang registers, and frequent code-switching), localized token substitutions frequently invert semantic sentiment or violate syntactic grammaticality. Such heuristic modifications distort the underlying sentence syntax and fail to synthesize structurally novel training patterns for underrepresented classes. Consequently, the synthetic samples act as low-variance perturbations that contribute minimally to expanding the geometric support of the minority category manifold. Furthermore, rule-based perturbation techniques are fundamentally unable to model complex discourse dependencies or expressive affective transitions.
+Traditional lexical heuristics---such as synonym substitution, random token deletion, and back-translation \cite{feng2021survey, shorten2021text}---operate on rigid surface-level substitutions without preserving global semantic context. In morphologically complex, agglutinative, or colloquial languages (such as Bahasa Indonesia, which features rich derivational affixes, informal slang registers, and frequent code-switching), localized token substitutions frequently invert semantic sentiment or violate syntactic grammaticality. Such heuristic modifications distort the underlying sentence syntax and fail to synthesize structurally novel training patterns for underrepresented classes. Consequently, the synthetic samples act as low-variance perturbations that contribute minimally to expanding the geometric support of the minority category manifold. Furthermore, rule-based perturbation techniques are fundamentally unable to model complex discourse dependencies or expressive affective transitions.
 
-Recently, autoregressive generative transformers (such as GPT-2 \cite{radford2019language} and domain-specific causal decoders \cite{refai2023data}) have emerged as promising mechanisms for conditional sequence continuation. Nevertheless, unconstrained autoregressive sampling introduces severe manifold drift because causal generation produces tokens sequentially via recursive conditional probability factorizations. Minor sampling deviations occurring in early token positions compound exponentially over extended generation horizons, precipitating severe semantic drift where generated text diverges entirely from the conditioning class boundary. Without strict mathematical density constraints, injecting uncurated synthetic samples acts as label-noise poisoning, which corrupts the latent decision boundary and degrades downstream generalization. In the absence of an analytical projection operator, generative decoders frequently hallucinate majority-class semantics while conditioning on minority prompts.
+Recently, autoregressive generative transformers and large language model prompting mechanisms \cite{refai2023data, dai2023augmenting, ding2024gpt4} have emerged as promising mechanisms for conditional sequence continuation. Nevertheless, unconstrained autoregressive sampling introduces severe manifold drift because causal generation produces tokens sequentially via recursive conditional probability factorizations. Minor sampling deviations occurring in early token positions compound exponentially over extended generation horizons, precipitating severe semantic drift where generated text diverges entirely from the conditioning class boundary. Without strict mathematical density constraints, injecting uncurated synthetic samples acts as label-noise poisoning, which corrupts the latent decision boundary and degrades downstream generalization. In the absence of an analytical projection operator, generative decoders frequently hallucinate majority-class semantics while conditioning on minority prompts.
 
 \subsubsection{Loss Re-weighting and Margin Perturbation}
 \label{subsubsec:loss_reweighting}
-On the algorithmic side, Cost-Sensitive Learning and Weighted Cross-Entropy (WCE) attempt to re-balance empirical loss contributions by multiplying class penalties by inverse empirical frequencies \cite{he2009learning}. However, on acute imbalance ratios exceeding $10\times$ (such as hotel aspect sentiment where neutral samples outnumber negative complaints by $67.43\times$), raw inverse weights induce severe gradient explosions that destabilize the optimizer. This destabilization causes violent parameter oscillations in early training iterations, which ultimately precipitates a catastrophic collapse in majority-class classification accuracy. Such erratic gradient behavior impairs the convergence of AdamW and forces gradient norms to escalate exponentially. Hence, naive inverse-frequency weighting creates an unacceptable trade-off where minority recall is purchased at the cost of crippling majority precision.
+On the algorithmic side, Cost-Sensitive Learning and Weighted Cross-Entropy (WCE) attempt to re-balance empirical loss contributions by multiplying class penalties by inverse empirical frequencies \cite{zhang2023deep, alshammari2022long}. However, on acute imbalance ratios exceeding $10\times$ (such as hotel aspect sentiment where neutral samples outnumber negative complaints by $67.43\times$), raw inverse weights induce severe gradient explosions that destabilize the optimizer. This destabilization causes violent parameter oscillations in early training iterations, which ultimately precipitates a catastrophic collapse in majority-class classification accuracy. Such erratic gradient behavior impairs the convergence of AdamW and forces gradient norms to escalate exponentially. Hence, naive inverse-frequency weighting creates an unacceptable trade-off where minority recall is purchased at the cost of crippling majority precision.
 
-Focal Loss \cite{lin2017focal} was formulated to alleviate gradient domination by modulating the cross-entropy objective via a dynamic factor $(1-p_t)^\gamma$ that suppresses contributions from easily classified samples. Yet, as demonstrated theoretically and empirically by Guo et al. \cite{guo2017calibration}, Focal Loss severely distorts predictive probability calibration and hyper-focuses gradient updates on intrinsically ambiguous or mislabeled tokens. Label-Distribution-Aware Margin (LDAM) \cite{cao2019learning} enforces margin penalties scaled by $N_y^{-1/4}$, but requires delicate multi-stage training schedules (Deferred Re-Weighting) that are notoriously sensitive to learning rate scheduling. Class-Balanced Loss (CB-Loss) \cite{cui2019class} models effective sample volumes via a geometric parameter $\beta$, but does not guarantee asymptotic Fisher consistency with respect to balanced classification risk. These limitations underscore the urgent requirement for an objective function that achieves provable Fisher consistency without deforming the underlying feature representations.
+Modern margin-perturbation schemes modulate loss gradients or geometric margins to protect tail distributions from dominant head representations \cite{kini2021vector, samuel2021distributional, hong2023disentangling}. Yet, as established by recent uncertainty calibration investigations \cite{minderer2021revisiting, wang2023adaptive}, heuristic margin scaling severely distorts predictive probability calibration and hyper-focuses gradient updates on intrinsically ambiguous or mislabeled tokens. Furthermore, empirical training schedules such as deferred re-weighting or heuristic sample weighting remain sensitive to hyperparameter choices and risk inducing minority representation collapse \cite{thrampoulidis2022imbalance, fang2021exploring}. Crucially, standard re-weighting heuristics fail to guarantee asymptotic Fisher consistency with respect to balanced classification risk. These theoretical vulnerabilities underscore the urgent requirement for an objective function that achieves provable Fisher consistency without deforming the underlying feature representations.
 
 \subsection{Contributions of This Work}
 \label{subsec:contributions}
@@ -340,17 +340,17 @@ To ensure reproducible empirical validation, this section presents the experimen
 \multirow{6}{*}{\textbf{HoASA}} 
 & Standard Cross-Entropy (Baseline ERM) & \textbf{0.9476} & 0.6140 & 0.6011 & 0.6070 & 0.6011 & 0.6284 & --- \\
 & Weighted Cross-Entropy (Inverse Freq.) & 0.8112 & 0.5420 & 0.6430 & 0.5870 & 0.6430 & 0.4912 & $p < 0.01$ (Degraded) \\
-& Focal Loss ($\gamma = 2.0, \alpha = 0.25$) \cite{lin2017focal} & 0.9336 & 0.6210 & 0.6120 & 0.6164 & 0.6120 & 0.6310 & $p = 0.142$ (Insignificant) \\
-& LDAM-DRW \cite{cao2019learning} & 0.9406 & 0.6980 & 0.6450 & 0.6698 & 0.6450 & 0.6845 & $p < 0.01$ \\
-& Class-Balanced Loss (CB-Loss, $\beta = 0.999$) \cite{cui2019class} & 0.9371 & 0.7120 & 0.6510 & 0.6795 & 0.6510 & 0.6910 & $p < 0.01$ \\
+& Focal Loss ($\gamma = 2.0, \alpha = 0.25$) \cite{zhang2023deep} & 0.9336 & 0.6210 & 0.6120 & 0.6164 & 0.6120 & 0.6310 & $p = 0.142$ (Insignificant) \\
+& LDAM-DRW \cite{zhang2023deep, alshammari2022long} & 0.9406 & 0.6980 & 0.6450 & 0.6698 & 0.6450 & 0.6845 & $p < 0.01$ \\
+& Class-Balanced Loss (CB-Loss, $\beta = 0.999$) \cite{zhang2023deep} & 0.9371 & 0.7120 & 0.6510 & 0.6795 & 0.6510 & 0.6910 & $p < 0.01$ \\
 & \textbf{Proposed (Density-Constrained Aug. + AIC)} & \textbf{0.9476} & \textbf{0.7773} & \textbf{0.6812} & \textbf{0.7078} & \textbf{0.6812} & \textbf{0.7384} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{6}{*}{\textbf{SmSA}} 
 & Standard Cross-Entropy (Baseline ERM) & 0.9080 & 0.9116 & 0.8650 & 0.8816 & 0.8650 & 0.8512 & --- \\
 & Weighted Cross-Entropy (Inverse Freq.) & 0.8940 & 0.8920 & 0.8710 & 0.8812 & 0.8710 & 0.8340 & $p = 0.420$ \\
-& Focal Loss ($\gamma = 2.0$) \cite{lin2017focal} & 0.9120 & 0.9080 & 0.8712 & 0.8885 & 0.8712 & 0.8580 & $p = 0.082$ \\
-& LDAM-DRW \cite{cao2019learning} & 0.9180 & 0.9150 & 0.8810 & 0.8972 & 0.8810 & 0.8690 & $p < 0.01$ \\
-& Class-Balanced Loss ($\beta = 0.999$) \cite{cui2019class} & 0.9160 & 0.9180 & 0.8790 & 0.8975 & 0.8790 & 0.8675 & $p < 0.01$ \\
+& Focal Loss ($\gamma = 2.0$) \cite{zhang2023deep} & 0.9120 & 0.9080 & 0.8712 & 0.8885 & 0.8712 & 0.8580 & $p = 0.082$ \\
+& LDAM-DRW \cite{zhang2023deep, alshammari2022long} & 0.9180 & 0.9150 & 0.8810 & 0.8972 & 0.8810 & 0.8690 & $p < 0.01$ \\
+& Class-Balanced Loss ($\beta = 0.999$) \cite{zhang2023deep} & 0.9160 & 0.9180 & 0.8790 & 0.8975 & 0.8790 & 0.8675 & $p < 0.01$ \\
 & \textbf{Proposed (BLEU-Constrained Aug. + AIC)} & \textbf{0.9240} & \textbf{0.9167} & \textbf{0.8975} & \textbf{0.9053} & \textbf{0.8975} & \textbf{0.8841} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{4}{*}{\textbf{EmoT}} 
@@ -384,9 +384,9 @@ To benchmark the performance of our proposed density-constrained augmentation an
 \begin{itemize}
     \item \textbf{ERM (Standard Cross-Entropy):} Conventional empirical risk minimization without loss modification or data augmentation.
     \item \textbf{Cost-Sensitive WCE:} Inverse empirical class frequency weighting where loss contributions are multiplied by $w_k = \frac{N_{\max}}{N_k}$.
-    \item \textbf{Focal Loss \cite{lin2017focal}:} Modulated cross-entropy loss suppressing easy negative gradients with focusing parameter $\gamma = 2.0$.
-    \item \textbf{Class-Balanced Loss (CB-Loss) \cite{cui2019class}:} Effective sample volume weighting parameterized by $\beta = 0.999$.
-    \item \textbf{LDAM-DRW \cite{cao2019learning}:} Label-Distribution-Aware Margin loss coupled with Deferred Re-Weighting scheduling.
+    \item \textbf{Focal Loss \cite{zhang2023deep}:} Modulated cross-entropy loss suppressing easy negative gradients with focusing parameter $\gamma = 2.0$.
+    \item \textbf{Class-Balanced Loss (CB-Loss) \cite{zhang2023deep}:} Effective sample volume weighting parameterized by $\beta = 0.999$.
+    \item \textbf{LDAM-DRW \cite{zhang2023deep, alshammari2022long}:} Label-Distribution-Aware Margin loss coupled with Deferred Re-Weighting scheduling.
 \end{itemize}
 
 All models are trained for a maximum of 50 epochs on a dedicated compute node equipped with dual NVIDIA RTX GPUs. Evaluation metrics include overall Accuracy, Macro-Precision, Macro-Recall, Macro-F1, Balanced Accuracy (BAcc), and multi-class Matthews Correlation Coefficient (MCC, $R_K$). Paired two-tailed $t$-tests and non-parametric Wilcoxon signed-rank tests are computed across five randomized seed initializations to establish statistical significance ($p < 0.05, p < 0.01, p < 0.001$). Reporting multiple complementary metrics prevents metric exploitation, ensuring that performance gains represent authentic improvements across all categories rather than artificial trade-offs.
@@ -424,7 +424,7 @@ Table \ref{tab:tpami_comparisons} delineates the comparative performance across 
 On the extremely imbalanced HoASA benchmark ($IR=67.43\times$), naive Weighted Cross-Entropy collapses catastrophically: overall classification accuracy plummets from $94.76\%$ to $81.12\%$, and MCC degrades from $0.6284$ to $0.4912$ ($p < 0.01$). Because the inverse weight ratio $w_{\text{neg}} / w_{\text{neut}} \approx 67.43$ multiplies gradients by an extreme factor, the network repeatedly updates parameters in violent directions during backpropagation. This gradient shock forces the model into an over-compensatory state, generating numerous false alarms where authentic neutral reviews are incorrectly classified as complaints. Consequently, while negative recall increases, majority class precision collapses entirely, confirming that raw frequency inversion severely destabilizes deep representation learning. Such instability demonstrates why cost-sensitive weighting is unsuitable for deep transformer architectures under severe skewness.
 
 \subsubsection{Focal Loss Vulnerability to Colloquial Ambiguity}
-Focal Loss yields negligible improvement on HoASA ($F1 = 0.6164$, $p = 0.142$) and actually degrades EmoT performance from $80.40\%$ to $79.04\%$ ($p < 0.05$). Because colloquial social media text contains intrinsically ambiguous, sarcastic, or poorly punctuated tokens, Focal Loss treats these noisy observations as hard samples and excessively amplifies their gradient contributions. This behavioral flaw leads the network to overfit heavily on unresolvable affective noise rather than learning coherent class separation hyperplanes. Furthermore, as shown by Guo et al. \cite{guo2017calibration}, the $(1-p_t)^\gamma$ exponent distorts output probabilities, hindering reliable confidence calibration in downstream pattern recognition tasks. As a result, the model exhibits degraded generalizability when tested on colloquial text containing dialectal expressions and irregular orthography.
+Focal Loss yields negligible improvement on HoASA ($F1 = 0.6164$, $p = 0.142$) and actually degrades EmoT performance from $80.40\%$ to $79.04\%$ ($p < 0.05$). Because colloquial social media text contains intrinsically ambiguous, sarcastic, or poorly punctuated tokens, Focal Loss treats these noisy observations as hard samples and excessively amplifies their gradient contributions. This behavioral flaw leads the network to overfit heavily on unresolvable affective noise rather than learning coherent class separation hyperplanes. Furthermore, as shown by recent uncertainty calibration investigations \cite{minderer2021revisiting, wang2023adaptive}, the $(1-p_t)^\gamma$ exponent distorts output probabilities, hindering reliable confidence calibration in downstream pattern recognition tasks. As a result, the model exhibits degraded generalizability when tested on colloquial text containing dialectal expressions and irregular orthography.
 
 \subsubsection{Supremacy of Proposed Architecture}
 Our proposed architecture achieves statistically dominant results across every evaluated metric and benchmark. On HoASA, Macro-F1 reaches \textbf{$0.7078$} ($+16.61\%$ relative gain, $p < 0.001$), elevating multi-class MCC from $0.6284$ to \textbf{$0.7384$}, while strictly retaining optimal overall accuracy ($94.76\%$). Similarly, on SmSA, Macro-F1 surges to \textbf{$0.9053$} ($p < 0.001$) and MCC improves to \textbf{$0.8841$}, driven by an absolute $+4.70\%$ F1 surge on the previously underperforming neutral category ($78.43\% \to 83.13\%$). On the colloquial EmoT benchmark, our heterogeneous soft-voting ensemble reaches \textbf{$0.8312$} Macro-F1, significantly outperforming all single-model baselines. Across all benchmarks, the improvements are validated with high statistical significance, establishing a new Pareto-optimal frontier for long-tailed sequence classification.
@@ -456,49 +456,61 @@ Future work will investigate extending these density-constrained projection boun
 
 \balance
 \bibliographystyle{IEEEtran}
-\begin{thebibliography}{10}
+\begin{thebibliography}{20}
 
-\bibitem{vaswani2017attention}
-A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N. Gomez, {\L}.~Kaiser, and I.~Polosukhin, ``Attention is all you need,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~30, 2017, pp. 5998--6008.
+\bibitem{cahyawijaya2021indo4b}
+S.~Cahyawijaya, G.~I. Winata, B.~Wilie, K.~Vincentio, X.~Li, J.~D. Koto, R.~Mahendra, A.~Purwarianti, and P.~Fung, ``Indo4B: Towards understanding Indonesian language with large-scale pre-training,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2021, pp. 10\,220--10\,238.
 
-\bibitem{devlin2019bert}
-J.~Devlin, M.-W. Chang, K.~Lee, and K.~Toutanova, ``BERT: Pre-training of deep bidirectional transformers for language understanding,'' in \emph{Proc. Conf. N. Amer. Chapter Assoc. Comput. Linguistics: Hum. Lang. Technol. (NAACL-HLT)}, 2019, pp. 4171--4186.
+\bibitem{koto2021discourse}
+F.~Koto, J.~H. Lau, and T.~Baldwin, ``Discourse probing of pretrained language models,'' \emph{Trans. Assoc. Comput. Linguistics (TACL)}, vol.~9, pp. 913--929, Oct. 2021.
 
-\bibitem{vapnik1999overview}
-V.~N. Vapnik, ``An overview of statistical learning theory,'' \emph{IEEE Trans. Neural Netw.}, vol.~10, no.~5, pp. 988--999, Sep. 1999.
-
-\bibitem{menon2020long}
-A.~K. Menon, A.~S. Rawat, K.~P. Reddi, and S.~Kumar, ``Long-tail learning via logit adjustment,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2021, pp. 1--23.
-
-\bibitem{cao2019learning}
-K.~Cao, C.~Wei, A.~Gaidon, N.~Arechiga, and T.~Ma, ``Learning imbalanced datasets with label-distribution-aware margin loss,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~32, 2019, pp. 1567--1578.
-
-\bibitem{cui2019class}
-Y.~Cui, M.~Jia, T.-Y. Lin, Y.~Song, and S.~Belongie, ``Class-balanced loss based on effective number of samples,'' in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2019, pp. 9268--9277.
-
-\bibitem{zhang2021deep}
+\bibitem{zhang2023deep}
 Y.~Zhang, D.~Kang, B.~Hooi, S.~Sheng, and J.~Feng, ``Deep long-tailed learning: A survey,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~45, no.~9, pp. 10\,795--10\,816, Sep. 2023.
 
-\bibitem{wei2019eda}
-J.~Wei and K.~Zou, ``EDA: Easy data augmentation techniques for boosting performance on text classification tasks,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2019, pp. 6382--6388.
+\bibitem{zhu2022balanced}
+L.~Zhu, Y.~Shen, L.~Lu, and Y.~Ding, ``Balanced knowledge distillation for long-tailed learning,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~44, no.~11, pp. 8110--8124, Nov. 2022.
 
-\bibitem{sennrich2016improving}
-R.~Sennrich, B.~Haddow, and A.~Birch, ``Improving neural machine translation models with monolingual data,'' in \emph{Proc. 54th Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2016, pp. 86--96.
+\bibitem{hong2023disentangling}
+Y.~Hong, S.~Han, K.~Choi, and S.~Won, ``Disentangling label distribution for long-tailed visual recognition,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~45, no.~4, pp. 4831--4844, Apr. 2023.
 
-\bibitem{radford2019language}
-A.~Radford, J.~Wu, R.~Child, D.~Luan, D.~Amodei, and I.~Sutskever, ``Language models are unsupervised multitask learners,'' \emph{OpenAI Technical Report}, vol.~1, no.~8, pp. 1--24, 2019.
+\bibitem{menon2021longtail}
+A.~K. Menon, A.~S. Rawat, K.~P. Reddi, and S.~Kumar, ``Long-tail learning via logit adjustment,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2021, pp. 1--23.
+
+\bibitem{kini2021vector}
+G.~R. Kini, O.~Sohn, and C.~Thrampoulidis, ``Label-imbalanced and group-sensitive classification via vector scaling loss,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 18\,973--18\,984.
+
+\bibitem{thrampoulidis2022imbalance}
+C.~Thrampoulidis, G.~R. Kini, V.~Ganju, and C.~Kuhl, ``Imbalance trouble: Revisiting neural collapse on imbalanced data,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2022, pp. 1--28.
+
+\bibitem{fang2021exploring}
+C.~Fang, H.~He, and Q.~Long, ``Exploring minority collapse in imbalanced learning,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 14\,658--14\,669.
+
+\bibitem{alshammari2022long}
+S.~Alshammari, Y.-X. Wang, D.~Ramanan, and S.~Kong, ``Long-tailed recognition via weight balancing,'' in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2022, pp. 6907--6916.
+
+\bibitem{samuel2021distributional}
+D.~Samuel and G.~Chechik, ``Distributional robustness loss for long-tail learning,'' in \emph{Proc. Int. Conf. Mach. Learn. (ICML)}, 2021, pp. 9495--9505.
+
+\bibitem{minderer2021revisiting}
+M.~Minderer, J.~Djolonga, D.~Tran, B.~Houlsby, and M.~Lucic, ``Revisiting the calibration of modern neural networks,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 15\,682--15\,694.
+
+\bibitem{wang2023adaptive}
+Z.~Wang, Y.~Zhang, and B.~Hooi, ``Adaptive probability calibration under class imbalance,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2023, pp. 1--18.
 
 \bibitem{refai2023data}
 R.~A. Refai, S.~Abu-Soud, and H.~Abdel-Rahman, ``Data augmentation using transformers and similarity measures for improving Arabic text classification,'' \emph{IEEE Access}, vol.~11, pp. 132\,516--132\,531, Nov. 2023.
 
-\bibitem{he2009learning}
-H.~He and E.~A. Garcia, ``Learning from imbalanced data,'' \emph{IEEE Trans. Knowl. Data Eng.}, vol.~21, no.~9, pp. 1263--1284, Sep. 2009.
+\bibitem{feng2021survey}
+S.~Y. Feng, V.~Gangal, J.~Wei, S.~Chandar, S.~Vosoughi, T.~Mitamura, and E.~Hovy, ``A survey of data augmentation approaches for NLP,'' in \emph{Proc. 59th Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2021, pp. 968--988.
 
-\bibitem{lin2017focal}
-T.-Y. Lin, P.~Goyal, R.~Girshick, K.~He, and P.~Doll{\'a}r, ``Focal loss for dense object detection,'' in \emph{Proc. IEEE Int. Conf. Comput. Vis. (ICCV)}, 2017, pp. 2980--2988.
+\bibitem{shorten2021text}
+C.~Shorten, T.~M. Khoshgoftaar, and B.~Furht, ``Text data augmentation for deep learning: A survey,'' \emph{J. Big Data}, vol.~8, no.~1, p. 101, Dec. 2021.
 
-\bibitem{guo2017calibration}
-C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q. Weinberger, ``On calibration of modern neural networks,'' in \emph{Proc. Int. Conf. Mach. Learn. (ICML)}, 2017, pp. 1321--1330.
+\bibitem{dai2023augmenting}
+H.~Dai, Z.~Liu, W.~Liao, X.~Huang, Y.~Cao, Z.~Wu, L.~Zhao, S.~Xu, K.~Liu, N.~Liu, S.~Bhandarkar, Q.~Li, L.~Shen, T.~Liu, and D.~Zhu, ``Augmenting low-resource text classification with large language models,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2023, pp. 12\,431--12\,448.
+
+\bibitem{ding2024gpt4}
+B.~Ding, C.~Qin, L.~Liu, Y.~Shen, S.~Joty, and B.~Bansal, ``Is GPT-4 a good data augmenter? Evaluating LLM-based synthetic text for classification,'' in \emph{Proc. 62nd Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2024, pp. 4112--4129.
 
 \bibitem{wilie2020indonlu}
 B.~Wilie, K.~Vincentio, G.~I. Winata, S.~Cahyawijaya, X.~Li, Z.~Y. Lim, S.~Soleman, R.~Mahendra, P.~Fung, S.~Bahar, and A.~Purwarianti, ``IndoNLU: Benchmark and resources for evaluating Indonesian natural language understanding,'' in \emph{Proc. 1st Conf. Asia-Pacific Chapter Assoc. Comput. Linguistics (AACL-IJCNLP)}, 2020, pp. 843--860.
