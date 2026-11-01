@@ -1,0 +1,42 @@
+[
+  {
+    "Dataset": "SmSA",
+    "Domain / Task": "Document Sentiment",
+    "Classes (K)": 3,
+    "Train Size": 11000,
+    "Val Size": 1260,
+    "Test Size": 500,
+    "Label Distribution (Train)": "positive: 6416 (58.3%), negative: 3436 (31.2%), neutral: 1148 (10.4%)",
+    "Imbalance Ratio (IR)": "5.59x (Moderate)"
+  },
+  {
+    "Dataset": "HoASA",
+    "Domain / Task": "Aspect Hotel Sentiment",
+    "Classes (K)": 3,
+    "Train Size": 2283,
+    "Val Size": 285,
+    "Test Size": 286,
+    "Label Distribution (Train)": "neut: 2023 (88.6%), pos: 230 (10.1%), neg: 30 (1.3%)",
+    "Imbalance Ratio (IR)": "67.43x (Extreme)"
+  },
+  {
+    "Dataset": "EmoT",
+    "Domain / Task": "Twitter Emotion Analysis",
+    "Classes (K)": 5,
+    "Train Size": 3521,
+    "Val Size": 440,
+    "Test Size": 440,
+    "Label Distribution (Train)": "anger: 881 (25.0%), happy: 814 (23.1%), sadness: 798 (22.7%), fear: 519 (14.7%), love: 509 (14.5%)",
+    "Imbalance Ratio (IR)": "1.73x (Mild)"
+  },
+  {
+    "Dataset": "MovieOpini",
+    "Domain / Task": "Film Review Sentiment",
+    "Classes (K)": 2,
+    "Train Size": 139,
+    "Val Size": 31,
+    "Test Size": 30,
+    "Label Distribution (Train)": "positive: 70 (50.4%), negative: 69 (49.6%)",
+    "Imbalance Ratio (IR)": "1.01x (Balanced)"
+  }
+]

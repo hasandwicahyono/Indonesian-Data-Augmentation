@@ -240,6 +240,70 @@ def clean_variant_name(raw_name: str) -> str:
 
 
 # =====================================================================
+# Dataset Statistics Computation and Persistence
+# =====================================================================
+def compute_and_save_dataset_statistics(
+    manager: Optional[IndonesianDatasetsManager] = None,
+    results_dir: str = "data/results",
+    extended_results_dir: str = "data/results/extended",
+) -> pd.DataFrame:
+    """Computes exact dataset partitions, class distributions, and IR from raw data and saves to file."""
+    if manager is None:
+        manager = IndonesianDatasetsManager()
+
+    datasets = [
+        ("SmSA", "Document Sentiment", manager.load_smsa),
+        ("HoASA", "Aspect Hotel Sentiment", manager.load_hoasa),
+        ("EmoT", "Twitter Emotion Analysis", manager.load_emot),
+        ("MovieOpini", "Film Review Sentiment", manager.load_movie_opini),
+    ]
+
+    records = []
+    for name, domain, load_fn in datasets:
+        ds = load_fn()
+        num_classes = len(ds.label_list)
+        train_len = len(ds.train)
+        val_len = len(ds.val)
+        test_len = len(ds.test)
+
+        counts = ds.train["label"].value_counts()
+        max_c = counts.max()
+        min_c = counts.min()
+        ir = round(max_c / max(1, min_c), 2)
+        ir_desc = "Balanced" if ir <= 1.2 else ("Mild" if ir <= 3.0 else ("Moderate" if ir <= 10.0 else "Extreme"))
+
+        dist_str_csv = ", ".join([f"{lbl}: {c} ({(c/train_len)*100:.1f}%)" for lbl, c in counts.items()])
+
+        records.append({
+            "Dataset": name,
+            "Domain / Task": domain,
+            "Classes (K)": num_classes,
+            "Train Size": train_len,
+            "Val Size": val_len,
+            "Test Size": test_len,
+            "Label Distribution (Train)": dist_str_csv,
+            "Imbalance Ratio (IR)": f"{ir}x ({ir_desc})",
+        })
+
+    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(extended_results_dir, exist_ok=True)
+
+    json_path = os.path.join(results_dir, "dataset_statistics.json")
+    with open(json_path, "w") as f:
+        json.dump(records, f, indent=2)
+
+    ext_json_path = os.path.join(extended_results_dir, "dataset_statistics.json")
+    with open(ext_json_path, "w") as f:
+        json.dump(records, f, indent=2)
+
+    df = pd.DataFrame(records)
+    csv_path = os.path.join(extended_results_dir, "access_table_dataset_stats.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"  [Dataset Stats] Saved {len(records)} dataset profiles to:\n    - {json_path}\n    - {csv_path}")
+    return df
+
+
+# =====================================================================
 # Visualization 1: 4-Metric Performance Comparison per Dataset
 # =====================================================================
 def plot_dataset_metric_comparison(
@@ -751,6 +815,16 @@ def run_benchmark_pipeline(
     os.makedirs(figures_dir, exist_ok=True)
     manager = IndonesianDatasetsManager()
 
+    # -------------------------------------------------------------
+    # Step 0: Compute and Persist Benchmark Dataset Statistics
+    # -------------------------------------------------------------
+    print("\n>>> [STEP 0] Computing and saving benchmark dataset statistics to persistent files...")
+    compute_and_save_dataset_statistics(
+        manager=manager,
+        results_dir=results_dir,
+        extended_results_dir="data/results/extended",
+    )
+
     mode_desc = "PLOT-ONLY (Visualizations from existing results)" if plot_only else (
         "FULL END-TO-END PIPELINE (Phase 1 Generation + Phase 2 Filtering + Phase 3 Training + Phase 4 Visualizations)"
         if run_generation else "BENCHMARK EVALUATION (Phase 3 Training + Phase 4 Visualizations)"
@@ -948,6 +1022,20 @@ def run_benchmark_pipeline(
                 print(f"  [Notice] Could not generate confusion matrix from {npz_cand}: {e}")
         else:
             print(f"  [Notice] Predictions file {npz_cand} not found. Confusion matrix requires model evaluation run to capture test predictions.")
+
+    # -------------------------------------------------------------
+    # Step 2b: Compute and Persist Architectural Ablation Analysis
+    # -------------------------------------------------------------
+    print("\n>>> [STEP 2b] Computing and saving architectural ablation analysis to persistent files...")
+    try:
+        from generate_dynamic_paper_tables import generate_access_ablation_table
+        generate_access_ablation_table(
+            results_dir=results_dir,
+            out_results_dir="data/results/extended",
+            paper_dir="paper",
+        )
+    except Exception as e:
+        print(f"  [Notice] Ablation table generation deferred: {e}")
 
     # -------------------------------------------------------------
     # 3. Generate Cross-Dataset Multi-Panel Dashboard

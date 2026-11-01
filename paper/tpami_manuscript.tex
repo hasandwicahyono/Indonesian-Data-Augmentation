@@ -226,7 +226,7 @@ Under severe imbalance, minimizing $\ell_{\text{CE}}$ leads to the Fisher-consis
 \end{align}
 Standard cross-entropy completely omits this class-prior adjustment, shifting the decision boundary in favor of dominant classes. As a consequence, tail class predictions are systematically suppressed unless their conditional likelihood exceeds the dominant prior ratio.
 
-We define the proposed **Adaptive Logit-Adjusted Loss** $\ell_{\text{ALA}}$:
+We define the proposed \textbf{Adaptive Logit-Adjusted Loss} $\ell_{\text{ALA}}$:
 \begin{equation}
     \ell_{\text{ALA}}(y, \mathbf{f}(x); \boldsymbol{\pi}) = -\log \left( \frac{\mathrm{e}^{f_y(x) + \tau(IR) \log \pi_y}}{\sum_{j=1}^K \mathrm{e}^{f_j(x) + \tau(IR) \log \pi_j}} \right)
 \end{equation}
