@@ -767,7 +767,7 @@ if __name__ == "__main__":
             ensemble_configs = [
                 {"model_name": "indolem/indobertweet-base-uncased", "weight": 0.50},
                 {"model_name": "indobenchmark/indobert-base-p1", "weight": 0.30},
-                {"model_name": "cahya/indobert-base-indonesian-522M", "weight": 0.20},
+                {"model_name": "cahya/bert-base-indonesian-522M", "weight": 0.20},
             ]
     elif args.dataset == "HoASA":
         ds = manager.load_hoasa()

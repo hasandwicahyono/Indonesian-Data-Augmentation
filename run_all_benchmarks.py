@@ -134,7 +134,7 @@ DATASET_CONFIGS = {
         "ensemble_models": [
             {"model_name": "indolem/indobertweet-base-uncased", "weight": 0.50},
             {"model_name": "indobenchmark/indobert-base-p1", "weight": 0.30},
-            {"model_name": "cahya/indobert-base-indonesian-522M", "weight": 0.20},
+            {"model_name": "cahya/bert-base-indonesian-522M", "weight": 0.20},
         ],
         "label_smoothing": 0.08,     # Regularizes overlapping emotion boundaries
         "use_fgm": True,
