@@ -59,7 +59,7 @@ GENERATIVE_MODELS_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Baseline first-generation autoregressive model matching Refai et al. (2023) AraGPT2 baseline.",
     },
     "gpt2-flax": {
-        "model_id": "flax-community/indonesian-gpt2",
+        "model_id": "flax-community/gpt2-small-indonesian",
         "generation": "First-Generation (2021)",
         "release_year": 2021,
         "author": "Hugging Face Community (JAX/Flax Sprint)",
@@ -77,7 +77,7 @@ GENERATIVE_MODELS_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Direct peer architecture trained on TPUv3-8 during the 2021 Flax Community Sprint.",
     },
     "gpt2-medium": {
-        "model_id": "cahya/gpt2-medium-indonesian-522M",
+        "model_id": "cahya/gpt2-medium-indonesian",
         "generation": "First-Generation (2020)",
         "release_year": 2020,
         "author": "Cahya Wirawan",

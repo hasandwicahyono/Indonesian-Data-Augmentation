@@ -8,7 +8,7 @@ This repository contains the complete source code adaptation of the methodology 
 
 | Component | Original Paper (Arabic) | Adapted Indonesian Implementation |
 | :--- | :--- | :--- |
-| **Generative Model** | `aubmindlab/aragpt2-base` | `cahya/gpt2-small-indonesian-522M` *(or `flax-community/indonesian-gpt2`)* |
+| **Generative Model** | `aubmindlab/aragpt2-base` | `cahya/gpt2-small-indonesian-522M` *(or `flax-community/gpt2-small-indonesian`)* |
 | **Sentence Embedding** | `distiluse-base-multilingual-cased` | `sentence-transformers/distiluse-base-multilingual-cased-v2` |
 | **Downstream Classifier** | `aubmindlab/bert-base-arabertv02-twitter` | `indobenchmark/indobert-base-p1` *(IndoBERT)* |
 | **Text Preprocessing** | `ArabertPreprocessor` (Farasa, Arabic diacritics, Tatweel) | `IndonesianPreprocessor` (Slang normalizer, repeated char reduction, mentions, URLs) |
