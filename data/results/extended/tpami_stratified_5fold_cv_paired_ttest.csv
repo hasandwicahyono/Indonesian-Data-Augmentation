@@ -1,9 +1,9 @@
 Dataset,Variant,Folds (1..5),Mean F1,t-stat,p-value,Significance
 MovieOpini (Movie Reviews),Baseline (Unaugmented),"0.7571, 0.7647, 0.7925, 0.7647, 0.7879",0.7734 +- 0.0141,+0.000,1.0000,---
-MovieOpini (Movie Reviews),Proposed (Augmented + AIC),"0.6780, 0.7939, 0.7332, 0.8497, 0.8479",0.7805 +- 0.0667,+0.220,0.8367,ns
-HoASA (Hotel Aspect),Baseline (Unaugmented),"0.7181, 0.7271, 0.7211, 0.7261, 0.7231",0.7231 +- 0.0033,+0.000,1.0000,---
-HoASA (Hotel Aspect),Proposed (ECU + AIC),"0.6883, 0.6973, 0.6913, 0.6963, 0.6933",0.6933 +- 0.0033,-inf,0.0000e+00,p < 0.001 (***)
-SmSA (Doc Sentiment),Baseline (Unaugmented),"0.9204, 0.9294, 0.9234, 0.9284, 0.9254",0.9254 +- 0.0033,+0.000,1.0000,---
-SmSA (Doc Sentiment),Proposed (ECU + AIC),"0.8889, 0.8979, 0.8919, 0.8969, 0.8939",0.8939 +- 0.0033,-inf,0.0000e+00,p < 0.001 (***)
-EmoT (Twitter Emotion),Baseline (Unaugmented),"0.7835, 0.7925, 0.7865, 0.7915, 0.7885",0.7885 +- 0.0033,+0.000,1.0000,---
-EmoT (Twitter Emotion),Proposed (ECU + AIC),"0.7709, 0.7799, 0.7739, 0.7789, 0.7759",0.7759 +- 0.0033,-inf,0.0000e+00,p < 0.001 (***)
+MovieOpini (Movie Reviews),Proposed (Augmented + AIC),"0.6780, 0.7939, 0.7332, 0.8497, 0.8479",0.7805 +- 0.0667,+0.220,0.8364,ns
+HoASA (Hotel Aspect),Baseline (Unaugmented),"0.5068, 0.3977, 0.3333, 0.5496, 0.4352",0.4445 +- 0.0769,+0.000,1.0000,---
+HoASA (Hotel Aspect),Proposed (Augmented + AIC),"0.3620, 0.3485, 0.3313, 0.7504, 0.6727",0.4930 +- 0.1804,+0.658,0.5465,ns
+SmSA (Doc Sentiment),Baseline (Unaugmented),"0.9048, 0.8094, 0.6250, 0.7488, 0.7381",0.7652 +- 0.0918,+0.000,1.0000,---
+SmSA (Doc Sentiment),Proposed (Augmented + AIC),"0.7778, 0.7548, 0.5863, 0.8047, 0.6546",0.7156 +- 0.0822,-1.635,0.1773,ns
+EmoT (Twitter Emotion),Baseline (Unaugmented),"0.2989, 0.1060, 0.1030, 0.1115, 0.1108",0.1460 +- 0.0765,+0.000,1.0000,---
+EmoT (Twitter Emotion),Proposed (Augmented + AIC),"0.2350, 0.1343, 0.2362, 0.1643, 0.1804",0.1900 +- 0.0400,+1.372,0.2421,ns

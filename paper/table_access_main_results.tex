@@ -1,0 +1,34 @@
+\begin{tabularx}{\textwidth}{l l c c c c c c c}
+\toprule
+\textbf{Dataset} & \textbf{Variant} & \textbf{Aug. Size} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{$\Delta$ F1 (Abs)} & \textbf{$\Delta$ F1 (Rel)} \\
+\midrule
+\multirow{5}{*}{\textbf{SmSA}}
+& Baseline (Not-Augmented) & 12,148 & 0.9400 & 0.9369 & 0.9169 & 0.9254 & --- & --- \\
+& ECU-Augmented & 13,172 & 0.9180 & 0.9182 & 0.8796 & 0.8939 & -0.0315 & -3.40\% \\
+& COS-Augmented & 13,014 & 0.9180 & 0.9206 & 0.8753 & 0.8914 & -0.0340 & -3.67\% \\
+& JAC-Augmented & 12,942 & 0.9140 & 0.9054 & 0.8786 & 0.8886 & -0.0368 & -3.97\% \\
+& BLEU-Augmented & 12,918 & 0.9200 & 0.9129 & 0.8790 & 0.8918 & -0.0336 & -3.63\% \\
+\midrule
+\multirow{5}{*}{\textbf{HoASA}}
+& Baseline (Not-Augmented) & 2,493 & 0.9336 & 0.6966 & 0.7559 & 0.7231 & --- & --- \\
+& ECU-Augmented & 2,705 & 0.9441 & 0.7112 & 0.6873 & 0.6933 & -0.0298 & -4.13\% \\
+& COS-Augmented & 2,637 & 0.9371 & 0.6768 & 0.6845 & 0.6790 & -0.0441 & -6.10\% \\
+& JAC-Augmented & 2,653 & 0.9336 & 0.6705 & 0.6832 & 0.6748 & -0.0483 & -6.68\% \\
+& BLEU-Augmented & 2,629 & 0.9441 & 0.7112 & 0.6873 & 0.6933 & -0.0298 & -4.13\% \\
+\midrule
+\multirow{6}{*}{\textbf{EmoT}}
+& Baseline (Not-Augmented) & 3,520 & 0.7864 & 0.7863 & 0.7911 & 0.7885 & --- & --- \\
+& ECU-Augmented & 3,914 & 0.7750 & 0.7786 & 0.7750 & 0.7759 & -0.0126 & -1.60\% \\
+& COS-Augmented & 3,835 & 0.7864 & 0.7874 & 0.7893 & 0.7877 & -0.0007 & -0.09\% \\
+& JAC-Augmented & 3,760 & 0.7864 & 0.7971 & 0.7825 & 0.7884 & -0.0001 & -0.01\% \\
+& BLEU-Augmented & 3,790 & 0.7818 & 0.7784 & 0.7856 & 0.7816 & -0.0069 & -0.87\% \\
+& Ensemble-Augmented & 3,761 & 0.7864 & 0.7909 & 0.7862 & 0.7872 & -0.0013 & -0.16\% \\
+\midrule
+\multirow{5}{*}{\textbf{MovieOpini}}
+& Baseline (Not-Augmented) & 139 & 0.9333 & 0.9412 & 0.9333 & 0.9330 & --- & --- \\
+& ECU-Augmented & 160 & 0.9333 & 0.9412 & 0.9333 & 0.9330 & +0.0000 & +0.00\% \\
+& \textbf{COS-Augmented} & 154 & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{+0.0670} & \textbf{+7.18\%} \\
+& JAC-Augmented & 153 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & +0.0670 & +7.18\% \\
+& BLEU-Augmented & 153 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & +0.0670 & +7.18\% \\
+\bottomrule
+\end{tabularx}

@@ -1,0 +1,5 @@
+Dataset,Domain / Task,Classes (K),Train Size,Val Size,Test Size,Label Distribution (Train),Imbalance Ratio (IR)
+SmSA,Document Sentiment,3,11000,1260,500,"positive: 6416 (58.3%), negative: 3436 (31.2%), neutral: 1148 (10.4%)",5.59x (Moderate)
+HoASA,Aspect Hotel Sentiment,3,2283,285,286,"neut: 2023 (88.6%), pos: 230 (10.1%), neg: 30 (1.3%)",67.43x (Extreme)
+EmoT,Twitter Emotion Analysis,5,3521,440,440,"anger: 881 (25.0%), happy: 814 (23.1%), sadness: 798 (22.7%), fear: 519 (14.7%), love: 509 (14.5%)",1.73x (Mild)
+MovieOpini,Film Review Sentiment,2,139,31,30,"positive: 70 (50.4%), negative: 69 (49.6%)",1.01x (Balanced)

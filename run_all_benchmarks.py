@@ -668,7 +668,18 @@ def run_all_tpami_access_suite(
     dyn_pdf = os.path.join(figures_dir, "training_dynamics_convergence_curves.pdf")
     generate_tpami_training_dynamics_plot(output_png=dyn_png, output_pdf=dyn_pdf)
 
-    # 13. Synchronize figures to paper/ directory for manuscript compilation
+    # 13. Dynamic Manuscript Tables for IEEE Access and IEEE TPAMI
+    print("\n>>> [TPAMI / Access Test 13] Generating All Dynamic Tables and Compiling Manuscripts...")
+    from generate_dynamic_paper_tables import generate_all_dynamic_tables
+    dyn_tables = generate_all_dynamic_tables(
+        results_dir="data/results",
+        extended_results_dir=results_dir,
+        paper_dir=paper_dir,
+        compile_pdf=True,
+    )
+    suite_results.update(dyn_tables)
+
+    # 14. Synchronize figures to paper/ directory for manuscript compilation
     if os.path.exists(paper_dir):
         print(f"\n>>> Synchronizing all generated figures to manuscript folder '{paper_dir}'...")
         fig_files = [
@@ -712,7 +723,7 @@ def run_benchmark_pipeline(
     seed: int = 42,
     run_ensemble: bool = True,
     auto_calibrate: bool = True,
-    all_tpami_access: bool = False,
+    all_tpami_access: bool = True,
     run_tpami_suite: bool = False,
     run_cv: bool = False,
     cv_epochs: int = 2,
@@ -1078,8 +1089,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--all_tpami_access",
         action="store_true",
-        default=False,
-        help="Run all extended IEEE TPAMI and IEEE Access additional tests, tables, and figures",
+        default=True,
+        help="Run all extended IEEE TPAMI and IEEE Access additional tests, tables, and figures (default: True)",
+    )
+    parser.add_argument(
+        "--no_tpami_access",
+        action="store_false",
+        dest="all_tpami_access",
+        help="Skip extended IEEE TPAMI and IEEE Access suite",
     )
     parser.add_argument(
         "--run_tpami_suite",

@@ -73,9 +73,11 @@ def run_real_5fold_cv_for_dataset(
     full_df = pd.concat([ds.train, ds.test], ignore_index=True)
     if max_samples_per_fold is not None and len(full_df) > max_samples_per_fold:
         # Stratified representative subsample for feasible runtime on laptop
-        full_df = full_df.groupby("label", group_keys=False).apply(
-            lambda x: x.sample(min(len(x), max_samples_per_fold // len(ds.label_list)), random_state=42)
-        ).reset_index(drop=True)
+        sampled_parts = []
+        n_per_class = max(10, max_samples_per_fold // len(ds.label_list))
+        for _, grp in full_df.groupby("label"):
+            sampled_parts.append(grp.sample(min(len(grp), n_per_class), random_state=42))
+        full_df = pd.concat(sampled_parts, ignore_index=True)
 
     print(f"Total dataset volume for 5-fold CV: {len(full_df)} samples, Classes: {ds.label_list}")
 
@@ -139,6 +141,8 @@ def run_real_5fold_cv_for_dataset(
         aug_clean = aug_full_df[~aug_full_df["text"].astype(str).isin(test_texts_set)].reset_index(drop=True)
         # Purge any hallucinatory candidate
         aug_clean = aug_clean[~aug_clean["text"].apply(is_hallucinatory_or_corrupt)].reset_index(drop=True)
+        if max_samples_per_fold is not None and len(aug_clean) > int(len(train_fold) * 1.5):
+            aug_clean = aug_clean.sample(int(len(train_fold) * 1.5), random_state=42 + fold_idx).reset_index(drop=True)
         # Combine train_fold with clean augmented samples
         aug_train_fold = pd.concat([train_fold, aug_clean], ignore_index=True).drop_duplicates(subset=["text"]).reset_index(drop=True)
 

@@ -251,52 +251,15 @@ def generate_tpami_sota_longtailed_table() -> pd.DataFrame:
     """
     Benchmarks the proposed framework against leading long-tailed paradigms:
     ERM, WCE, Focal Loss, Class-Balanced Loss, LDAM-DRW, c-RT, and VS-Loss.
-    Dynamically loads real baseline and proposed evaluation metrics from data/results/*.xlsx.
+    Dynamically loads real baseline and proposed evaluation metrics from data/results/*.xlsx
+    and structured experimental records.
     """
-    records = []
-    
-    for ds_name, ir_val in [("HoASA", "67.43x"), ("SmSA", "5.59x")]:
-        eval_path = f"data/results/{ds_name}_evaluation_results.xlsx"
-        if not os.path.exists(eval_path):
-            continue
-            
-        df_eval = pd.read_excel(eval_path)
-        base_df = df_eval[df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)]
-        aug_df = df_eval[
-            df_eval["dataset_name"].str.contains("Augmented", case=False, na=False)
-            & ~df_eval["dataset_name"].str.contains("NotAugmented", case=False, na=False)
-        ]
-        
-        base_row = base_df.iloc[0] if not base_df.empty else None
-        prop_row = aug_df.iloc[0] if not aug_df.empty else None
-        
-        b_acc = float(base_row.get("accuracy", 0.90)) if base_row is not None else 0.90
-        b_f1 = float(base_row.get("macro_f1", 0.70)) if base_row is not None else 0.70
-        b_prec = float(base_row.get("macro_precision", 0.70)) if base_row is not None else 0.70
-        b_rec = float(base_row.get("macro_recall", 0.70)) if base_row is not None else 0.70
-
-        p_acc = float(prop_row.get("accuracy", 0.94)) if prop_row is not None else 0.94
-        p_f1 = float(prop_row.get("macro_f1", 0.72)) if prop_row is not None else 0.72
-        p_prec = float(prop_row.get("macro_precision", 0.75)) if prop_row is not None else 0.75
-        p_rec = float(prop_row.get("macro_recall", 0.72)) if prop_row is not None else 0.72
-        prop_variant = str(prop_row.get("dataset_name", "Augmented")).split("-")[-1] if prop_row is not None else "Augmented"
-
-        records.extend([
-            {"Dataset": ds_name, "Method Paradigm": "Standard ERM (Cross-Entropy)", "Technique Family": "Empirical Risk Minimization", "Accuracy": round(b_acc, 4), "Macro-Prec": round(b_prec, 4), "Macro-Rec": round(b_rec, 4), "Macro-F1": round(b_f1, 4), "Rec (Min)": 0.0000, "BAcc": round(b_rec, 4)},
-            {"Dataset": ds_name, "Method Paradigm": "Inverse-Frequency WCE", "Technique Family": "Cost-Sensitive Re-weighting", "Accuracy": round(b_acc * 0.94, 4), "Macro-Prec": round(b_prec * 1.02, 4), "Macro-Rec": round(b_rec * 1.04, 4), "Macro-F1": round(b_f1 * 1.03, 4), "Rec (Min)": 0.2000, "BAcc": round(b_rec * 1.04, 4)},
-            {"Dataset": ds_name, "Method Paradigm": "Focal Loss (gamma=2.0)", "Technique Family": "Hard-Example Mining (Lin 2017)", "Accuracy": round(b_acc * 0.98, 4), "Macro-Prec": round(b_prec * 1.04, 4), "Macro-Rec": round(b_rec * 1.03, 4), "Macro-F1": round(b_f1 * 1.04, 4), "Rec (Min)": 0.0000, "BAcc": round(b_rec * 1.03, 4)},
-            {"Dataset": ds_name, "Method Paradigm": "Class-Balanced Focal (CB-Focal)", "Technique Family": "Effective Sample Size (Cui 2019)", "Accuracy": round(b_acc * 0.985, 4), "Macro-Prec": round(b_prec * 1.06, 4), "Macro-Rec": round(b_rec * 1.05, 4), "Macro-F1": round(b_f1 * 1.06, 4), "Rec (Min)": 0.2000, "BAcc": round(b_rec * 1.05, 4)},
-            {"Dataset": ds_name, "Method Paradigm": "LDAM-DRW (Deferred Re-weight)", "Technique Family": "Label-Aware Margin (Cao 2019)", "Accuracy": round(b_acc * 0.995, 4), "Macro-Prec": round(b_prec * 1.10, 4), "Macro-Rec": round(b_rec * 1.07, 4), "Macro-F1": round(b_f1 * 1.08, 4), "Rec (Min)": 0.2000, "BAcc": round(b_rec * 1.07, 4)},
-            {"Dataset": ds_name, "Method Paradigm": "Decoupled c-RT (Classifier Re-train)", "Technique Family": "Two-Stage Decoupling (Kang 2020)", "Accuracy": round(b_acc * 0.992, 4), "Macro-Prec": round(b_prec * 1.09, 4), "Macro-Rec": round(b_rec * 1.06, 4), "Macro-F1": round(b_f1 * 1.07, 4), "Rec (Min)": 0.2000, "BAcc": round(b_rec * 1.06, 4)},
-            {"Dataset": ds_name, "Method Paradigm": "Vector Scaling (VS) Loss", "Technique Family": "Multiplicative Margin (Kini 2021)", "Accuracy": round(b_acc * 0.998, 4), "Macro-Prec": round(b_prec * 1.12, 4), "Macro-Rec": round(b_rec * 1.08, 4), "Macro-F1": round(b_f1 * 1.10, 4), "Rec (Min)": 0.2000, "BAcc": round(b_rec * 1.08, 4)},
-            {"Dataset": ds_name, "Method Paradigm": f"Proposed ({prop_variant}-Augmented + AIC)", "Technique Family": "Dual-Space Projection + Logit Adj.", "Accuracy": round(p_acc, 4), "Macro-Prec": round(p_prec, 4), "Macro-Rec": round(p_rec, 4), "Macro-F1": round(p_f1, 4), "Rec (Min)": 0.2857, "BAcc": round(p_rec, 4)},
-        ])
-
-    df = pd.DataFrame(records)
-    out_csv = "data/results/extended/tpami_longtailed_sota_comparison.csv"
-    df.to_csv(out_csv, index=False)
-    print("\n[TPAMI SOTA Long-Tailed Benchmarking Table]")
-    print(df.to_string(index=False))
+    from generate_dynamic_paper_tables import generate_tpami_comparisons_table
+    df, _ = generate_tpami_comparisons_table(
+        results_dir="data/results",
+        paper_dir="paper",
+        out_results_dir="data/results/extended",
+    )
     return df
 
 
@@ -487,103 +450,14 @@ def generate_tpami_ir_sweep_and_noise_plots(
 def generate_tpami_5fold_cv_table(output_csv: str = "data/results/extended/tpami_stratified_5fold_cv_paired_ttest.csv") -> pd.DataFrame:
     """
     Computes and formats the 5-Fold CV Paired t-Test table across all datasets.
-    Dynamically loads real experimental trial results from JSON files and evaluation spreadsheets,
+    Dynamically loads real experimental trial results from JSON files,
     guaranteeing that all values are derived from actual experiments without hard-coding.
     """
-    import json
-    datasets_perf = {}
-    
-    datasets_map = {
-        "MovieOpini": ("MovieOpini (Movie Reviews)", "MovieOpini_real_5fold_results.json"),
-        "HoASA": ("HoASA (Hotel Aspect)", "HoASA_real_5fold_results.json"),
-        "SmSA": ("SmSA (Doc Sentiment)", "SmSA_real_5fold_results.json"),
-        "EmoT": ("EmoT (Twitter Emotion)", "EmoT_real_5fold_results.json"),
-    }
-
-    for ds_code, (ds_label, json_name) in datasets_map.items():
-        json_path = os.path.join("data/results/extended", json_name)
-        datasets_perf[ds_label] = {}
-
-        # 1. Try loading from real 5-fold CV json
-        loaded_from_json = False
-        if os.path.exists(json_path):
-            try:
-                with open(json_path, "r") as f:
-                    data = json.load(f)
-                if "baseline_f1" in data and "augmented_f1" in data:
-                    datasets_perf[ds_label]["Baseline (Unaugmented)"] = [round(x, 4) for x in data["baseline_f1"]]
-                    prop_name = data.get("variant_name", "Proposed (Augmented + AIC)")
-                    if not prop_name.startswith("Proposed"):
-                        prop_name = f"Proposed ({prop_name} + AIC)"
-                    datasets_perf[ds_label][prop_name] = [round(x, 4) for x in data["augmented_f1"]]
-                    print(f"  [Real 5-Fold CV Data Loaded] {ds_label} from {json_path}")
-                    loaded_from_json = True
-            except Exception as e:
-                print(f"  [Warning] Could not parse {json_path}: {e}")
-
-        # 2. If no 5-fold JSON yet, load empirical mean from real evaluation results spreadsheet
-        if not loaded_from_json:
-            eval_path = f"data/results/{ds_code}_evaluation_results.xlsx"
-            if os.path.exists(eval_path):
-                try:
-                    df_eval = pd.read_excel(eval_path)
-                    base_df = df_eval[df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)]
-                    aug_df = df_eval[
-                        df_eval["dataset_name"].str.contains("Augmented", case=False, na=False)
-                        & ~df_eval["dataset_name"].str.contains("NotAugmented", case=False, na=False)
-                    ]
-                    
-                    b_f1 = float(base_df.iloc[0].get("macro_f1", 0.70)) if not base_df.empty else 0.70
-                    p_row = aug_df.iloc[0] if not aug_df.empty else None
-                    p_f1 = float(p_row.get("macro_f1", 0.72)) if p_row is not None else 0.72
-                    prop_var = str(p_row.get("dataset_name", "Augmented")).split("-")[-1] if p_row is not None else "Augmented"
-
-                    # Generate empirical folds around actual measured performance
-                    np.random.seed(42 + len(ds_code))
-                    fold_deltas = np.array([-0.005, +0.004, -0.002, +0.003, 0.000])
-                    datasets_perf[ds_label]["Baseline (Unaugmented)"] = [round(b_f1 + d, 4) for d in fold_deltas]
-                    datasets_perf[ds_label][f"Proposed ({prop_var} + AIC)"] = [round(p_f1 + d, 4) for d in fold_deltas]
-                    print(f"  [Real Benchmark Data Loaded] {ds_label} derived from {eval_path}")
-                except Exception as e:
-                    print(f"  [Warning] Could not parse {eval_path}: {e}")
-
-    records = []
-    for dname, variants in datasets_perf.items():
-        base_scores = list(variants.values())[0]
-        for vname, scores in variants.items():
-            mean_f1 = np.mean(scores)
-            std_f1 = np.std(scores)
-            if vname.startswith("Baseline"):
-                t_stat, p_val, sig = 0.0, 1.0, "---"
-            else:
-                t_res = stats.ttest_rel(scores, base_scores)
-                t_stat = float(t_res.statistic)
-                p_val = float(t_res.pvalue)
-                if p_val < 0.001:
-                    sig = "p < 0.001 (***)"
-                elif p_val < 0.01:
-                    sig = "p < 0.01 (**)"
-                elif p_val < 0.05:
-                    sig = "p < 0.05 (*)"
-                else:
-                    sig = "ns"
-
-            records.append({
-                "Dataset": dname,
-                "Variant": vname,
-                "Folds (1..5)": f"{scores[0]:.4f}, {scores[1]:.4f}, {scores[2]:.4f}, {scores[3]:.4f}, {scores[4]:.4f}",
-                "Mean F1": f"{mean_f1:.4f} +- {std_f1:.4f}",
-                "t-stat": f"{t_stat:+.3f}",
-                "p-value": f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}",
-                "Significance": sig,
-            })
-
-    df = pd.DataFrame(records)
-    out_csv = output_csv
-    os.makedirs(os.path.dirname(out_csv), exist_ok=True)
-    df.to_csv(out_csv, index=False)
-    print("\n[TPAMI 5-Fold Cross Validation Paired t-Test Table]")
-    print(df.to_string(index=False))
+    from generate_dynamic_paper_tables import generate_tpami_5fold_table
+    df, _ = generate_tpami_5fold_table(
+        results_dir=os.path.dirname(output_csv),
+        paper_dir="paper",
+    )
     return df
 
 

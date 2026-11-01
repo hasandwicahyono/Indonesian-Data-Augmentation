@@ -219,16 +219,7 @@ To ensure complete reproducibility, this section describes the experimental conf
 \caption{Benchmark Dataset Statistics and Split Distributions Across the Four Evaluated Corpora}
 \label{tab:dataset_stats}
 \centering
-\begin{tabularx}{\textwidth}{l l c c c c X c}
-\toprule
-\textbf{Dataset} & \textbf{Domain / Task} & \textbf{Classes ($K$)} & \textbf{Train Size} & \textbf{Val Size} & \textbf{Test Size} & \textbf{Label Distribution (Train)} & \textbf{Imbalance Ratio ($IR$)} \\
-\midrule
-\textbf{SmSA} & Document Sentiment & 3 & 11,000 & 1,260 & 500 & Pos: 6,416 (58.3\%), Neg: 3,436 (31.2\%), Neut: 1,148 (10.4\%) & 5.59$\times$ (Moderate) \\
-\textbf{HoASA} & Aspect Hotel Sentiment & 3 & 2,283 & 285 & 286 & Neut: 2,023 (88.6\%), Pos: 230 (10.1\%), Neg: 30 (1.3\%) & 67.43$\times$ (Extreme) \\
-\textbf{EmoT} & Twitter Emotion Analysis & 5 & 3,520 & 440 & 440 & Anger: 881, Happy: 814, Sadness: 798, Fear: 519, Love: 509 & 1.73$\times$ (Mild) \\
-\textbf{MovieOpini} & Film Review Sentiment & 2 & 139 & 31 & 30 & Negative: 70 (50.4\%), Positive: 69 (49.6\%) & 1.01$\times$ (Balanced) \\
-\bottomrule
-\end{tabularx}
+\input{table_access_dataset_stats.tex}
 \end{table*}
 
 \subsection{Benchmark Datasets}
@@ -273,39 +264,7 @@ This section details the empirical findings obtained across the benchmark suite.
 \caption{Comprehensive Classification Benchmark Results Across Four Datasets and Augmentation Variants}
 \label{tab:main_results}
 \centering
-\begin{tabularx}{\textwidth}{l l c c c c c c c}
-\toprule
-\textbf{Dataset} & \textbf{Variant} & \textbf{Aug. Size} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{$\Delta$ F1 (Abs)} & \textbf{$\Delta$ F1 (Rel)} \\
-\midrule
-\multirow{5}{*}{\textbf{SmSA}} 
-& Baseline (Not-Augmented) & 11,000 & 0.9080 & 0.9116 & 0.8650 & 0.8816 & --- & --- \\
-& ECU-Augmented & 11,109 & 0.9080 & 0.9168 & 0.8557 & 0.8683 & -0.0133 & -1.51\% \\
-& COS-Augmented & 11,114 & 0.9220 & \textbf{0.9287} & 0.8770 & 0.8893 & +0.0077 & +0.87\% \\
-& JAC-Augmented & 11,113 & 0.9200 & 0.9102 & 0.8906 & 0.8988 & +0.0172 & +1.95\% \\
-& \textbf{BLEU-Augmented} & 11,113 & \textbf{0.9240} & 0.9167 & \textbf{0.8975} & \textbf{0.9053} & \textbf{+0.0237} & \textbf{+2.69\%} \\
-\midrule
-\multirow{5}{*}{\textbf{HoASA}} 
-& Baseline (Not-Augmented) & 2,283 & \textbf{0.9476} & 0.6140 & 0.6011 & 0.6070 & --- & --- \\
-& ECU-Augmented & 2,290 & 0.9441 & 0.7685 & 0.6725 & 0.6990 & +0.0921 & +15.17\% \\
-& \textbf{COS-Augmented} & 2,287 & \textbf{0.9476} & \textbf{0.7773} & \textbf{0.6812} & \textbf{0.7078} & \textbf{+0.1008} & \textbf{+16.61\%} \\
-& JAC-Augmented & 2,289 & 0.9406 & 0.5961 & 0.6132 & 0.6045 & -0.0025 & -0.42\% \\
-& BLEU-Augmented & 2,288 & 0.9510 & 0.6172 & 0.6173 & 0.6172 & +0.0102 & +1.68\% \\
-\midrule
-\multirow{5}{*}{\textbf{EmoT}} 
-& Baseline (Not-Augmented) & 3,520 & \textbf{0.8023} & \textbf{0.8055} & \textbf{0.8039} & \textbf{0.8040} & --- & --- \\
-& ECU-Augmented & 3,604 & 0.7932 & 0.7954 & 0.7948 & 0.7940 & -0.0100 & -1.24\% \\
-& COS-Augmented & 3,591 & 0.7750 & 0.7788 & 0.7804 & 0.7769 & -0.0270 & -3.36\% \\
-& JAC-Augmented & 3,590 & 0.7909 & 0.7993 & 0.7893 & 0.7932 & -0.0107 & -1.33\% \\
-& BLEU-Augmented & 3,575 & 0.7909 & 0.7965 & 0.7916 & 0.7931 & -0.0108 & -1.35\% \\
-\midrule
-\multirow{5}{*}{\textbf{MovieOpini}} 
-& Baseline (Not-Augmented) & 139 & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & --- & --- \\
-& ECU-Augmented & 208 & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & 0.0000 & 0.00\% \\
-& COS-Augmented & 201 & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & 0.0000 & 0.00\% \\
-& JAC-Augmented & 211 & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & 0.0000 & 0.00\% \\
-& BLEU-Augmented & 211 & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & 0.0000 & 0.00\% \\
-\bottomrule
-\end{tabularx}
+\input{table_access_main_results.tex}
 \end{table*}
 
 \subsection{Overall Classification Benchmark Performance}
@@ -322,25 +281,7 @@ On the SmSA benchmark, the baseline model achieved an accuracy of $90.80\%$ and 
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{l l c c c}
-\toprule
-\textbf{Dataset} & \textbf{Variant} & \textbf{F1 (Neg)} & \textbf{F1 (Neut)} & \textbf{F1 (Pos)} \\
-\midrule
-\multirow{5}{*}{\textbf{SmSA}} 
-& Baseline & 0.9390 & 0.7843 & 0.9216 \\
-& ECU & 0.9437 & 0.7376 & 0.9238 \\
-& COS & 0.9596 & 0.7742 & 0.9340 \\
-& JAC & 0.9439 & 0.8052 & 0.9474 \\
-& \textbf{BLEU} & \textbf{0.9461} & \textbf{0.8313} & \textbf{0.9386} \\
-\midrule
-\multirow{5}{*}{\textbf{HoASA}} 
-& Baseline & 0.0000 & 0.9717 & 0.8493 \\
-& ECU & \textbf{0.2857} & 0.9693 & 0.8421 \\
-& \textbf{COS} & \textbf{0.2857} & 0.9693 & \textbf{0.8684} \\
-& JAC & 0.0000 & 0.9672 & 0.8462 \\
-& BLEU & 0.0000 & 0.9715 & 0.8800 \\
-\bottomrule
-\end{tabular}
+\input{table_access_per_class_f1.tex}
 \end{table}
 
 To understand the anatomical source of this gain, Table \ref{tab:per_class_f1} deconstructs per-class F1-scores. In the baseline model, performance on positive ($92.16\%$) and negative ($93.90\%$) was exceptionally high, but neutral was severely depressed at $78.43\%$. Under BLEU augmentation, the neutral F1-score surged by \textbf{$+4.70\%$} to \textbf{$83.13\%$}, while positive F1 reached $93.86\%$ and negative reached $94.61\%$. This breakdown proves that the global Macro-F1 improvement is driven specifically by resolving the minority class bottleneck rather than inflating majority scores. Furthermore, the balanced improvement across all three classes confirms that our post-hoc prior adjustment effectively counteracts test distribution drift.
@@ -387,19 +328,7 @@ To isolate the individual contribution of each architectural component, this sec
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\columnwidth}{X c c}
-\toprule
-\textbf{Configuration} & \textbf{HoASA F1} & \textbf{SmSA F1} \\
-\midrule
-Full Proposed Pipeline & \textbf{0.7078} & \textbf{0.9053} \\
-\quad $-$ w/o Logit Adjustment ($\tau=0$) & 0.6120 & 0.8840 \\
-\quad $-$ w/o Minority Oversampling & 0.6385 & 0.8912 \\
-\quad $-$ w/o Semantic Filtering (Raw GPT-2) & 0.5842 & 0.8654 \\
-\quad $-$ w/o Emoji Semantic Mapping & 0.7012 & 0.9010 \\
-\quad $-$ w/o FGM Adversarial Regularization & 0.6890 & 0.8970 \\
-Baseline (Unaugmented ERM) & 0.6070 & 0.8816 \\
-\bottomrule
-\end{tabularx}
+\input{table_access_ablation.tex}
 \end{table}
 
 \subsection{Impact of Logit Adjustment Parameter $\tau$}
