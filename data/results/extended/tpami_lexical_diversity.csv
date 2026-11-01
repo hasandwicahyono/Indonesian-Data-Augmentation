@@ -1,13 +1,21 @@
 Dataset,Variant,Distinct-1,Distinct-2,Entropy (H)
-HoASA,Baseline (Original Training Set),0.0824,0.3842,6.84
-HoASA,Raw Unfiltered GPT-2 Continuations,0.0512,0.2415,5.12
-HoASA,ECU-Augmented (Euclidean Filtered),0.0865,0.4012,6.95
-HoASA,COS-Augmented (Cosine Filtered),0.0881,0.4085,7.02
-HoASA,JAC-Augmented (Jaccard Filtered),0.0841,0.392,6.89
-HoASA,BLEU-Augmented (BLEU Filtered),0.0852,0.3965,6.91
-SmSA,Baseline (Original Training Set),0.0612,0.312,7.21
-SmSA,Raw Unfiltered GPT-2 Continuations,0.041,0.1985,5.85
-SmSA,ECU-Augmented (Euclidean Filtered),0.0635,0.325,7.34
-SmSA,COS-Augmented (Cosine Filtered),0.0642,0.331,7.39
-SmSA,JAC-Augmented (Jaccard Filtered),0.0658,0.339,7.42
-SmSA,BLEU-Augmented (BLEU Filtered),0.0664,0.3425,7.45
+HoASA,Baseline (Original Training Set),0.1678,0.6842,9.98
+HoASA,ECU-Augmented (ECU Filtered),0.1683,0.6659,10.1
+HoASA,COS-Augmented (COS Filtered),0.1701,0.6764,10.06
+HoASA,JAC-Augmented (JAC Filtered),0.1697,0.6755,10.05
+HoASA,BLEU-Augmented (BLEU Filtered),0.1697,0.6753,10.06
+SmSA,Baseline (Original Training Set),0.0499,0.3753,9.52
+SmSA,ECU-Augmented (ECU Filtered),0.0502,0.3754,9.53
+SmSA,COS-Augmented (COS Filtered),0.0502,0.3755,9.53
+SmSA,JAC-Augmented (JAC Filtered),0.05,0.3753,9.53
+SmSA,BLEU-Augmented (BLEU Filtered),0.05,0.3753,9.53
+MovieOpini,Baseline (Original Training Set),0.4913,0.9149,9.06
+MovieOpini,ECU-Augmented (ECU Filtered),0.3456,0.6559,9.44
+MovieOpini,COS-Augmented (COS Filtered),0.3476,0.6598,9.31
+MovieOpini,JAC-Augmented (JAC Filtered),0.3215,0.6093,9.39
+MovieOpini,BLEU-Augmented (BLEU Filtered),0.3215,0.6093,9.39
+EmoT,Baseline (Original Training Set),0.2298,0.8259,11.82
+EmoT,ECU-Augmented (ECU Filtered),0.2262,0.8112,11.84
+EmoT,COS-Augmented (COS Filtered),0.2273,0.8148,11.84
+EmoT,JAC-Augmented (JAC Filtered),0.2271,0.8137,11.84
+EmoT,BLEU-Augmented (BLEU Filtered),0.2276,0.8163,11.83
