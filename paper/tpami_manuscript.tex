@@ -96,9 +96,10 @@ Without loss of generality, we index classes in descending order of frequency: $
 
 \begin{definition}[Balanced Classification Risk]
 Under severe class imbalance, the standard Bayes 0-1 risk $\mathcal{R}(f) = \mathbb{E}_{(X, Y)}[\mathbb{I}(f(X) \neq Y)]$ is heavily biased toward dominant categories. The balanced classification risk (equivalent to balanced accuracy and Macro-Recall optimization) assigns equal weight to every category:
-\begin{equation}
-    \mathcal{R}_{\text{bal}}(f) = \frac{1}{K} \sum_{k=1}^K \mathbb{P}_{X \mid Y=k}(f(X) \neq k) = \frac{1}{K} \sum_{k=1}^K \mathbb{E}_{X \mid Y=k} \left[ \mathbb{I}(f(X) \neq k) \right]
-\end{equation}
+\begin{align}
+    \mathcal{R}_{\text{bal}}(f) &= \frac{1}{K} \sum_{k=1}^K \mathbb{P}_{X \mid Y=k}(f(X) \neq k) \nonumber \\
+    &= \frac{1}{K} \sum_{k=1}^K \mathbb{E}_{X \mid Y=k} \left[ \mathbb{I}(f(X) \neq k) \right]
+\end{align}
 A surrogate classification loss $\mathcal{L}(y, f(x))$ is said to be \textbf{Fisher consistent} with respect to $\mathcal{R}_{\text{bal}}$ if the minimizer of the surrogate risk achieves the minimal balanced classification error.
 \end{definition}
 
@@ -149,9 +150,10 @@ Let $\phi: \mathcal{X} \to \mathcal{H}$ denote a nonlinear sentence embedding ma
 \end{definition}
 
 We define the admissible candidate set $\Omega_k$ governed by empirical threshold parameters:
-\begin{equation}
-    \Omega_k = \left\{ \tilde{x} \in \mathcal{X} \;\middle|\; S_{\text{COS}}(x, \tilde{x}) \ge \mu_{\text{COS}} + \sigma_{\text{COS}}, \; \text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}} \right\}
-\end{equation}
+\begin{align}
+    \Omega_k = \Big\{ \tilde{x} \in \mathcal{X} \;\Big|\; & S_{\text{COS}}(x, \tilde{x}) \ge \mu_{\text{COS}} + \sigma_{\text{COS}}, \nonumber \\
+    & \text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}} \Big\}
+\end{align}
 
 \begin{theorem}[Wasserstein Semantic Manifold Drift Bound]
 \label{thm:wasserstein_bound}
@@ -174,9 +176,10 @@ Let $\gamma \in \Pi(P_k, \tilde{P}_k^{\Omega})$ be an optimal transport coupling
     \|u - v\|_\mathcal{H} \le \|u - \mathbb{E}[P_k]\|_\mathcal{H} + \|\mathbb{E}[P_k] - v\|_\mathcal{H}
 \end{equation}
 Under the metric condition $v \in \Omega_k$, the angular constraint enforces:
-\begin{equation}
-    \|u - v\|_\mathcal{H}^2 = \|u\|_\mathcal{H}^2 + \|v\|_\mathcal{H}^2 - 2 \langle u, v \rangle_\mathcal{H} = 2 - 2 S_{\text{COS}}(x, \tilde{x}) \le 2(1 - \theta_{\text{COS}})
-\end{equation}
+\begin{align}
+    \|u - v\|_\mathcal{H}^2 &= \|u\|_\mathcal{H}^2 + \|v\|_\mathcal{H}^2 - 2 \langle u, v \rangle_\mathcal{H} \nonumber \\
+    &= 2 - 2 S_{\text{COS}}(x, \tilde{x}) \le 2(1 - \theta_{\text{COS}})
+\end{align}
 Taking the square root yields the primary Euclidean geodesic bound: $\|u - v\|_\mathcal{H} \le \sqrt{2(1 - \theta_{\text{COS}})}$.
 
 Furthermore, lexical deviation in the sequence domain maps to a distribution deviation over non-collocated sub-manifolds. By the Poisson-binomial tail bound on $n$-gram match counts under BLEU threshold $\theta_{\text{BLEU}}$, the probability of off-manifold semantic mutation decays exponentially with rate $\beta$:
@@ -201,19 +204,20 @@ We now address the classification loss formulation. Let $\mathbf{f}(x) = [f_1(x)
     \ell_{\text{CE}}(y, \mathbf{f}(x)) = -\log \left( \frac{\exp(f_y(x))}{\sum_{j=1}^K \exp(f_j(x))} \right)
 \end{equation}
 Under severe imbalance, minimizing $\ell_{\text{CE}}$ leads to the Fisher-consistent prediction rule for standard risk: $f_k^*(x) = \log P(Y=k \mid X=x) + \text{const}$. In contrast, optimizing the balanced risk $\mathcal{R}_{\text{bal}}$ requires predicting according to the balanced class posterior:
-\begin{equation}
-    f_{\text{bal}}^*(x) = \arg\max_{k \in \mathcal{Y}} P(X=x \mid Y=k) = \arg\max_{k \in \mathcal{Y}} \left\{ \log P(Y=k \mid X=x) - \log \pi_k \right\}
-\end{equation}
+\begin{align}
+    f_{\text{bal}}^*(x) &= \arg\max_{k \in \mathcal{Y}} P(X=x \mid Y=k) \nonumber \\
+    &= \arg\max_{k \in \mathcal{Y}} \left\{ \log P(Y=k \mid X=x) - \log \pi_k \right\}
+\end{align}
 
 We define the proposed **Adaptive Logit-Adjusted Loss** $\ell_{\text{ALA}}$:
 \begin{equation}
-    \ell_{\text{ALA}}(y, \mathbf{f}(x); \boldsymbol{\pi}) = -\log \left( \frac{\exp\left(f_y(x) + \tau(IR) \log \pi_y\right)}{\sum_{j=1}^K \exp\left(f_j(x) + \tau(IR) \log \pi_j\right)} \right)
+    \ell_{\text{ALA}}(y, \mathbf{f}(x); \boldsymbol{\pi}) = -\log \left( \frac{\mathrm{e}^{f_y(x) + \tau(IR) \log \pi_y}}{\sum_{j=1}^K \mathrm{e}^{f_j(x) + \tau(IR) \log \pi_j}} \right)
 \end{equation}
 where the dynamic temperature scaling function $\tau(IR)$ is defined as:
 \begin{equation}
     \tau(IR) = \begin{cases}
         0.0, & IR \le 2.0 \\
-        \min\left(1.0, \; \max\left(0.35, \; 0.45 \cdot \log_{10}(IR)\right)\right), & IR > 2.0
+        \mathrm{clip}\left(0.45 \log_{10}(IR), 0.35, 1.0\right), & IR > 2.0
     \end{cases}
 \end{equation}
 
@@ -225,24 +229,26 @@ For any distribution $P(X, Y)$ with support $\mathcal{X} \times \mathcal{Y}$, th
     \arg\max_{k \in \mathcal{Y}} f_k^*(x) = \arg\max_{k \in \mathcal{Y}} \left\{ P(X=x \mid Y=k) \cdot \pi_k^{1 - \tau(IR)} \right\}
 \end{equation}
 In particular, when $\tau(IR) \to 1.0$ (as enforced under extreme imbalance $IR \gg 10$), the optimal decision rule strictly satisfies:
-\begin{equation}
-    \arg\max_{k \in \mathcal{Y}} f_k^*(x) = \arg\max_{k \in \mathcal{Y}} P(X=x \mid Y=k) = \arg\min_{k \in \mathcal{Y}} \mathcal{R}_{\text{bal}}(f)
-\end{equation}
+\begin{align}
+    \arg\max_{k \in \mathcal{Y}} f_k^*(x) &= \arg\max_{k \in \mathcal{Y}} P(X=x \mid Y=k) \nonumber \\
+    &= \arg\min_{k \in \mathcal{Y}} \mathcal{R}_{\text{bal}}(f)
+\end{align}
 proving that $\ell_{\text{ALA}}$ is asymptotically Fisher consistent with respect to balanced classification risk.
 \end{theorem}
 
 \begin{proof}
 Conditioned on observation $X=x$, the conditional surrogate risk is:
-\begin{equation}
-    \mathcal{L}_x(\mathbf{f}) = \sum_{k=1}^K P(Y=k \mid X=x) \left[ -\left(f_k(x) + \tau \log \pi_k\right) + \log \sum_{j=1}^K \exp(f_j(x) + \tau \log \pi_j) \right]
-\end{equation}
+\begin{align}
+    \mathcal{L}_x(\mathbf{f}) &= \sum_{k=1}^K P(Y=k \mid X=x) \Big[ -(f_k(x) + \tau \log \pi_k) \nonumber \\
+    &\quad + \log \sum_{j=1}^K \mathrm{e}^{f_j(x) + \tau \log \pi_j} \Big]
+\end{align}
 To find the minimizer, we take the partial derivative with respect to $f_k(x)$ and set it to zero:
 \begin{equation}
-    \frac{\partial \mathcal{L}_x}{\partial f_k(x)} = -P(Y=k \mid X=x) + \frac{\exp(f_k(x) + \tau \log \pi_k)}{\sum_{j=1}^K \exp(f_j(x) + \tau \log \pi_j)} = 0
+    \frac{\partial \mathcal{L}_x}{\partial f_k(x)} = -P(Y=k \mid X=x) + \frac{\mathrm{e}^{f_k(x) + \tau \log \pi_k}}{\sum_{j=1}^K \mathrm{e}^{f_j(x) + \tau \log \pi_j}} = 0
 \end{equation}
 This implies that for all $k \in \mathcal{Y}$:
 \begin{equation}
-    \frac{\exp(f_k^*(x) + \tau \log \pi_k)}{\sum_{j=1}^K \exp(f_j^*(x) + \tau \log \pi_j)} = P(Y=k \mid X=x)
+    \frac{\mathrm{e}^{f_k^*(x) + \tau \log \pi_k}}{\sum_{j=1}^K \mathrm{e}^{f_j^*(x) + \tau \log \pi_j}} = P(Y=k \mid X=x)
 \end{equation}
 Taking the natural logarithm on both sides:
 \begin{equation}
@@ -313,7 +319,9 @@ which strictly bounds gradient variance and ensures continuous backpropagation s
 \caption{Comprehensive Performance and Statistical Comparison on HoASA, SmSA, and EmoT Against State-of-the-Art Imbalance Loss Formulations}
 \label{tab:tpami_comparisons}
 \centering
-\begin{tabularx}{\textwidth}{l l c c c c c c c}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{l X c c c c c c c}
 \toprule
 \textbf{Dataset} & \textbf{Method / Objective Formulation} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{BAcc} & \textbf{MCC ($R_K$)} & \textbf{$p$-value ($t$-test)} \\
 \midrule

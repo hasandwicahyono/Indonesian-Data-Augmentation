@@ -113,7 +113,7 @@ Informal Indonesian social texts are characterized by noisy orthography and symb
             \texttt{\_emosi\_bahagia\_}, & e \in \mathcal{E}_{\text{joy}}
         \end{cases}
     \end{equation}
-    For instance, the noisy tweet \textit{"Keren bgt filmnya 😭 sedih banget T\_T"} is normalized into \textit{"bagus banget filmnya \_emosi\_sedih\_ sedih banget \_emosi\_sedih\_"}.
+    For instance, the noisy tweet \textit{"Keren bgt filmnya [sedih] sedih banget T\_T"} is normalized into \textit{"bagus banget filmnya \_emosi\_sedih\_ sedih banget \_emosi\_sedih\_"}.
 \end{enumerate}
 
 \subsection{Phase 2: Autoregressive Continuation Generation}
@@ -175,7 +175,7 @@ The imbalance ratio is defined as:
 \end{equation}
 A class $k$ is designated as a minority category if its prior $\pi_k = \frac{N_k}{N}$ falls below $80\%$ of the uniform prior or its sample count is less than $75\%$ of the median class size:
 \begin{equation}
-    k \in \mathcal{Y}_{\text{min}} \iff \pi_k < \frac{0.80}{K} \quad \lor \quad N_k < 0.75 \cdot \text{median}(\{N_j\}_{j=1}^K)
+    k \in \mathcal{Y}_{\text{min}} \iff \pi_k < \frac{0.80}{K} \;\lor\; N_k < 0.75 \cdot \mathrm{med}(\{N_j\}_{j=1}^K)
 \end{equation}
 
 \subsubsection{Dynamic Logit-Adjusted Loss}
@@ -331,9 +331,11 @@ To understand the anatomical source of this gain, Table \ref{tab:per_class_f1} d
 \caption{Per-Class F1-Score Breakdown on SmSA and HoASA}
 \label{tab:per_class_f1}
 \centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{l l c c c}
 \toprule
-\textbf{Dataset} & \textbf{Variant} & \textbf{F1 (Negative)} & \textbf{F1 (Neutral)} & \textbf{F1 (Positive)} \\
+\textbf{Dataset} & \textbf{Variant} & \textbf{F1 (Neg)} & \textbf{F1 (Neut)} & \textbf{F1 (Pos)} \\
 \midrule
 \multirow{5}{*}{\textbf{SmSA}} 
 & Baseline & 0.9390 & 0.7843 & 0.9216 \\
@@ -392,9 +394,11 @@ To rigorously assess the individual contribution of each architectural component
 \caption{Ablation Analysis of Architectural Components on HoASA and SmSA}
 \label{tab:ablation}
 \centering
-\begin{tabular}{l c c}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\columnwidth}{X c c}
 \toprule
-\textbf{Configuration} & \textbf{HoASA Macro-F1} & \textbf{SmSA Macro-F1} \\
+\textbf{Configuration} & \textbf{HoASA F1} & \textbf{SmSA F1} \\
 \midrule
 Full Proposed Pipeline & \textbf{0.7078} & \textbf{0.9053} \\
 \quad $-$ w/o Logit Adjustment ($\tau=0$) & 0.6120 & 0.8840 \\
@@ -404,7 +408,7 @@ Full Proposed Pipeline & \textbf{0.7078} & \textbf{0.9053} \\
 \quad $-$ w/o FGM Adversarial Regularization & 0.6890 & 0.8970 \\
 Baseline (Unaugmented ERM) & 0.6070 & 0.8816 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \subsection{Impact of Logit Adjustment Parameter $\tau$}
