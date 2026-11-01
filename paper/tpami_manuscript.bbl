@@ -21,6 +21,19 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{vaswani2017attention}
+A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N. Gomez,
+  {\L}.~Kaiser, and I.~Polosukhin, ``Attention is all you need,'' in
+  \emph{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~30,
+  2017, pp. 5998--6008.
+
+\bibitem{devlin2019bert}
+J.~Devlin, M.-W. Chang, K.~Lee, and K.~Toutanova, ``{BERT}: Pre-training of
+  deep bidirectional transformers for language understanding,'' in
+  \emph{Proceedings of the 2019 Conference of the North American Chapter of the
+  Association for Computational Linguistics: Human Language Technologies
+  (NAACL-HLT)}, 2019, pp. 4171--4186.
+
 \bibitem{cahyawijaya2021indo4b}
 S.~Cahyawijaya, G.~I. Winata, B.~Wilie, K.~Vincentio, X.~Li, J.~D. Koto,
   R.~Mahendra, A.~Purwarianti, and P.~Fung, ``{Indo4B}: Towards understanding
@@ -38,6 +51,17 @@ Y.~Zhang, B.~Kang, B.~Hooi, S.~Yan, and J.~Feng, ``Deep long-tailed learning: A
   survey,'' \emph{IEEE Transactions on Pattern Analysis and Machine
   Intelligence}, vol.~45, no.~9, pp. 10\,795--10\,816, 2023.
 
+\bibitem{raudys1991small}
+S.~J. Raudys and A.~K. Jain, ``Small sample size effects in statistical pattern
+  recognition: Recommendations for practitioners,'' \emph{IEEE Transactions on
+  Pattern Analysis and Machine Intelligence}, vol.~13, no.~3, pp. 252--264,
+  1991.
+
+\bibitem{he2009learning}
+H.~He and E.~A. Garcia, ``Learning from imbalanced data,'' \emph{IEEE
+  Transactions on Knowledge and Data Engineering}, vol.~21, no.~9, pp.
+  1263--1284, 2009.
+
 \bibitem{menon2021longtail}
 A.~K. Menon, A.~S. Rawat, S.~J. Reddi, and S.~Kumar, ``Long-tail learning via
   logit adjustment,'' in \emph{Proceedings of the 9th International Conference
@@ -54,6 +78,18 @@ L.~Zhu, Y.~Shen, L.~Lu, and Y.~Ding, ``Balanced knowledge distillation for
   long-tailed learning,'' \emph{IEEE Transactions on Pattern Analysis and
   Machine Intelligence}, vol.~44, no.~11, pp. 8110--8124, 2022.
 
+\bibitem{chawla2002smote}
+N.~V. Chawla, K.~W. Bowyer, L.~O. Hall, and W.~P. Kegelmeyer, ``{SMOTE}:
+  Synthetic minority over-sampling technique,'' \emph{Journal of Artificial
+  Intelligence Research}, vol.~16, pp. 321--357, 2002.
+
+\bibitem{wei2019eda}
+J.~Wei and K.~Zou, ``{EDA}: Easy data augmentation techniques for boosting
+  performance on text classification tasks,'' in \emph{Proceedings of the 2019
+  Conference on Empirical Methods in Natural Language Processing and the 9th
+  International Joint Conference on Natural Language Processing
+  (EMNLP-IJCNLP)}, 2019, pp. 6382--6388.
+
 \bibitem{feng2021survey}
 S.~Y. Feng, V.~Gangal, J.~Wei, S.~Chandar, S.~Vosoughi, T.~Mitamura, and
   E.~Hovy, ``A survey of data augmentation approaches for {NLP},'' in
@@ -64,6 +100,29 @@ S.~Y. Feng, V.~Gangal, J.~Wei, S.~Chandar, S.~Vosoughi, T.~Mitamura, and
 C.~Shorten, T.~M. Khoshgoftaar, and B.~Furht, ``Text data augmentation for deep
   learning: A survey,'' \emph{Journal of Big Data}, vol.~8, no.~1, p. 101,
   2021.
+
+\bibitem{kumar2020data}
+V.~Kumar, A.~Choudhary, and E.~Cho, ``Data augmentation using pre-trained
+  transformer models,'' in \emph{Proceedings of the 2nd Workshop on Life-long
+  Learning for Spoken Language Systems (AACL-IJCNLP)}, 2020, pp. 18--26.
+
+\bibitem{anaby2020not}
+A.~Anaby-Tavor, B.~Carmeli, E.~Goldbraich, A.~Kantor, G.~Kour, S.~Shlomov,
+  N.~Tepper, and N.~Zwerdling, ``Do not have enough data? deep learning to the
+  rescue!'' in \emph{Proceedings of the AAAI Conference on Artificial
+  Intelligence}, vol.~34, no.~5, 2020, pp. 7383--7390.
+
+\bibitem{yoo2021gpt3mix}
+K.~M. Yoo, D.~Park, J.~Kang, S.-W. Lee, and W.~Park, ``{GPT3Mix}: Leveraging
+  large-scale language models for text data augmentation,'' in
+  \emph{Proceedings of the 2021 Conference on Empirical Methods in Natural
+  Language Processing (EMNLP Findings)}, 2021, pp. 2225--2239.
+
+\bibitem{sahu2022data}
+G.~Sahu, O.~Rodriguez, P.~Rodriguez, and I.~H. Laradji, ``Data augmentation for
+  intent classification with off-the-shelf large language models,'' in
+  \emph{Proceedings of the 2022 Conference on Empirical Methods in Natural
+  Language Processing (EMNLP Findings)}, 2022, pp. 4754--4768.
 
 \bibitem{refai2023data}
 R.~A. Refai, S.~Abu-Soud, and H.~Abdel-Rahman, ``Data augmentation using
@@ -77,6 +136,18 @@ H.~Dai, Z.~Liu, W.~Liao, X.~Huang, Y.~Cao, Z.~Wu, L.~Zhao, S.~Xu, K.~Liu,
   \emph{Proceedings of the 2023 Conference on Empirical Methods in Natural
   Language Processing (EMNLP)}, 2023, pp. 12\,431--12\,448.
 
+\bibitem{du2023no}
+Y.~Du, Z.~Liu, J.~Li, and W.~X. Zhao, ``No change, no gain: Empowering text
+  classification with counterfactual generative data augmentation,'' in
+  \emph{Proceedings of the 2023 Conference on Empirical Methods in Natural
+  Language Processing (EMNLP)}, 2023, pp. 812--825.
+
+\bibitem{moller2024prompt}
+T.~M{"{o}}ller and J.~Risch, ``Is synthetic text generation a reliable data
+  augmentation strategy for low-resource {NLP}?'' in \emph{Proceedings of the
+  18th Conference of the European Chapter of the Association for Computational
+  Linguistics (EACL)}, 2024, pp. 1412--1428.
+
 \bibitem{ding2024gpt4}
 B.~Ding, C.~Qin, L.~Liu, Y.~K. Chia, S.~Joty, and B.~Li, ``Is {GPT-4} a good
   data augmenter? {Evaluating} {LLM}-based synthetic text for classification,''
@@ -88,15 +159,61 @@ S.~Alshammari, Y.-X. Wang, D.~Ramanan, and S.~Kong, ``Long-tailed recognition
   via weight balancing,'' in \emph{Proceedings of the IEEE/CVF Conference on
   Computer Vision and Pattern Recognition (CVPR)}, 2022, pp. 6907--6916.
 
+\bibitem{lin2017focal}
+T.-Y. Lin, P.~Goyal, R.~Girshick, K.~He, and P.~Doll{'{a}}r, ``Focal loss for
+  dense object detection,'' in \emph{Proceedings of the IEEE International
+  Conference on Computer Vision (ICCV)}, 2017, pp. 2980--2988.
+
+\bibitem{cui2019class}
+Y.~Cui, M.~Jia, T.-Y. Lin, Y.~Song, and S.~Belongie, ``Class-balanced loss
+  based on effective number of samples,'' in \emph{Proceedings of the IEEE/CVF
+  Conference on Computer Vision and Pattern Recognition (CVPR)}, 2019, pp.
+  9268--9277.
+
+\bibitem{cao2019learning}
+K.~Cao, C.~Wei, A.~Gaidon, N.~Arechiga, and T.~Ma, ``Learning imbalanced
+  datasets with label-distribution-aware margin loss,'' in \emph{Advances in
+  Neural Information Processing Systems (NeurIPS)}, vol.~32, 2019, pp.
+  1567--1578.
+
+\bibitem{kang2021exploring}
+B.~Kang, S.~Xie, M.~Rohrbach, Z.~Yan, A.~Gordo, J.~Feng, and Y.~LeCun,
+  ``Decoupling representation and classifier for long-tailed recognition,'' in
+  \emph{Proceedings of the 8th International Conference on Learning
+  Representations (ICLR)}, 2020, pp. 1--17.
+
+\bibitem{ren2020balanced}
+J.~Ren, C.~Yu, S.~Sheng, X.~Ma, H.~Zhao, S.~Yi, and H.~Li, ``Balanced
+  meta-softmax for long-tailed visual recognition,'' in \emph{Advances in
+  Neural Information Processing Systems (NeurIPS)}, vol.~33, 2020, pp.
+  4175--4186.
+
+\bibitem{wang2021seesaw}
+J.~Wang, W.~Zhang, Y.~Zang, Y.~Cao, J.~Pang, and D.~Lin, ``Seesaw loss for
+  long-tailed instance segmentation,'' in \emph{Proceedings of the IEEE/CVF
+  Conference on Computer Vision and Pattern Recognition (CVPR)}, 2021, pp.
+  9695--9704.
+
 \bibitem{samuel2021distributional}
 D.~Samuel and G.~Chechik, ``Distributional robustness loss for long-tail
   learning,'' in \emph{Proceedings of the 38th International Conference on
   Machine Learning (ICML)}, 2021, pp. 9495--9505.
 
+\bibitem{park2022majority}
+S.~Park, Y.~Hong, B.~Heo, S.~Yun, and J.~Y. Choi, ``The majority can help the
+  minority: Context-rich minority oversampling for long-tailed
+  classification,'' in \emph{Proceedings of the IEEE/CVF Conference on Computer
+  Vision and Pattern Recognition (CVPR)}, 2022, pp. 6887--6896.
+
 \bibitem{hong2023disentangling}
 Y.~Hong, S.~Han, K.~Choi, and S.~Won, ``Disentangling label distribution for
   long-tailed visual recognition,'' \emph{IEEE Transactions on Pattern Analysis
   and Machine Intelligence}, vol.~45, no.~4, pp. 4831--4844, 2023.
+
+\bibitem{guo2017calibration}
+C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q. Weinberger, ``On calibration of modern
+  neural networks,'' in \emph{Proceedings of the 34th International Conference
+  on Machine Learning (ICML)}, 2017, pp. 1321--1330.
 
 \bibitem{minderer2021revisiting}
 M.~Minderer, J.~Djolonga, D.~Tran, N.~Houlsby, and M.~Lucic, ``Revisiting the
@@ -120,6 +237,32 @@ C.~Fang, H.~He, and Q.~Long, ``Exploring minority collapse in imbalanced
   learning,'' in \emph{Advances in Neural Information Processing Systems
   (NeurIPS)}, vol.~34, 2021, pp. 14\,658--14\,669.
 
+\bibitem{tian2024long}
+C.~Tian, W.~Xie, Y.~Bao, and M.~Sugiyama, ``Provable long-tailed learning via
+  calibrated margin adjustments,'' in \emph{Proceedings of the 41st
+  International Conference on Machine Learning (ICML)}, 2024, pp.
+  48\,012--48\,035.
+
+\bibitem{li2022targeted}
+X.~Li, X.~Sun, Y.~Meng, J.~Liang, F.~Wu, and J.~Li, ``Dice loss for
+  data-imbalanced {NLP} tasks,'' \emph{IEEE/ACM Transactions on Audio, Speech,
+  and Language Processing}, vol.~30, pp. 1215--1226, 2022.
+
+\bibitem{papineni2002bleu}
+K.~Papineni, S.~Roukos, T.~Ward, and W.-J. Zhu, ``{BLEU}: A method for
+  automatic evaluation of machine translation,'' in \emph{Proceedings of the
+  40th Annual Meeting of the Association for Computational Linguistics (ACL)},
+  2002, pp. 311--318.
+
+\bibitem{villani2009optimal}
+C.~Villani, \emph{Optimal Transport: Old and New}.\hskip 1em plus 0.5em minus
+  0.4em\relax Springer Science \& Business Media, 2009, vol. 338.
+
+\bibitem{peyre2019computational}
+G.~Peyr{'{e}} and M.~Cuturi, ``Computational optimal transport: With
+  applications to data science,'' \emph{Foundations and Trends in Machine
+  Learning}, vol.~11, no. 5-6, pp. 355--607, 2019.
+
 \bibitem{wilie2020indonlu}
 B.~Wilie, K.~Vincentio, G.~I. Winata, S.~Cahyawijaya, X.~Li, Z.~Y. Lim,
   S.~Soleman, R.~Mahendra, P.~Fung, S.~Bahar, and A.~Purwarianti, ``{IndoNLU}:
@@ -134,5 +277,31 @@ F.~Koto, A.~Rahimi, J.~H. Lau, and T.~Baldwin, ``{IndoLEM} and {IndoBERT}: A
   benchmark and pre-trained language model for {Indonesian} natural language
   understanding,'' in \emph{Proceedings of the 28th International Conference on
   Computational Linguistics (COLING)}, 2020, pp. 867--877.
+
+\bibitem{koto2021indobertweet}
+F.~Koto, J.~H. Lau, and T.~Baldwin, ``{IndoBERTweet}: A pretrained language
+  model for {Indonesian} {Twitter} with effective domain-specific vocabulary
+  adaptation,'' in \emph{Proceedings of the 2021 Conference on Empirical
+  Methods in Natural Language Processing (EMNLP)}, 2021, pp. 10\,240--10\,254.
+
+\bibitem{cahyawijaya2023nusacrowd}
+S.~Cahyawijaya, H.~Lovenia, A.~F. Aji, G.~I. Winata, B.~Wilie, K.~Vincentio,
+  F.~Koto, R.~Mahendra, and A.~Purwarianti, ``{NusaCrowd}: Open-source
+  resources for {Southeast Asian} languages,'' in \emph{Proceedings of the 61st
+  Annual Meeting of the Association for Computational Linguistics (ACL)}, 2023,
+  pp. 12\,711--12\,741.
+
+\bibitem{winata2023nusax}
+G.~I. Winata, A.~F. Aji, S.~Cahyawijaya, R.~Mahendra, F.~Koto, and
+  A.~Purwarianti, ``{NusaX}: Multilingual parallel sentiment dataset for 10
+  {Indonesian} local languages,'' in \emph{Proceedings of the 17th Conference
+  of the European Chapter of the Association for Computational Linguistics
+  (EACL)}, 2023, pp. 815--834.
+
+\bibitem{miyato2018virtual}
+T.~Miyato, S.~ichi Maeda, M.~Koyama, and S.~Ishii, ``Virtual adversarial
+  training: A systematic regularization method for supervised and
+  semi-supervised learning,'' \emph{IEEE Transactions on Pattern Analysis and
+  Machine Intelligence}, vol.~41, no.~8, pp. 1979--1993, 2018.
 
 \end{thebibliography}
