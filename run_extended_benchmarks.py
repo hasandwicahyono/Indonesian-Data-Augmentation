@@ -23,6 +23,22 @@ from typing import Dict, List, Tuple, Any, Optional
 warnings.filterwarnings("ignore")
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
+
+def _resolve_path(p: str) -> str:
+    """Resolves relative paths gracefully across execution directories."""
+    if os.path.isabs(p):
+        return p
+    p_curr = os.path.join(CURRENT_DIR, p)
+    if os.path.exists(p_curr):
+        return os.path.abspath(p_curr)
+    if os.path.exists(p):
+        return os.path.abspath(p)
+    return os.path.join(CURRENT_DIR, p)
+
 import torch
 import numpy as np
 import pandas as pd
@@ -461,101 +477,92 @@ def run_comparative_baselines(dataset_name: str = "HoASA") -> pd.DataFrame:
     df_bt = pd.DataFrame(bt_records)
 
     # Compile comparative performance summary table dynamically from real evaluation results
-    eval_excel = f"data/results/{dataset_name}_evaluation_results.xlsx"
+    eval_excel = _resolve_path(f"data/results/{dataset_name}_evaluation_results.xlsx")
     comp_data = []
 
-    if os.path.exists(eval_excel):
-        print(f"  [Real Benchmark Data Loaded] Loading baseline and proposed variants from {eval_excel}...")
-        df_eval = pd.read_excel(eval_excel)
+    if not os.path.exists(eval_excel):
+        raise FileNotFoundError(
+            f"Missing evaluation file: '{eval_excel}'. "
+            f"Please run 'python run_all_benchmarks.py' to generate experimental results for {dataset_name}."
+        )
 
-        # Baseline
-        raw_erm_df = df_eval[df_eval["dataset_name"].str.contains("RawERM", case=False, na=False)]
-        base_df = df_eval[df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)]
-        ref_row = raw_erm_df.iloc[0] if not raw_erm_df.empty else (base_df.iloc[0] if not base_df.empty else None)
+    print(f"  [Real Benchmark Data Loaded] Loading baseline and proposed variants from {eval_excel}...")
+    df_eval = pd.read_excel(eval_excel)
 
-        if ref_row is not None:
-            base_f1 = float(ref_row.get("macro_f1", 0.0))
-            comp_data.append({
-                "Method / Augmentation": "Baseline (Unaugmented)",
-                "Aug Size": int(ref_row.get("train_size", len(ds.train))),
-                "Accuracy": round(float(ref_row.get("accuracy", 0.0)), 4),
-                "Macro-Prec": round(float(ref_row.get("macro_precision", 0.0)), 4),
-                "Macro-Rec": round(float(ref_row.get("macro_recall", 0.0)), 4),
-                "Macro-F1": round(base_f1, 4),
-                "F1 Gain": "---",
-            })
-        else:
-            base_f1 = 0.0
+    # Baseline
+    raw_erm_df = df_eval[df_eval["dataset_name"].str.contains("RawERM", case=False, na=False)]
+    base_df = df_eval[df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)]
+    ref_row = raw_erm_df.iloc[0] if not raw_erm_df.empty else (base_df.iloc[0] if not base_df.empty else None)
 
-        # EDA & Back-Translation baselines (dynamically loaded from comparative baseline caches)
-        eda_bt_candidates = [
-            f"data/results/extended/{dataset_name}_comparative_baselines.csv",
-            f"data/results/extended/comparative_baselines_{dataset_name.lower()}.csv",
-            f"data/results/extended/comparative_baselines_{dataset_name}.csv",
-        ]
-        eda_loaded = False
-        for cpath in eda_bt_candidates:
-            if os.path.exists(cpath):
-                df_cached = pd.read_csv(cpath)
-                for _, r in df_cached.iterrows():
-                    mname = str(r.get("Method", r.get("Method / Augmentation", "")))
-                    if "EDA" in mname or "Back-Translation" in mname or "MarianMT" in mname:
-                        comp_data.append({
-                            "Method / Augmentation": mname,
-                            "Aug Size": int(r.get("Aug Size", 0)) if str(r.get("Aug Size", "")).isdigit() else len(df_eda),
-                            "Accuracy": round(float(r.get("Accuracy", 0.0)), 4),
-                            "Macro-Prec": round(float(r.get("Macro-Prec", 0.0)), 4),
-                            "Macro-Rec": round(float(r.get("Macro-Rec", 0.0)), 4),
-                            "Macro-F1": round(float(r.get("Macro-F1", 0.0)), 4),
-                            "F1 Gain": str(r.get("Delta F1", r.get("F1 Gain", ""))),
-                        })
-                eda_loaded = True
-                print(f"  [Comparative Baselines Loaded] Loaded EDA/BT from {cpath}")
-                break
+    if ref_row is None:
+        raise ValueError(f"Baseline row not found in '{eval_excel}'. Please rerun 'python run_all_benchmarks.py'.")
 
-        if not eda_loaded:
-            # Dynamically derive empirical baseline without arbitrary multipliers
-            comp_data.append({
-                "Method / Augmentation": "EDA (Wei & Zou, 2019)",
-                "Aug Size": len(df_eda),
-                "Accuracy": round(float(ref_row.get("accuracy", 0.0)), 4),
-                "Macro-Prec": round(float(ref_row.get("macro_precision", 0.0)), 4),
-                "Macro-Rec": round(float(ref_row.get("macro_recall", 0.0)), 4),
-                "Macro-F1": round(base_f1, 4),
-                "F1 Gain": "+0.00%",
-            })
-            comp_data.append({
-                "Method / Augmentation": "Back-Translation (MarianMT)",
-                "Aug Size": len(df_bt),
-                "Accuracy": round(float(ref_row.get("accuracy", 0.0)), 4),
-                "Macro-Prec": round(float(ref_row.get("macro_precision", 0.0)), 4),
-                "Macro-Rec": round(float(ref_row.get("macro_recall", 0.0)), 4),
-                "Macro-F1": round(base_f1, 4),
-                "F1 Gain": "+0.00%",
-            })
+    base_f1 = float(ref_row.get("macro_f1", 0.0))
+    comp_data.append({
+        "Method / Augmentation": "Baseline (Unaugmented)",
+        "Aug Size": int(ref_row.get("train_size", len(ds.train))),
+        "Accuracy": round(float(ref_row.get("accuracy", 0.0)), 4),
+        "Macro-Prec": round(float(ref_row.get("macro_precision", 0.0)), 4),
+        "Macro-Rec": round(float(ref_row.get("macro_recall", 0.0)), 4),
+        "Macro-F1": round(base_f1, 4),
+        "F1 Gain": "---",
+    })
 
-        # Proposed Variants (excluding baseline)
-        aug_df = df_eval[
-            df_eval["dataset_name"].str.contains("Augmented", case=False, na=False)
-            & ~df_eval["dataset_name"].str.contains("NotAugmented", case=False, na=False)
-            & ~df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)
-        ]
-        for _, r in aug_df.iterrows():
-            dname = str(r.get("dataset_name", ""))
-            vname = dname.split("-")[-1] if "-" in dname else dname
-            f1_val = float(r.get("macro_f1", 0.0))
-            gain = ((f1_val - base_f1) / base_f1) * 100.0 if base_f1 > 0 else 0.0
-            comp_data.append({
-                "Method / Augmentation": f"Proposed ({vname}-Augmented + AIC)",
-                "Aug Size": int(r.get("train_size", 0)),
-                "Accuracy": round(float(r.get("accuracy", 0.0)), 4),
-                "Macro-Prec": round(float(r.get("macro_precision", 0.0)), 4),
-                "Macro-Rec": round(float(r.get("macro_recall", 0.0)), 4),
-                "Macro-F1": round(f1_val, 4),
-                "F1 Gain": f"{gain:+.2f}%",
-            })
-    else:
-        print(f"  [Warning] {eval_excel} not found. Please run run_all_benchmarks.py first.")
+    # EDA & Back-Translation baselines (dynamically loaded from comparative baseline caches)
+    eda_bt_candidates = [
+        _resolve_path(f"data/results/extended/{dataset_name}_comparative_baselines.csv"),
+        _resolve_path(f"data/results/extended/comparative_baselines_{dataset_name.lower()}.csv"),
+        _resolve_path(f"data/results/extended/comparative_baselines_{dataset_name}.csv"),
+    ]
+    eda_loaded = False
+    for cpath in eda_bt_candidates:
+        if os.path.exists(cpath):
+            df_cached = pd.read_csv(cpath)
+            for _, r in df_cached.iterrows():
+                mname = str(r.get("Method", r.get("Method / Augmentation", "")))
+                if "EDA" in mname or "Back-Translation" in mname or "MarianMT" in mname:
+                    comp_data.append({
+                        "Method / Augmentation": mname,
+                        "Aug Size": int(r.get("Aug Size", 0)) if str(r.get("Aug Size", "")).isdigit() else len(df_eda),
+                        "Accuracy": round(float(r.get("Accuracy", 0.0)), 4),
+                        "Macro-Prec": round(float(r.get("Macro-Prec", 0.0)), 4),
+                        "Macro-Rec": round(float(r.get("Macro-Rec", 0.0)), 4),
+                        "Macro-F1": round(float(r.get("Macro-F1", 0.0)), 4),
+                        "F1 Gain": str(r.get("Delta F1", r.get("F1 Gain", ""))),
+                    })
+            eda_loaded = True
+            print(f"  [Comparative Baselines Loaded] Loaded EDA/BT from {cpath}")
+            break
+
+    if not eda_loaded:
+        raise FileNotFoundError(
+            f"Missing comparative baselines file for {dataset_name} ('{dataset_name}_comparative_baselines.csv'). "
+            "Please run 'python run_all_benchmarks.py --run_comparative_baselines' to produce this file."
+        )
+
+    # Proposed Variants (excluding baseline)
+    aug_df = df_eval[
+        df_eval["dataset_name"].str.contains("Augmented", case=False, na=False)
+        & ~df_eval["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+        & ~df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)
+    ]
+    if aug_df.empty:
+        raise ValueError(f"Augmented evaluations not found in '{eval_excel}'. Please rerun 'python run_all_benchmarks.py'.")
+
+    for _, r in aug_df.iterrows():
+        dname = str(r.get("dataset_name", ""))
+        vname = dname.split("-")[-1] if "-" in dname else dname
+        f1_val = float(r.get("macro_f1", 0.0))
+        gain = ((f1_val - base_f1) / base_f1) * 100.0 if base_f1 > 0 else 0.0
+        comp_data.append({
+            "Method / Augmentation": f"Proposed ({vname}-Augmented + AIC)",
+            "Aug Size": int(r.get("train_size", 0)),
+            "Accuracy": round(float(r.get("accuracy", 0.0)), 4),
+            "Macro-Prec": round(float(r.get("macro_precision", 0.0)), 4),
+            "Macro-Rec": round(float(r.get("macro_recall", 0.0)), 4),
+            "Macro-F1": round(f1_val, 4),
+            "F1 Gain": f"{gain:+.2f}%",
+        })
 
     df_comp = pd.DataFrame(comp_data)
     print(f"\n[Comparative Baseline Table ({dataset_name}) (Dynamically Derived)]")
@@ -581,7 +588,7 @@ def run_stratified_5fold_cv_all_datasets() -> pd.DataFrame:
 
     for ds_name in datasets:
         fold_perf[ds_name] = {}
-        json_path = f"data/results/extended/{ds_name}_real_5fold_results.json"
+        json_path = _resolve_path(f"data/results/extended/{ds_name}_real_5fold_results.json")
         loaded = False
         
         # 1. Load from real 5-fold CV run JSON
@@ -610,6 +617,12 @@ def run_stratified_5fold_cv_all_datasets() -> pd.DataFrame:
                 loaded = True
             except Exception as e:
                 print(f"  [Error] Failed to run dynamic 5-fold CV for {ds_name}: {e}")
+
+        if not loaded:
+            raise FileNotFoundError(
+                f"Missing 5-fold cross validation file: '{json_path}'. "
+                f"Please run 'python run_all_benchmarks.py --run_cv' or 'python execute_real_cross_validation.py' to produce this file for {ds_name}."
+            )
 
     for dname, variants in fold_perf.items():
         base_scores = variants["Baseline"]
@@ -671,30 +684,29 @@ def plot_training_dynamics(
     epochs = np.arange(1, 16)
 
     # Dynamically extract anchor metrics from actual evaluation spreadsheets
-    def _get_f1_anchors(eval_excel: str, def_base: float, def_aug: float, def_var: str):
-        if os.path.exists(eval_excel):
-            try:
-                df = pd.read_excel(eval_excel)
-                b_df = df[df["dataset_name"].str.contains("Baseline|RawERM", case=False, na=False)]
-                a_df = df[
-                    df["dataset_name"].str.contains("Augmented", case=False, na=False)
-                    & ~df["dataset_name"].str.contains("NotAugmented", case=False, na=False)
-                ]
-                b_val = float(b_df.iloc[0]["macro_f1"]) if not b_df.empty else def_base
-                if not a_df.empty:
-                    best_idx = a_df["macro_f1"].idxmax()
-                    a_val = float(a_df.loc[best_idx, "macro_f1"])
-                    v_name = str(a_df.loc[best_idx, "dataset_name"]).split("-")[-1]
-                else:
-                    a_val = def_aug
-                    v_name = def_var
-                return b_val, a_val, v_name
-            except Exception:
-                pass
-        return def_base, def_aug, def_var
+    def _get_f1_anchors(eval_excel: str):
+        eval_excel = _resolve_path(eval_excel)
+        if not os.path.exists(eval_excel):
+            raise FileNotFoundError(
+                f"Missing evaluation file: '{eval_excel}'. "
+                "Please run 'python run_all_benchmarks.py' to generate benchmark evaluations."
+            )
+        df = pd.read_excel(eval_excel)
+        b_df = df[df["dataset_name"].str.contains("Baseline|RawERM", case=False, na=False)]
+        a_df = df[
+            df["dataset_name"].str.contains("Augmented", case=False, na=False)
+            & ~df["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+        ]
+        if b_df.empty or a_df.empty:
+            raise ValueError(f"Baseline or augmented evaluations not found in '{eval_excel}'. Please rerun 'python run_all_benchmarks.py'.")
+        b_val = float(b_df.iloc[0]["macro_f1"])
+        best_idx = a_df["macro_f1"].idxmax()
+        a_val = float(a_df.loc[best_idx, "macro_f1"])
+        v_name = str(a_df.loc[best_idx, "dataset_name"]).split("-")[-1]
+        return b_val, a_val, v_name
 
-    smsa_base_f1, smsa_aug_f1, smsa_var = _get_f1_anchors("data/results/SmSA_evaluation_results.xlsx", 0.9254, 0.8939, "BLEU")
-    hoasa_base_f1, hoasa_aug_f1, hoasa_var = _get_f1_anchors("data/results/HoASA_evaluation_results.xlsx", 0.7231, 0.6933, "COS")
+    smsa_base_f1, smsa_aug_f1, smsa_var = _get_f1_anchors("data/results/SmSA_evaluation_results.xlsx")
+    hoasa_base_f1, hoasa_aug_f1, hoasa_var = _get_f1_anchors("data/results/HoASA_evaluation_results.xlsx")
 
     # Dynamic convergence trajectories anchored to empirical results
     # SmSA

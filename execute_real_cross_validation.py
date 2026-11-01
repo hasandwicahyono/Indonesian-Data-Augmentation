@@ -82,11 +82,22 @@ def run_real_5fold_cv_for_dataset(
     print(f"Total dataset volume for 5-fold CV: {len(full_df)} samples, Classes: {ds.label_list}")
 
     # Load augmented data for the best metric
-    aug_path = f"data/augmented/all_text/{dataset_name}-Augmented-{best_aug_metric}-ALL-Text-Final.csv"
-    if os.path.exists(aug_path):
-        aug_full_df = pd.read_csv(aug_path)
-    else:
-        aug_full_df = full_df
+    aug_candidates = [
+        f"data/augmented/all_text/{dataset_name}-Augmented-{best_aug_metric}-ALL-Text-Final.csv",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), f"data/augmented/all_text/{dataset_name}-Augmented-{best_aug_metric}-ALL-Text-Final.csv"),
+    ]
+    aug_path = None
+    for cand in aug_candidates:
+        if os.path.exists(cand):
+            aug_path = cand
+            break
+
+    if aug_path is None:
+        raise FileNotFoundError(
+            f"Missing augmented dataset file: '{aug_candidates[0]}'. "
+            f"Please run 'python run_all_benchmarks.py' to generate augmented data for {dataset_name}."
+        )
+    aug_full_df = pd.read_csv(aug_path)
 
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     fold_results = {

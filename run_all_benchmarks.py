@@ -874,8 +874,10 @@ def run_benchmark_pipeline(
                 results_df = pd.read_excel(existing_excel)
                 all_results[ds_name] = results_df
             else:
-                print(f"  [Warning] No existing results excel found for {ds_name}. Skipping...")
-                continue
+                raise FileNotFoundError(
+                    f"No existing results excel found for {ds_name} in '{results_dir}'. "
+                    f"Please rerun 'python run_all_benchmarks.py' without --plot_only to execute benchmarks."
+                )
         else:
             # Check if Step 1 (Generation) and Step 2 (Filtering) are requested or needed
             aug_dfs = {} if run_generation else load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
