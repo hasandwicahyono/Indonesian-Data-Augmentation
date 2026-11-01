@@ -38,7 +38,7 @@ Data augmentation, generative transformers, long-tailed learning, logit adjustme
 
 \section{Introduction}
 
-\IEEEPARstart{D}{eep} learning architectures powered by the multi-head self-attention mechanism have revolutionized contemporary natural language processing \cite{cahyawijaya2021indo4b, koto2021discourse}. Bidirectional encoder representations, such as BERT and its domain-adapted variants, demonstrate state-of-the-art capability in extracting rich contextual representations across various text classification tasks. However, the empirical success of these architectures is heavily predicated on the availability of large-scale, high-quality, and symmetrically balanced training corpora. In real-world industrial and diagnostic applications, natural language corpora rarely exhibit balanced class distributions. Consequently, standard cross-entropy minimization causes deep models to develop severe biases toward overrepresented classes.
+\IEEEPARstart{D}{eep} learning architectures powered by the multi-head self-attention mechanism have advanced contemporary natural language processing \cite{cahyawijaya2021indo4b, koto2021discourse}. Bidirectional encoder representations, such as BERT and its domain-adapted variants, demonstrate state-of-the-art capability in extracting rich contextual representations across various text classification tasks. However, the empirical success of these architectures is heavily predicated on the availability of large-scale, high-quality, and symmetrically balanced training corpora. In real-world industrial and diagnostic applications, natural language corpora rarely exhibit balanced class distributions. Consequently, standard cross-entropy minimization causes deep models to develop severe biases toward overrepresented classes.
 
 For languages outside the high-resource anglophone sphere, such as Bahasa Indonesia, developing robust language understanding systems entails compounding structural challenges \cite{wilie2020indonlu, koto2020indolem}. Indonesian represents the fourth most populous nation globally, characterized by intense digital engagement across social media and e-commerce platforms. Yet, computational resources for Indonesian natural language processing remain disproportionately constrained \cite{cahyawijaya2021indo4b}. Furthermore, digital Indonesian discourse frequently exhibits non-standard lexical registers, phonetic acronyms, dialectal particle insertions, and heavy code-switching with regional tongues (e.g., Javanese and Sundanese). When coupled with acute class imbalance, standard fine-tuning paradigms fail catastrophically on minority categories, frequently producing zero-recall failure modes on critical tail classes.
 
@@ -366,72 +366,10 @@ Future research will explore scaling this framework to contemporary generative d
 
 \section*{Acknowledgment}
 
-The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. We also thank the anonymous reviewers for their constructive feedback in refining the mathematical formulations and experimental discussions. Finally, we appreciate the broader research community for fostering reproducible, open-access natural language processing tools.
+The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. We also thank the anonymous reviewers for their constructive feedback in refining the mathematical formulations and experimental discussions. Finally, we appreciate the broader research community for supporting reproducible, open-access natural language processing tools.
 
 \balance
 \bibliographystyle{IEEEtran}
-\begin{thebibliography}{20}
-
-\bibitem{cahyawijaya2021indo4b}
-S.~Cahyawijaya, G.~I. Winata, B.~Wilie, K.~Vincentio, X.~Li, J.~D. Koto, R.~Mahendra, A.~Purwarianti, and P.~Fung, ``Indo4B: Towards understanding Indonesian language with large-scale pre-training,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2021, pp. 10\,220--10\,238.
-
-\bibitem{koto2021discourse}
-F.~Koto, J.~H. Lau, and T.~Baldwin, ``Discourse probing of pretrained language models,'' \emph{Trans. Assoc. Comput. Linguistics (TACL)}, vol.~9, pp. 913--929, Oct. 2021.
-
-\bibitem{zhang2023deep}
-Y.~Zhang, D.~Kang, B.~Hooi, S.~Sheng, and J.~Feng, ``Deep long-tailed learning: A survey,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~45, no.~9, pp. 10\,795--10\,816, Sep. 2023.
-
-\bibitem{zhu2022balanced}
-L.~Zhu, Y.~Shen, L.~Lu, and Y.~Ding, ``Balanced knowledge distillation for long-tailed learning,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~44, no.~11, pp. 8110--8124, Nov. 2022.
-
-\bibitem{hong2023disentangling}
-Y.~Hong, S.~Han, K.~Choi, and S.~Won, ``Disentangling label distribution for long-tailed visual recognition,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~45, no.~4, pp. 4831--4844, Apr. 2023.
-
-\bibitem{menon2021longtail}
-A.~K. Menon, A.~S. Rawat, K.~P. Reddi, and S.~Kumar, ``Long-tail learning via logit adjustment,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2021, pp. 1--23.
-
-\bibitem{kini2021vector}
-G.~R. Kini, O.~Sohn, and C.~Thrampoulidis, ``Label-imbalanced and group-sensitive classification via vector scaling loss,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 18\,973--18\,984.
-
-\bibitem{thrampoulidis2022imbalance}
-C.~Thrampoulidis, G.~R. Kini, V.~Ganju, and C.~Kuhl, ``Imbalance trouble: Revisiting neural collapse on imbalanced data,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2022, pp. 1--28.
-
-\bibitem{fang2021exploring}
-C.~Fang, H.~He, and Q.~Long, ``Exploring minority collapse in imbalanced learning,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 14\,658--14\,669.
-
-\bibitem{alshammari2022long}
-S.~Alshammari, Y.-X. Wang, D.~Ramanan, and S.~Kong, ``Long-tailed recognition via weight balancing,'' in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2022, pp. 6907--6916.
-
-\bibitem{samuel2021distributional}
-D.~Samuel and G.~Chechik, ``Distributional robustness loss for long-tail learning,'' in \emph{Proc. Int. Conf. Mach. Learn. (ICML)}, 2021, pp. 9495--9505.
-
-\bibitem{minderer2021revisiting}
-M.~Minderer, J.~Djolonga, D.~Tran, B.~Houlsby, and M.~Lucic, ``Revisiting the calibration of modern neural networks,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~34, 2021, pp. 15\,682--15\,694.
-
-\bibitem{wang2023adaptive}
-Z.~Wang, Y.~Zhang, and B.~Hooi, ``Adaptive probability calibration under class imbalance,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2023, pp. 1--18.
-
-\bibitem{refai2023data}
-R.~A. Refai, S.~Abu-Soud, and H.~Abdel-Rahman, ``Data augmentation using transformers and similarity measures for improving Arabic text classification,'' \emph{IEEE Access}, vol.~11, pp. 132\,516--132\,531, Nov. 2023.
-
-\bibitem{feng2021survey}
-S.~Y. Feng, V.~Gangal, J.~Wei, S.~Chandar, S.~Vosoughi, T.~Mitamura, and E.~Hovy, ``A survey of data augmentation approaches for NLP,'' in \emph{Proc. 59th Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2021, pp. 968--988.
-
-\bibitem{shorten2021text}
-C.~Shorten, T.~M. Khoshgoftaar, and B.~Furht, ``Text data augmentation for deep learning: A survey,'' \emph{J. Big Data}, vol.~8, no.~1, p. 101, Dec. 2021.
-
-\bibitem{dai2023augmenting}
-H.~Dai, Z.~Liu, W.~Liao, X.~Huang, Y.~Cao, Z.~Wu, L.~Zhao, S.~Xu, K.~Liu, N.~Liu, S.~Bhandarkar, Q.~Li, L.~Shen, T.~Liu, and D.~Zhu, ``Augmenting low-resource text classification with large language models,'' in \emph{Proc. Conf. Empirical Methods Nat. Lang. Process. (EMNLP)}, 2023, pp. 12\,431--12\,448.
-
-\bibitem{ding2024gpt4}
-B.~Ding, C.~Qin, L.~Liu, Y.~Shen, S.~Joty, and B.~Bansal, ``Is GPT-4 a good data augmenter? Evaluating LLM-based synthetic text for classification,'' in \emph{Proc. 62nd Annu. Meeting Assoc. Comput. Linguistics (ACL)}, 2024, pp. 4112--4129.
-
-\bibitem{wilie2020indonlu}
-B.~Wilie, K.~Vincentio, G.~I. Winata, S.~Cahyawijaya, X.~Li, Z.~Y. Lim, S.~Soleman, R.~Mahendra, P.~Fung, S.~Bahar, and A.~Purwarianti, ``IndoNLU: Benchmark and resources for evaluating Indonesian natural language understanding,'' in \emph{Proc. 1st Conf. Asia-Pacific Chapter Assoc. Comput. Linguistics (AACL-IJCNLP)}, 2020, pp. 843--860.
-
-\bibitem{koto2020indolem}
-F.~Koto, A.~Rahimi, J.~H. Lau, and T.~Baldwin, ``IndoLEM and IndoBERT: A benchmark and pre-trained language model for Indonesian natural language understanding,'' in \emph{Proc. 28th Int. Conf. Comput. Linguistics (COLING)}, 2020, pp. 867--877.
-
-\end{thebibliography}
+\bibliography{IDA}
 
 \end{document}

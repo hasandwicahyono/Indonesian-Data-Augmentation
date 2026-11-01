@@ -693,15 +693,18 @@ def inject_dynamic_tables_into_manuscripts(paper_dir: str = "paper"):
 # 8. Compile LaTeX Manuscripts to Verify PDFs
 # =====================================================================
 def compile_latex_manuscripts(paper_dir: str = "paper") -> bool:
-    """Compiles main.tex and tpami_manuscript.tex with pdflatex."""
+    """Compiles main.tex and tpami_manuscript.tex with pdflatex and bibtex."""
+    import shutil
     pdflatex_bin = "/Library/TeX/texbin/pdflatex"
     if not os.path.exists(pdflatex_bin):
-        # Fallback to which
-        import shutil
         pdflatex_bin = shutil.which("pdflatex")
         if not pdflatex_bin:
             print("  [Warning] pdflatex not found. Skipping PDF compilation.")
             return False
+
+    bibtex_bin = "/Library/TeX/texbin/bibtex"
+    if not os.path.exists(bibtex_bin):
+        bibtex_bin = shutil.which("bibtex")
 
     success = True
     for doc in ["main.tex", "tpami_manuscript.tex"]:
@@ -709,8 +712,35 @@ def compile_latex_manuscripts(paper_dir: str = "paper") -> bool:
         if not os.path.exists(doc_path):
             continue
 
-        print(f"  [Compiling PDF] {pdflatex_bin} -interaction=batchmode {doc} in {paper_dir}...")
+        doc_stem = os.path.splitext(doc)[0]
+        print(f"  [Compiling PDF] Running pdflatex -> bibtex -> pdflatex -> pdflatex for {doc} in {paper_dir}...")
         try:
+            # 1. First pdflatex pass
+            subprocess.run(
+                [pdflatex_bin, "-interaction=batchmode", doc],
+                cwd=paper_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=60,
+            )
+            # 2. Bibtex pass
+            if bibtex_bin:
+                subprocess.run(
+                    [bibtex_bin, doc_stem],
+                    cwd=paper_dir,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=30,
+                )
+            # 3. Second pdflatex pass
+            subprocess.run(
+                [pdflatex_bin, "-interaction=batchmode", doc],
+                cwd=paper_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=60,
+            )
+            # 4. Final pdflatex pass
             res = subprocess.run(
                 [pdflatex_bin, "-interaction=batchmode", doc],
                 cwd=paper_dir,
@@ -719,7 +749,7 @@ def compile_latex_manuscripts(paper_dir: str = "paper") -> bool:
                 timeout=60,
             )
             if res.returncode == 0:
-                print(f"  [Success] {doc.replace('.tex', '.pdf')} compiled cleanly!")
+                print(f"  [Success] {doc.replace('.tex', '.pdf')} compiled cleanly with full references!")
             else:
                 print(f"  [Warning] {doc} compilation returned code {res.returncode}")
                 success = False
