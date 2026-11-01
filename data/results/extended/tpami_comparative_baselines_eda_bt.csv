@@ -1,0 +1,13 @@
+Dataset,Method,Aug Size,Accuracy,Macro-Prec,Macro-Rec,Macro-F1,Delta F1
+HoASA (Hotel),Baseline (Unaugmented),"2,283",0.9476,0.614,0.6011,0.607,---
+HoASA (Hotel),"EDA (Wei & Zou, 2019)","2,543",0.9371,0.6582,0.6241,0.6385,+3.15%
+HoASA (Hotel),Back-Translation (MarianMT),"2,543",0.9406,0.6814,0.6355,0.6521,+4.51%
+HoASA (Hotel),Raw GPT-2 (Unfiltered),"2,483",0.9161,0.5912,0.584,0.5842,-2.28%
+HoASA (Hotel),Proposed (ECU-Augmented + AIC),"2,290",0.9441,0.7685,0.6725,0.699,+9.20%
+HoASA (Hotel),Proposed (COS-Augmented + AIC),"2,287",0.9476,0.7773,0.6812,0.7078,+10.08%
+SmSA (Prosa),Baseline (Unaugmented),"11,000",0.908,0.9116,0.865,0.8816,---
+SmSA (Prosa),"EDA (Wei & Zou, 2019)","11,500",0.912,0.9045,0.8712,0.8865,+0.49%
+SmSA (Prosa),Back-Translation (MarianMT),"11,500",0.914,0.912,0.8765,0.892,+1.04%
+SmSA (Prosa),Raw GPT-2 (Unfiltered),"11,500",0.894,0.8812,0.852,0.8654,-1.62%
+SmSA (Prosa),Proposed (JAC-Augmented + AIC),"11,113",0.92,0.9102,0.8906,0.8988,+1.72%
+SmSA (Prosa),Proposed (BLEU-Augmented + AIC),"11,113",0.924,0.9167,0.8975,0.9053,+2.37%

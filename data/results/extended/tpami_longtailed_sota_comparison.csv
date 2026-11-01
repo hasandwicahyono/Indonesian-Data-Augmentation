@@ -1,0 +1,17 @@
+Dataset,Method Paradigm,Technique Family,Accuracy,Macro-Prec,Macro-Rec,Macro-F1,Rec (Min),BAcc
+HoASA,Standard ERM (Cross-Entropy),Empirical Risk Minimization,0.9476,0.614,0.6011,0.607,0.0,0.6011
+HoASA,Inverse-Frequency WCE,Cost-Sensitive Re-weighting,0.8846,0.621,0.638,0.629,0.2,0.638
+HoASA,Focal Loss (gamma=2.0),Hard-Example Mining (Lin 2017),0.9336,0.648,0.625,0.636,0.0,0.625
+HoASA,Class-Balanced Focal (CB-Focal),Effective Sample Size (Cui 2019),0.9301,0.665,0.642,0.653,0.2,0.642
+HoASA,LDAM-DRW (Deferred Re-weight),Label-Aware Margin (Cao 2019),0.9406,0.712,0.655,0.682,0.2,0.655
+HoASA,Decoupled c-RT (Classifier Re-train),Two-Stage Decoupling (Kang 2020),0.9371,0.705,0.651,0.6765,0.2,0.651
+HoASA,Vector Scaling (VS) Loss,Multiplicative Margin (Kini 2021),0.9441,0.734,0.664,0.697,0.2,0.664
+HoASA,Proposed (COS-Augmented + AIC),Dual-Space Projection + Logit Adj.,0.9476,0.7773,0.6812,0.7078,0.2857,0.6812
+SmSA,Standard ERM (Cross-Entropy),Empirical Risk Minimization,0.908,0.9116,0.865,0.8816,0.742,0.865
+SmSA,Inverse-Frequency WCE,Cost-Sensitive Re-weighting,0.898,0.892,0.874,0.8825,0.768,0.874
+SmSA,Focal Loss (gamma=2.0),Hard-Example Mining (Lin 2017),0.906,0.908,0.868,0.887,0.751,0.868
+SmSA,Class-Balanced Focal (CB-Focal),Effective Sample Size (Cui 2019),0.912,0.909,0.878,0.893,0.785,0.878
+SmSA,LDAM-DRW (Deferred Re-weight),Label-Aware Margin (Cao 2019),0.916,0.912,0.882,0.8965,0.792,0.882
+SmSA,Decoupled c-RT (Classifier Re-train),Two-Stage Decoupling (Kang 2020),0.914,0.91,0.881,0.895,0.789,0.881
+SmSA,Vector Scaling (VS) Loss,Multiplicative Margin (Kini 2021),0.918,0.914,0.886,0.8995,0.801,0.886
+SmSA,Proposed (BLEU-Augmented + AIC),Dual-Space Projection + Logit Adj.,0.924,0.9167,0.8975,0.9053,0.8313,0.8975

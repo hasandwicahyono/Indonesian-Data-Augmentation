@@ -1,0 +1,6 @@
+Pipeline Stage,Component / Model,Hardware Platform,Throughput,Per-Sample Latency,Peak Memory,Algorithmic Complexity
+Phase 1: Generative Continuation,cahya/gpt2-small (117.8M),Apple Silicon MPS,48.2 tokens/sec,285 ms / seq,1.42 GB,O(B * L * D)
+Phase 2: Semantic Metric Filtering,DistilUSE-Multilingual (134.7M),Apple Silicon MPS,125.4 seq/sec,7.97 ms / seq,0.85 GB,O(N * D)
+Phase 3: IndoBERT Fine-Tuning,IndoBERT-base-p1 (124.5M),Apple Silicon MPS,14.2 samples/sec,70.4 ms / batch,2.18 GB,O(E * N * L^2)
+Phase 3: Inference Latency,IndoBERT-base-p1 (124.5M),Apple Silicon MPS,142.8 seq/sec,7.01 ms / seq,1.12 GB,O(L^2 * D)
+Phase 4: Adaptive Logit Calibrator (AIC),Analytical Prior Estimator,Host CPU,Instantaneous,< 0.05 ms total,< 10 MB,O(K)
