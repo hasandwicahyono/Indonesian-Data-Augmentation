@@ -22,6 +22,18 @@ if CURRENT_DIR not in sys.path:
 from DatasetsManager import IndonesianDatasetsManager
 
 
+def _resolve_path(p: str) -> str:
+    """Resolves relative paths gracefully across execution directories."""
+    if os.path.isabs(p):
+        return p
+    p_curr = os.path.join(CURRENT_DIR, p)
+    if os.path.exists(p_curr):
+        return os.path.abspath(p_curr)
+    if os.path.exists(p):
+        return os.path.abspath(p)
+    return os.path.join(CURRENT_DIR, p)
+
+
 # =====================================================================
 # 1. IEEE Access Table 1: Benchmark Dataset Statistics (tab:dataset_stats)
 # =====================================================================
@@ -31,6 +43,8 @@ def generate_access_dataset_stats_table(
     results_dir: str = "data/results/extended",
 ) -> Tuple[pd.DataFrame, str]:
     """Dynamically computes/loads dataset partitions, class distributions, and IR from file."""
+    paper_dir = _resolve_path(paper_dir)
+    results_dir = _resolve_path(results_dir)
     stats_json_candidates = [
         os.path.join(results_dir, "dataset_statistics.json"),
         os.path.join(os.path.dirname(results_dir.rstrip("/")), "dataset_statistics.json"),
@@ -169,6 +183,9 @@ def generate_access_main_results_table(
     out_results_dir: str = "data/results/extended",
 ) -> Tuple[pd.DataFrame, str]:
     """Dynamically compiles Table 2 of IEEE Access from real evaluation results."""
+    results_dir = _resolve_path(results_dir)
+    paper_dir = _resolve_path(paper_dir)
+    out_results_dir = _resolve_path(out_results_dir)
     datasets = ["SmSA", "HoASA", "EmoT", "MovieOpini"]
     records = []
     latex_blocks = []
@@ -176,7 +193,10 @@ def generate_access_main_results_table(
     for ds_name in datasets:
         eval_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
         if not os.path.exists(eval_path):
-            continue
+            raise FileNotFoundError(
+                f"Missing evaluation file: '{eval_path}'. "
+                f"Please run 'python run_all_benchmarks.py' to execute experiments and produce this file."
+            )
 
         df_eval = pd.read_excel(eval_path)
         
@@ -186,7 +206,7 @@ def generate_access_main_results_table(
         ref_row = raw_erm_df.iloc[0] if not raw_erm_df.empty else (base_df.iloc[0] if not base_df.empty else None)
         
         if ref_row is None:
-            continue
+            raise ValueError(f"Baseline row not found in '{eval_path}'. Please rerun 'python run_all_benchmarks.py'.")
             
         base_f1 = float(ref_row.get("macro_f1", 0.0))
         base_acc = float(ref_row.get("accuracy", 0.0))
@@ -300,6 +320,9 @@ def generate_access_per_class_f1_table(
     out_results_dir: str = "data/results/extended",
 ) -> Tuple[pd.DataFrame, str]:
     """Dynamically compiles Table 3 of IEEE Access (Per-Class F1 for SmSA & HoASA)."""
+    results_dir = _resolve_path(results_dir)
+    paper_dir = _resolve_path(paper_dir)
+    out_results_dir = _resolve_path(out_results_dir)
     datasets = ["SmSA", "HoASA"]
     records = []
     latex_blocks = []
@@ -307,7 +330,10 @@ def generate_access_per_class_f1_table(
     for ds_name in datasets:
         eval_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
         if not os.path.exists(eval_path):
-            continue
+            raise FileNotFoundError(
+                f"Missing evaluation file: '{eval_path}'. "
+                f"Please run 'python run_all_benchmarks.py' to produce experimental results for dataset {ds_name}."
+            )
 
         df_eval = pd.read_excel(eval_path)
         raw_erm_df = df_eval[df_eval["dataset_name"].str.contains("RawERM", case=False, na=False)]
@@ -321,7 +347,9 @@ def generate_access_per_class_f1_table(
         ]
 
         if ref_row is None:
-            continue
+            raise ValueError(f"Baseline row not found in '{eval_path}'. Please rerun 'python run_all_benchmarks.py'.")
+        if aug_df.empty:
+            raise ValueError(f"Augmented evaluations not found in '{eval_path}'. Please rerun 'python run_all_benchmarks.py'.")
 
         rows_to_process = [("Baseline", ref_row)]
         for _, r in aug_df.iterrows():
@@ -391,10 +419,59 @@ def generate_access_ablation_table(
     out_results_dir: str = "data/results/extended",
 ) -> Tuple[pd.DataFrame, str]:
     """Dynamically compiles Table 4 of IEEE Access (Ablation Analysis) populated from file."""
+    results_dir = _resolve_path(results_dir)
+    paper_dir = _resolve_path(paper_dir)
+    out_results_dir = _resolve_path(out_results_dir)
     hoasa_path = os.path.join(results_dir, "HoASA_evaluation_results.xlsx")
     smsa_path = os.path.join(results_dir, "SmSA_evaluation_results.xlsx")
     ablation_cache = os.path.join(out_results_dir, "access_ablation_results.json")
     ablation_csv = os.path.join(out_results_dir, "access_table_ablation.csv")
+
+    if not os.path.exists(hoasa_path):
+        raise FileNotFoundError(
+            f"Missing evaluation file: '{hoasa_path}'. "
+            "Please run 'python run_all_benchmarks.py' to execute experiments and produce this file."
+        )
+    if not os.path.exists(smsa_path):
+        raise FileNotFoundError(
+            f"Missing evaluation file: '{smsa_path}'. "
+            "Please run 'python run_all_benchmarks.py' to execute experiments and produce this file."
+        )
+
+    # Populate h_base, h_best, s_base, s_best directly from the .xlsx files with zero hard-coding
+    df_h = pd.read_excel(hoasa_path)
+    base_h = df_h[df_h["dataset_name"].str.contains("Baseline", case=False, na=False)]
+    if base_h.empty:
+        base_h = df_h[df_h["dataset_name"].str.contains("RawERM", case=False, na=False)]
+    if base_h.empty:
+        raise ValueError(f"Baseline row not found in '{hoasa_path}'. Please rerun 'python run_all_benchmarks.py'.")
+    h_base = float(base_h.iloc[0]["macro_f1"])
+
+    aug_h = df_h[
+        df_h["dataset_name"].str.contains("Augmented", case=False, na=False)
+        & ~df_h["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+        & ~df_h["dataset_name"].str.contains("Baseline", case=False, na=False)
+    ]
+    if aug_h.empty:
+        raise ValueError(f"Augmented evaluations not found in '{hoasa_path}'. Please rerun 'python run_all_benchmarks.py'.")
+    h_best = float(aug_h["macro_f1"].max())
+
+    df_s = pd.read_excel(smsa_path)
+    base_s = df_s[df_s["dataset_name"].str.contains("Baseline", case=False, na=False)]
+    if base_s.empty:
+        base_s = df_s[df_s["dataset_name"].str.contains("RawERM", case=False, na=False)]
+    if base_s.empty:
+        raise ValueError(f"Baseline row not found in '{smsa_path}'. Please rerun 'python run_all_benchmarks.py'.")
+    s_base = float(base_s.iloc[0]["macro_f1"])
+
+    aug_s = df_s[
+        df_s["dataset_name"].str.contains("Augmented", case=False, na=False)
+        & ~df_s["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+        & ~df_s["dataset_name"].str.contains("Baseline", case=False, na=False)
+    ]
+    if aug_s.empty:
+        raise ValueError(f"Augmented evaluations not found in '{smsa_path}'. Please rerun 'python run_all_benchmarks.py'.")
+    s_best = float(aug_s["macro_f1"].max())
 
     loaded_records = None
     source_file = None
@@ -414,50 +491,21 @@ def generate_access_ablation_table(
         except Exception:
             pass
 
-    # Synchronize with latest evaluation files from run_all_benchmarks.py if available
-    h_best = 0.6933
-    h_base = 0.7231
-    s_best = 0.8939
-    s_base = 0.9254
+    if loaded_records is None:
+        raise FileNotFoundError(
+            f"Missing ablation experimental records file ('{ablation_cache}' or '{ablation_csv}'). "
+            "Please run 'python run_all_benchmarks.py' or 'python run_extended_benchmarks.py' to generate the ablation suite results."
+        )
 
-    if os.path.exists(hoasa_path):
-        df_h = pd.read_excel(hoasa_path)
-        base_h = df_h[df_h["dataset_name"].str.contains("Baseline", case=False, na=False)]
-        aug_h = df_h[df_h["dataset_name"].str.contains("Augmented", case=False, na=False) & ~df_h["dataset_name"].str.contains("NotAugmented", case=False, na=False)]
-        if not base_h.empty:
-            h_base = float(base_h.iloc[0].get("macro_f1", h_base))
-        if not aug_h.empty:
-            h_best = float(aug_h["macro_f1"].max())
-
-    if os.path.exists(smsa_path):
-        df_s = pd.read_excel(smsa_path)
-        base_s = df_s[df_s["dataset_name"].str.contains("Baseline", case=False, na=False)]
-        aug_s = df_s[df_s["dataset_name"].str.contains("Augmented", case=False, na=False) & ~df_s["dataset_name"].str.contains("NotAugmented", case=False, na=False)]
-        if not base_s.empty:
-            s_base = float(base_s.iloc[0].get("macro_f1", s_base))
-        if not aug_s.empty:
-            s_best = float(aug_s["macro_f1"].max())
-
-    if loaded_records:
-        print(f"  [Access Table 4] Populating dynamically from file: {source_file}")
-        records = loaded_records
-        for r in records:
-            if "Full Proposed" in r.get("Configuration", ""):
-                r["HoASA F1"] = round(h_best, 4)
-                r["SmSA F1"] = round(s_best, 4)
-            elif "Baseline (Unaugmented ERM)" in r.get("Configuration", ""):
-                r["HoASA F1"] = round(h_base, 4)
-                r["SmSA F1"] = round(s_base, 4)
-    else:
-        records = [
-            {"Configuration": "Full Proposed Pipeline", "HoASA F1": round(h_best, 4), "SmSA F1": round(s_best, 4)},
-            {"Configuration": "\\quad $-$ w/o Logit Adjustment ($\\tau=0$)", "HoASA F1": round(h_base + 0.005, 4), "SmSA F1": round(s_base + 0.0024, 4)},
-            {"Configuration": "\\quad $-$ w/o Minority Oversampling", "HoASA F1": round(h_base + 0.0315, 4), "SmSA F1": round(s_base + 0.0096, 4)},
-            {"Configuration": "\\quad $-$ w/o Semantic Filtering (Raw GPT-2)", "HoASA F1": round(h_base - 0.0228, 4), "SmSA F1": round(s_base - 0.0162, 4)},
-            {"Configuration": "\\quad $-$ w/o Emoji Semantic Mapping", "HoASA F1": round(h_best - 0.0066, 4), "SmSA F1": round(s_best - 0.0043, 4)},
-            {"Configuration": "\\quad $-$ w/o FGM Adversarial Regularization", "HoASA F1": round(h_best - 0.0188, 4), "SmSA F1": round(s_best - 0.0083, 4)},
-            {"Configuration": "Baseline (Unaugmented ERM)", "HoASA F1": round(h_base, 4), "SmSA F1": round(s_base, 4)},
-        ]
+    print(f"  [Access Table 4] Populating dynamically from file: {source_file}")
+    records = loaded_records
+    for r in records:
+        if "Full Proposed" in r.get("Configuration", ""):
+            r["HoASA F1"] = round(h_best, 4)
+            r["SmSA F1"] = round(s_best, 4)
+        elif "Baseline" in r.get("Configuration", ""):
+            r["HoASA F1"] = round(h_base, 4)
+            r["SmSA F1"] = round(s_base, 4)
 
     os.makedirs(out_results_dir, exist_ok=True)
     with open(ablation_cache, "w") as f:
@@ -501,73 +549,94 @@ def generate_tpami_comparisons_table(
     out_results_dir: str = "data/results/extended",
 ) -> Tuple[pd.DataFrame, str]:
     """Dynamically compiles Table 1 of IEEE TPAMI Manuscript."""
+    results_dir = _resolve_path(results_dir)
+    paper_dir = _resolve_path(paper_dir)
+    out_results_dir = _resolve_path(out_results_dir)
     records = []
     latex_blocks = []
 
     # Persistent benchmark reference file
     bench_json = os.path.join(out_results_dir, "sota_longtailed_benchmark_results.json")
-    if os.path.exists(bench_json):
-        with open(bench_json, "r") as f:
-            benchmarks_data = json.load(f)
-    else:
-        # Standard empirical benchmarks
-        benchmarks_data = {
-            "HoASA": [
-                {"Method / Objective Formulation": "Standard Cross-Entropy (Baseline ERM)", "Accuracy": 0.9476, "Macro-Prec": 0.6140, "Macro-Rec": 0.6011, "Macro-F1": 0.6070, "BAcc": 0.6011, "MCC": 0.6284, "p-value": "---"},
-                {"Method / Objective Formulation": "Weighted Cross-Entropy (Inverse Freq.)", "Accuracy": 0.8112, "Macro-Prec": 0.5420, "Macro-Rec": 0.6430, "Macro-F1": 0.5870, "BAcc": 0.6430, "MCC": 0.4912, "p-value": "$p < 0.01$ (Degraded)"},
-                {"Method / Objective Formulation": "Focal Loss ($\\gamma = 2.0, \\alpha = 0.25$)", "Accuracy": 0.9336, "Macro-Prec": 0.6210, "Macro-Rec": 0.6120, "Macro-F1": 0.6164, "BAcc": 0.6120, "MCC": 0.6310, "p-value": "$p = 0.142$ (Insignificant)"},
-                {"Method / Objective Formulation": "LDAM-DRW", "Accuracy": 0.9406, "Macro-Prec": 0.6980, "Macro-Rec": 0.6450, "Macro-F1": 0.6698, "BAcc": 0.6450, "MCC": 0.6845, "p-value": "$p < 0.01$"},
-                {"Method / Objective Formulation": "Class-Balanced Loss (CB-Loss, $\\beta = 0.999$)", "Accuracy": 0.9371, "Macro-Prec": 0.7120, "Macro-Rec": 0.6510, "Macro-F1": 0.6795, "BAcc": 0.6510, "MCC": 0.6910, "p-value": "$p < 0.01$"},
-            ],
-            "SmSA": [
-                {"Method / Objective Formulation": "Standard Cross-Entropy (Baseline ERM)", "Accuracy": 0.9080, "Macro-Prec": 0.9116, "Macro-Rec": 0.8650, "Macro-F1": 0.8816, "BAcc": 0.8650, "MCC": 0.8512, "p-value": "---"},
-                {"Method / Objective Formulation": "Weighted Cross-Entropy (Inverse Freq.)", "Accuracy": 0.8940, "Macro-Prec": 0.8920, "Macro-Rec": 0.8710, "Macro-F1": 0.8812, "BAcc": 0.8710, "MCC": 0.8340, "p-value": "$p = 0.420$"},
-                {"Method / Objective Formulation": "Focal Loss ($\\gamma = 2.0$)", "Accuracy": 0.9120, "Macro-Prec": 0.9080, "Macro-Rec": 0.8712, "Macro-F1": 0.8885, "BAcc": 0.8712, "MCC": 0.8580, "p-value": "$p = 0.082$"},
-                {"Method / Objective Formulation": "LDAM-DRW", "Accuracy": 0.9180, "Macro-Prec": 0.9150, "Macro-Rec": 0.8810, "Macro-F1": 0.8972, "BAcc": 0.8810, "MCC": 0.8690, "p-value": "$p < 0.01$"},
-                {"Method / Objective Formulation": "Class-Balanced Loss ($\\beta = 0.999$)", "Accuracy": 0.9160, "Macro-Prec": 0.9180, "Macro-Rec": 0.8790, "Macro-F1": 0.8975, "BAcc": 0.8790, "MCC": 0.8675, "p-value": "$p < 0.01$"},
-            ],
-            "EmoT": [
-                {"Method / Objective Formulation": "Standard Cross-Entropy (Single-Model Baseline)", "Accuracy": 0.8023, "Macro-Prec": 0.8055, "Macro-Rec": 0.8039, "Macro-F1": 0.8040, "BAcc": 0.8039, "MCC": 0.7521, "p-value": "---"},
-                {"Method / Objective Formulation": "Focal Loss ($\\gamma = 2.0$)", "Accuracy": 0.7910, "Macro-Prec": 0.7890, "Macro-Rec": 0.7920, "Macro-F1": 0.7904, "BAcc": 0.7920, "MCC": 0.7380, "p-value": "$p < 0.05$ (Degraded)"},
-                {"Method / Objective Formulation": "Best Single Augmented Variant (ECU)", "Accuracy": 0.7932, "Macro-Prec": 0.7954, "Macro-Rec": 0.7948, "Macro-F1": 0.7940, "BAcc": 0.7948, "MCC": 0.7410, "p-value": "$p = 0.091$"},
-            ]
-        }
-        with open(bench_json, "w") as f:
-            json.dump(benchmarks_data, f, indent=2)
+    if not os.path.exists(bench_json):
+        raise FileNotFoundError(
+            f"Missing SOTA long-tailed benchmark file: '{bench_json}'. "
+            "Please rerun generate_tpami_comparisons_table() via 'python run_all_benchmarks.py' to produce this file."
+        )
+
+    with open(bench_json, "r") as f:
+        benchmarks_data = json.load(f)
 
     for ds_name in ["HoASA", "SmSA", "EmoT"]:
         eval_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
+        pred_path = os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz")
+
+        if not os.path.exists(eval_path):
+            raise FileNotFoundError(
+                f"Missing evaluation file: '{eval_path}'. "
+                f"Please run 'python run_all_benchmarks.py' to produce experimental results for dataset {ds_name}."
+            )
+        if not os.path.exists(pred_path):
+            raise FileNotFoundError(
+                f"Missing predictions file: '{pred_path}'. "
+                f"Please run 'python run_all_benchmarks.py' to produce model test predictions for dataset {ds_name}."
+            )
+
+        preds_npz = np.load(pred_path)
         bench_list = benchmarks_data.get(ds_name, [])
+        if not bench_list:
+            raise ValueError(f"No benchmark baseline entries found for '{ds_name}' in '{bench_json}'. Please rerun generate_tpami_comparisons_table().")
 
-        # Fetch actual proposed numbers
-        p_acc, p_prec, p_rec, p_f1 = 0.94, 0.77, 0.68, 0.70
-        p_mcc = 0.7384
-        p_var_name = "Proposed (Augmented + AIC)"
-        if os.path.exists(eval_path):
-            df_eval = pd.read_excel(eval_path)
-            raw_erm_df = df_eval[df_eval["dataset_name"].str.contains("RawERM", case=False, na=False)]
-            base_df = df_eval[df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)]
-            ref_row = raw_erm_df.iloc[0] if not raw_erm_df.empty else (base_df.iloc[0] if not base_df.empty else None)
-            if ref_row is not None:
-                for b in bench_list:
-                    if "Baseline ERM" in b["Method / Objective Formulation"] or "Baseline" in b["Method / Objective Formulation"]:
-                        b["Accuracy"] = round(float(ref_row.get("accuracy", b["Accuracy"])), 4)
-                        b["Macro-Prec"] = round(float(ref_row.get("macro_precision", b["Macro-Prec"])), 4)
-                        b["Macro-Rec"] = round(float(ref_row.get("macro_recall", b["Macro-Rec"])), 4)
-                        b["Macro-F1"] = round(float(ref_row.get("macro_f1", b["Macro-F1"])), 4)
-                        b["BAcc"] = round(float(ref_row.get("macro_recall", b["BAcc"])), 4)
+        df_eval = pd.read_excel(eval_path)
+        raw_erm_df = df_eval[df_eval["dataset_name"].str.contains("RawERM", case=False, na=False)]
+        base_df = df_eval[df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)]
+        ref_row = raw_erm_df.iloc[0] if not raw_erm_df.empty else (base_df.iloc[0] if not base_df.empty else None)
+        if ref_row is None:
+            raise ValueError(f"Baseline row not found in '{eval_path}'. Please rerun 'python run_all_benchmarks.py'.")
 
-            aug_df = df_eval[df_eval["dataset_name"].str.contains("Augmented", case=False, na=False) & ~df_eval["dataset_name"].str.contains("NotAugmented", case=False, na=False)]
-            if not aug_df.empty:
-                best_row = aug_df.loc[aug_df["macro_f1"].idxmax()]
-                p_acc = float(best_row.get("accuracy", p_acc))
-                p_prec = float(best_row.get("macro_precision", p_prec))
-                p_rec = float(best_row.get("macro_recall", p_rec))
-                p_f1 = float(best_row.get("macro_f1", p_f1))
-                vname = str(best_row.get("dataset_name", "")).split("-")[-1]
-                p_var_name = f"Proposed ({vname}-Constrained Aug. + AIC)"
-                if ds_name == "EmoT" and "Ensemble" in vname:
-                    p_var_name = "Proposed Heterogeneous Soft-Voting Ensemble"
+        base_dname = str(ref_row.get("dataset_name", ""))
+        base_k_pred = f"{base_dname}__pred"
+        base_k_true = f"{base_dname}__true"
+        base_mcc = None
+        if base_k_pred in preds_npz and base_k_true in preds_npz:
+            from sklearn.metrics import matthews_corrcoef
+            base_mcc = float(matthews_corrcoef(preds_npz[base_k_true], preds_npz[base_k_pred]))
+
+        for b in bench_list:
+            if "Baseline ERM" in b["Method / Objective Formulation"] or "Baseline" in b["Method / Objective Formulation"]:
+                b["Accuracy"] = round(float(ref_row.get("accuracy", b["Accuracy"])), 4)
+                b["Macro-Prec"] = round(float(ref_row.get("macro_precision", b["Macro-Prec"])), 4)
+                b["Macro-Rec"] = round(float(ref_row.get("macro_recall", b["Macro-Rec"])), 4)
+                b["Macro-F1"] = round(float(ref_row.get("macro_f1", b["Macro-F1"])), 4)
+                b["BAcc"] = round(float(ref_row.get("macro_recall", b["BAcc"])), 4)
+                if base_mcc is not None:
+                    b["MCC"] = round(base_mcc, 4)
+
+        aug_df = df_eval[
+            df_eval["dataset_name"].str.contains("Augmented", case=False, na=False)
+            & ~df_eval["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+            & ~df_eval["dataset_name"].str.contains("Baseline", case=False, na=False)
+        ]
+        if aug_df.empty:
+            raise ValueError(f"No augmented evaluations found in '{eval_path}'. Please rerun 'python run_all_benchmarks.py'.")
+
+        best_row = aug_df.loc[aug_df["macro_f1"].idxmax()]
+        p_acc = float(best_row["accuracy"])
+        p_prec = float(best_row["macro_precision"])
+        p_rec = float(best_row["macro_recall"])
+        p_f1 = float(best_row["macro_f1"])
+
+        best_dname = str(best_row.get("dataset_name", ""))
+        k_pred = f"{best_dname}__pred"
+        k_true = f"{best_dname}__true"
+        if k_pred not in preds_npz or k_true not in preds_npz:
+            raise KeyError(f"Missing keys '{k_pred}' and '{k_true}' in '{pred_path}'. Please rerun 'python run_all_benchmarks.py'.")
+        from sklearn.metrics import matthews_corrcoef
+        p_mcc = float(matthews_corrcoef(preds_npz[k_true], preds_npz[k_pred]))
+
+        vname = best_dname.split("-")[-1]
+        p_var_name = f"Proposed ({vname}-Constrained Aug. + AIC)"
+        if ds_name == "EmoT" and "Ensemble" in vname:
+            p_var_name = "Proposed Heterogeneous Soft-Voting Ensemble"
 
         block = [f"\\multirow{{{len(bench_list) + 1}}}{{*}}{{\\textbf{{{ds_name}}}}}"]
         for b in bench_list:
@@ -584,7 +653,7 @@ def generate_tpami_comparisons_table(
             })
             block.append(f"& {b['Method / Objective Formulation']} & {b['Accuracy']:.4f} & {b['Macro-Prec']:.4f} & {b['Macro-Rec']:.4f} & {b['Macro-F1']:.4f} & {b['BAcc']:.4f} & {b['MCC']:.4f} & {b['p-value']} \\\\")
 
-        # Proposed Row
+        # Proposed Row populated directly from real evaluations and predictions
         records.append({
             "Dataset": ds_name,
             "Method / Objective Formulation": p_var_name,
@@ -628,6 +697,8 @@ def generate_tpami_5fold_table(
     paper_dir: str = "paper",
 ) -> Tuple[pd.DataFrame, str]:
     """Dynamically compiles Table 2 of IEEE TPAMI (5-Fold CV Paired t-Test)."""
+    results_dir = _resolve_path(results_dir)
+    paper_dir = _resolve_path(paper_dir)
     datasets_map = {
         "MovieOpini": ("MovieOpini (Movie Reviews)", "MovieOpini_real_5fold_results.json"),
         "HoASA": ("HoASA (Hotel Aspect)", "HoASA_real_5fold_results.json"),
@@ -641,7 +712,10 @@ def generate_tpami_5fold_table(
     for ds_code, (ds_label, json_name) in datasets_map.items():
         json_path = os.path.join(results_dir, json_name)
         if not os.path.exists(json_path):
-            continue
+            raise FileNotFoundError(
+                f"Missing 5-fold cross validation file: '{json_path}'. "
+                "Please run 'python run_all_benchmarks.py --run_cv' or 'python execute_real_cross_validation.py' to produce this file."
+            )
 
         with open(json_path, "r") as f:
             data = json.load(f)
@@ -717,6 +791,7 @@ def inject_dynamic_tables_into_manuscripts(paper_dir: str = "paper"):
     Replaces static tabular environments in paper/main.tex and paper/tpami_manuscript.tex
     with dynamic input commands or exact dynamically generated table code.
     """
+    paper_dir = _resolve_path(paper_dir)
     main_tex = os.path.join(paper_dir, "main.tex")
     tpami_tex = os.path.join(paper_dir, "tpami_manuscript.tex")
 
@@ -782,6 +857,7 @@ def inject_dynamic_tables_into_manuscripts(paper_dir: str = "paper"):
 # =====================================================================
 def compile_latex_manuscripts(paper_dir: str = "paper") -> bool:
     """Compiles main.tex and tpami_manuscript.tex with pdflatex and bibtex."""
+    paper_dir = _resolve_path(paper_dir)
     import shutil
     pdflatex_bin = "/Library/TeX/texbin/pdflatex"
     if not os.path.exists(pdflatex_bin):
