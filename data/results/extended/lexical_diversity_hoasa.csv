@@ -1,0 +1,6 @@
+Dataset,Variant,Distinct-1,Distinct-2,Entropy (H)
+HoASA,Baseline (Original),0.1678,0.6842,9.98
+HoASA,ECU-Augmented,0.1671,0.6587,10.12
+HoASA,COS-Augmented,0.1689,0.673,10.07
+HoASA,JAC-Augmented,0.169,0.6745,10.06
+HoASA,BLEU-Augmented,0.1689,0.6753,10.05
