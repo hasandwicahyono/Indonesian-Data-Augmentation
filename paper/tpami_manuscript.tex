@@ -130,7 +130,7 @@ An autoregressive language model $\mathcal{M}_{\text{gen}}$ parameterized by wei
 \begin{equation}
     P_\Theta(x \mid x^{\text{prompt}}) = \prod_{t=L_p+1}^{|x|} P_\Theta(w_t \mid w_{<t})
 \end{equation}
-Beam search with length-normalized nucleus sampling generates a synthetic continuation $\hat{x}_i^{\text{gen}} \sim P_\Theta(\cdot \mid x_i^{\text{prompt}})$, constructing the candidate augmented sequence $\tilde{x}_i = x_i \circ \hat{x}_i^{\text{gen}}$. The complete augmented candidate sequence inherits the ground-truth class label $y_i$ of the seed prompt, expanding the effective dataset size for underrepresented classes. In our implementation, decoding uses beam width $B=5$, repetition penalty $r=2.5$, no-repeat $n$-gram size $n=3$, top-$p=0.95$, and temperature $T=1.0$. To empirically justify the choice of generative backbone, Table \ref{tab:generative_models} provides a comprehensive evaluation of candidate first-generation and contemporary foundation architectures across inference throughput, sample latency, lexical diversity, and semantic preservation. However, because autoregressive sampling cannot inherently guarantee category consistency, these raw candidates must be rigorously audited before inclusion in the training set.
+Beam search with length-normalized nucleus sampling generates a synthetic continuation $\hat{x}_i^{\text{gen}} \sim P_\Theta(\cdot \mid x_i^{\text{prompt}})$, constructing the candidate augmented sequence $\tilde{x}_i = x_i \circ \hat{x}_i^{\text{gen}}$. The complete augmented candidate sequence inherits the ground-truth class label $y_i$ of the seed prompt, expanding the effective dataset size for underrepresented classes. In our implementation, decoding uses beam width $B_{\text{beam}}=5$, repetition penalty $r=2.5$, no-repeat $n$-gram size $n_{\text{ngram}}=3$, top-$p$ nucleus probability threshold $p_{\text{nuc}}=0.95$, and decoding temperature $T_{\text{sample}}=1.0$. To empirically justify the choice of generative backbone, Table \ref{tab:generative_models} provides a comprehensive evaluation of candidate first-generation and contemporary foundation architectures across inference throughput, sample latency, lexical diversity, and semantic preservation. However, because autoregressive sampling cannot inherently guarantee category consistency, these raw candidates must be rigorously audited before inclusion in the training set.
 
 \begin{table*}[!t]
 \caption{Empirical Benchmarking of Candidate Generative Backbone Models for Indonesian Sequence Augmentation Across Architectural Eras, Computational Latency, Lexical Diversity, and Semantic Fidelity}
@@ -159,13 +159,15 @@ Let $\phi: \mathcal{X} \to \mathcal{H}$ denote a nonlinear sentence embedding ma
     \end{aligned}
     \end{equation}
     \item Discrete Token Jaccard Lattice Metric:
+    Let $\mathcal{V}(x)$ and $\mathcal{V}(\tilde{x})$ denote the sets of unique lemmatized word tokens in the seed and candidate text, respectively:
     \begin{equation}
-        J(x, \tilde{x}) = \frac{|\mathcal{W}(x) \cap \mathcal{W}(\tilde{x})|}{|\mathcal{W}(x) \cup \mathcal{W}(\tilde{x})|}
+        J(x, \tilde{x}) = \frac{|\mathcal{V}(x) \cap \mathcal{V}(\tilde{x})|}{|\mathcal{V}(x) \cup \mathcal{V}(\tilde{x})|}
     \end{equation}
     \item Collocation BLEU Lattice Precision \cite{papineni2002bleu}:
     \begin{equation}
-        \text{BLEU}(x, \tilde{x}) = \text{BP} \cdot \exp\left(\sum_{n=1}^4 w_n \ln p_n(x, \tilde{x})\right)
+        \text{BLEU}(x, \tilde{x}) = \text{BP}(x, \tilde{x}) \cdot \exp\left(\sum_{n=1}^4 w_n \ln p_n(x, \tilde{x})\right)
     \end{equation}
+    where $w_n = 0.25$ denotes uniform $n$-gram weights, $p_n(x, \tilde{x})$ represents modified $n$-gram precision, and $\text{BP}(x, \tilde{x}) = \min\left(1, \exp\left(1 - \frac{|x|}{|\tilde{x}|}\right)\right)$ is the brevity penalty with $|x|$ and $|\tilde{x}|$ denoting token lengths.
 \end{enumerate}
 Together, these metrics measure both global semantic alignment in latent space and structural lexical coherence in token space. By evaluating both topological distance and discrete word overlap, the system prevents semantic drift while encouraging natural morphological variation. Dense metrics guarantee that candidate vectors remain inside the target class cluster, while token-level metrics protect syntactic validity. Consequently, only candidates preserving high-level semantics and surface regularity are retained.
 \end{definition}
@@ -368,7 +370,7 @@ To benchmark the performance of our proposed density-constrained augmentation an
     \item \textbf{LDAM-DRW \cite{cao2019learning, alshammari2022long}:} Label-Distribution-Aware Margin loss coupled with Deferred Re-Weighting scheduling.
 \end{itemize}
 
-All models are trained for a maximum of 50 epochs on a dedicated compute node equipped with dual NVIDIA RTX GPUs. Evaluation metrics include overall Accuracy, Macro-Precision, Macro-Recall, Macro-F1, Balanced Accuracy (BAcc), and multi-class Matthews Correlation Coefficient (MCC, $R_K$). Paired two-tailed $t$-tests and non-parametric Wilcoxon signed-rank tests are computed across five randomized seed initializations to establish statistical significance ($p < 0.05, p < 0.01, p < 0.001$). Reporting multiple complementary metrics prevents metric exploitation, ensuring that performance gains represent authentic improvements across all categories rather than artificial trade-offs.
+All models are trained for a maximum of 50 epochs on a dedicated compute node equipped with dual NVIDIA RTX GPUs. Performance is audited using the multi-class confusion matrix $\mathbf{C} \in \mathbb{N}^{K \times K}$ (where $C_{jk}$ denotes true class $j$ predicted as class $k$), computing overall Accuracy ($\text{Acc} = \frac{\sum_k C_{kk}}{\sum_{j,k} C_{jk}}$), Macro-Precision ($\text{Prec}_{\text{macro}} = \frac{1}{K}\sum_k \frac{C_{kk}}{\sum_j C_{jk}}$), Macro-Recall ($\text{Rec}_{\text{macro}} = \frac{1}{K}\sum_k \frac{C_{kk}}{\sum_j C_{kj}}$), Macro-F1 ($\text{F1}_{\text{macro}} = \frac{1}{K}\sum_k \frac{2 \text{Prec}_k \text{Rec}_k}{\text{Prec}_k + \text{Rec}_k + \epsilon_0}$), Balanced Accuracy ($\text{BAcc} = \text{Rec}_{\text{macro}}$), and multi-class Matthews Correlation Coefficient ($R_K = \frac{c \cdot s - \sum_k p_k t_k}{\sqrt{(s^2 - \sum_k p_k^2)(s^2 - \sum_k t_k^2)}}$, with $c = \sum_k C_{kk}$, $s = \sum_{j,k} C_{jk}$, $p_k = \sum_j C_{jk}$, and $t_k = \sum_j C_{kj}$). Paired two-tailed $t$-tests and non-parametric Wilcoxon signed-rank tests are computed across five randomized seed initializations to establish statistical significance ($p < 0.05, p < 0.01, p < 0.001$). Reporting multiple complementary metrics prevents metric exploitation, ensuring that performance gains represent authentic improvements across all categories rather than artificial trade-offs.
 \section{Empirical Results and Theoretical Validation}
 \label{sec:results}
 

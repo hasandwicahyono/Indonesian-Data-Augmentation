@@ -29,8 +29,8 @@
 \tfootnote{This research was supported in part by open-access computational resources and benchmark datasets provided by the Indonesian NLP research community, IndoNLU, IndoLEM, and Hugging Face.}
 
 \markboth
-{H. D. Cahyono: Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
-{H. D. Cahyono: Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
+{H. D. Cahyono: Dual-Space Projection and Logit Calibration for Imbalanced Indonesian NLP}
+{H. D. Cahyono: Dual-Space Projection and Logit Calibration for Imbalanced Indonesian NLP}
 
 \corresp{Corresponding author: Hasan Dwi Cahyono (e-mail: hasan.dwi.cahyono@gmail.com).}
 
@@ -102,27 +102,27 @@ The proposed framework integrates generative data synthesis, multi-space quality
 Digital text in low-resource and colloquial registers contains heavy orthographic noise that degrades tokenization efficiency. Raw text inputs undergo systematic cleaning: HTML entities, non-standard punctuation clusters, trailing URLs, and social media user tags (@username) are removed. Alphabetic text is case-folded to lower case, while sequences of repeated characters (e.g., ``bangeeet'') are normalized to standard lexical forms. To address non-standard dialectal registers and informal orthography, we incorporate the Colloquial Indonesian Lexicon established by Salsabila et al. \cite{salsabila2018colloquial}, which normalizes over 15,000 empirical colloquial word forms into their standard grammatical lemmas, preventing sub-word fragmentation and resolving lexical ambiguity before tokenization. In formal domains, these operations eliminate superficial token noise and reduce vocabulary dispersion.
 
 In colloquial social media text, emotional expression is heavily mediated by graphical emojis and stylized pictograms. Standard NLP pipelines typically strip these characters as unprocessable noise, thereby discarding vital sentiment indicators. Such naive removal obscures critical pragmatic intent, especially in sentiment-heavy conversational contexts. Rather than discarding emojis or relying on ad-hoc heuristics, we establish an empirically grounded emoji semantic mapper utilizing the Multidimensional Lexicon of Emojis (MLE) by Godard and Holtzman \cite{godard2022multidimensional}. The MLE provides standardized continuous ratings across 359 emojis evaluated along 10 discrete affective and sentiment dimensions (Tables 1 and 2 of \cite{godard2022multidimensional}). Based on these empirical distributions, each emoji $e$ is systematically projected into canonical Indonesian affective tokens:
-\begin{equation}
-    e \mapsto \begin{cases}
-        \texttt{\_emosi\_marah\_}, & e \in \mathcal{E}_{\text{anger}} \\
-        \texttt{\_emosi\_sedih\_}, & e \in \mathcal{E}_{\text{sadness}} \\
-        \texttt{\_emosi\_takut\_}, & e \in \mathcal{E}_{\text{fear}} \\
-        \texttt{\_emosi\_cinta\_}, & e \in \mathcal{E}_{\text{love}} \\
-        \texttt{\_emosi\_bahagia\_}, & e \in \mathcal{E}_{\text{joy}}
-    \end{cases}
-\end{equation}
-For example, the noisy social text \textit{``Keren bgt filmnya [sedih] sedih banget T\_T''} is converted to \textit{``bagus banget filmnya \_emosi\_sedih\_ sedih banget \_emosi\_sedih\_''}. This transformation provides explicit lexical anchors that standard WordPiece tokenizers can encode without sub-word fragmentation. Consequently, the downstream classifier learns to associate emotional iconography with clear semantic vectors. Empirical evaluation demonstrates that this mapping eliminates tokenizer out-of-vocabulary fallback, boosting emotional feature saliency.
+    \begin{equation}
+        e \mapsto \begin{cases}
+            \texttt{\_emosi\_marah\_}, & e \in \mathcal{E}_{\text{anger}} \\
+            \texttt{\_emosi\_sedih\_}, & e \in \mathcal{E}_{\text{sadness}} \\
+            \texttt{\_emosi\_takut\_}, & e \in \mathcal{E}_{\text{fear}} \\
+            \texttt{\_emosi\_cinta\_}, & e \in \mathcal{E}_{\text{love}} \\
+            \texttt{\_emosi\_bahagia\_}, & e \in \mathcal{E}_{\text{joy}}
+        \end{cases}
+    \end{equation}
+    where $\mathcal{E}_c$ denotes the partition of emojis assigned to affective emotion category $c \in \{\text{anger}, \text{sadness}, \text{fear}, \text{love}, \text{joy}\}$ based on empirical valence and arousal ratings from the Multidimensional Lexicon of Emojis \cite{godard2022multidimensional}. For example, the noisy social text \textit{``Keren bgt filmnya [sedih] sedih banget T\_T''} is converted to \textit{``bagus banget filmnya \_emosi\_sedih\_ sedih banget \_emosi\_sedih\_''}. This transformation provides explicit lexical anchors that standard WordPiece tokenizers can encode without sub-word fragmentation. Consequently, the downstream classifier learns to associate emotional iconography with clear semantic vectors. Empirical evaluation demonstrates that this mapping eliminates tokenizer out-of-vocabulary fallback, boosting emotional feature saliency.
 
 \subsection{Phase 2: Autoregressive Continuation Generation}
 \label{subsec:phase2}
 
-Let $\mathcal{D}_{\text{train}} = \{(x_i, y_i)\}_{i=1}^{N}$ denote the training set. Minority classes are identified via the set $\mathcal{Y}_{\text{min}} \subset \mathcal{Y}$. For each seed sample $(x_i, y_i)$ where $y_i \in \mathcal{Y}_{\text{min}}$, the original text is partitioned into a prompt prefix $x_i^{\text{prefix}}$ comprising the first $L_{\text{prompt}} = \max(3, \lfloor \lambda \cdot |x_i| \rfloor)$ tokens, where $\lambda = 0.5$. This prefix retention anchors the generation process to genuine linguistic patterns present in the authentic sample.
+Let $\mathcal{D}_{\text{train}} = \{(x_i, y_i)\}_{i=1}^{N}$ denote the training set of size $N$, with input sequences $x_i \in \mathcal{X}$ and categorical labels $y_i \in \mathcal{Y} = \{1, \dots, K\}$. Minority classes are identified via the subset $\mathcal{Y}_{\text{min}} \subset \mathcal{Y}$. For each seed sample $(x_i, y_i)$ where $y_i \in \mathcal{Y}_{\text{min}}$, the original text sequence $x_i = (w_1^{(0)}, \dots, w_{|x_i|}^{(0)})$ is partitioned into a prompt prefix $x_i^{\text{prefix}} = (w_1^{(0)}, \dots, w_{L_{\text{prompt}}}^{(0)})$ comprising the initial $L_{\text{prompt}} = \max(3, \lfloor \lambda \cdot |x_i| \rfloor)$ tokens, where $\lambda = 0.5$ denotes the prefix retention fraction. This prefix retention anchors the generation process to genuine linguistic patterns present in the authentic sample.
 
-The prefix is fed to an autoregressive decoder model $\mathcal{M}_{\text{gen}}$ parameterized by $\Theta$. Conditioning directly on the prefix forces the generator to maintain grammatical continuity with genuine training utterances. The model samples a synthetic sequence continuation $\hat{x}_i^{\text{gen}}$ according to the factorized causal probability:
+The prefix is fed to an autoregressive decoder model $\mathcal{M}_{\text{gen}}$ parameterized by weights $\Theta$. Conditioning directly on the prefix forces the generator to maintain grammatical continuity with genuine training utterances. The model samples a synthetic sequence continuation $\hat{x}_i^{\text{gen}} = (w_1, \dots, w_{L_{\text{gen}}})$ of length $L_{\text{gen}} = |\hat{x}_i^{\text{gen}}|$ according to the factorized causal probability:
 \begin{equation}
-    P(\hat{x}_i^{\text{gen}} \mid x_i^{\text{prefix}}; \Theta) = \prod_{t=1}^{T} P(w_t \mid x_i^{\text{prefix}}, w_1, \dots, w_{t-1}; \Theta)
+    P(\hat{x}_i^{\text{gen}} \mid x_i^{\text{prefix}}; \Theta) = \prod_{t=1}^{L_{\text{gen}}} P(w_t \mid x_i^{\text{prefix}}, w_1, \dots, w_{t-1}; \Theta)
 \end{equation}
-This autoregressive decomposition ensures that each successive token distribution remains conditioned on both historical seed context and newly generated tokens. Generation is executed using beam-search guided decoding with a beam width $B=5$, repetition penalty $r=2.5$, no-repeat $n$-gram size $n=3$, top-$p$ nucleus sampling $p=0.95$, and a temperature $T=1.0$. The complete augmented candidate text is constructed by concatenating the original seed prompt with the synthetic continuation: $\tilde{x}_i = x_i \circ \hat{x}_i^{\text{gen}}$, assigned the identical ground-truth label $y_i$. This causal expansion yields grammatically coherent sentences while preserving the thematic premise of the initial seed. Furthermore, the combination of beam search and nucleus sampling prevents degenerative token loops while allowing sufficient lexical diversity.
+This autoregressive decomposition ensures that each successive token distribution remains conditioned on both historical seed context and newly generated tokens. Generation is executed using beam-search guided decoding with a beam width $B_{\text{beam}}=5$, repetition penalty $r=2.5$, no-repeat $n$-gram size $n_{\text{ngram}}=3$, top-$p$ nucleus probability threshold $p_{\text{nuc}}=0.95$, and decoding temperature $T_{\text{sample}}=1.0$. The complete augmented candidate text is constructed by concatenating the original seed prompt with the synthetic continuation: $\tilde{x}_i = x_i \circ \hat{x}_i^{\text{gen}}$, assigned the identical ground-truth label $y_i$. This causal expansion yields grammatically coherent sentences while preserving the thematic premise of the initial seed. Furthermore, the combination of beam search and nucleus sampling prevents degenerative token loops while allowing sufficient lexical diversity.
 
 \subsection{Phase 3: Multi-Metric Semantic Similarity Filtering}
 \label{subsec:phase3}
@@ -144,18 +144,25 @@ Cosine similarity evaluates directional alignment between normalized sentence ve
 Candidates are admitted if their angular alignment satisfies $S_{\text{COS}}(x, \tilde{x}) \ge \mu_{\text{COS}} + \sigma_{\text{COS}}$, ensuring that the underlying semantic vector direction is strictly preserved. This directional threshold prevents contradictory sentiment shifts while accommodating diverse lexical paraphrasing. In acute imbalance regimes, directional alignment proves vital for capturing diverse expressions of rare classes. Overall, cosine filtering ensures that synthesized samples remain collinear with the true category concept.
 
 \subsubsection{Lexical Jaccard Index (JAC)}
-Discrete lexical overlap is computed over unique token vocabularies to enforce surface terminological consistency. Let $\mathcal{W}(x)$ and $\mathcal{W}(\tilde{x})$ denote the sets of unique lemmatized word tokens in the seed and candidate text, respectively. The Jaccard similarity coefficient quantifies the ratio of shared vocabulary to total vocabulary:
+Discrete lexical overlap is computed over unique token vocabularies to enforce surface terminological consistency. Let $\mathcal{V}(x)$ and $\mathcal{V}(\tilde{x})$ denote the sets of unique lemmatized word tokens in the seed and candidate text, respectively. The Jaccard similarity coefficient quantifies the ratio of shared vocabulary to total vocabulary:
 \begin{equation}
-    J(x, \tilde{x}) = \frac{|\mathcal{W}(x) \cap \mathcal{W}(\tilde{x})|}{|\mathcal{W}(x) \cup \mathcal{W}(\tilde{x})|}
+    J(x, \tilde{x}) = \frac{|\mathcal{V}(x) \cap \mathcal{V}(\tilde{x})|}{|\mathcal{V}(x) \cup \mathcal{V}(\tilde{x})|}
 \end{equation}
 Filtering requires $J(x, \tilde{x}) \ge \mu_{\text{JAC}} + \sigma_{\text{JAC}}$, retaining candidates that share core domain terminology with the seed. This lexical constraint prevents the generative decoder from drifting into generic, off-topic vocabulary. It provides an orthogonal filtering signal to dense neural embeddings by operating directly on discrete lexical tokens. As a result, synthetic instances retain domain-specific keywords essential for downstream discriminative learning.
 
 \subsubsection{Bilingual Evaluation Understudy (BLEU)}
 Local syntactic collocation is evaluated via sentence-level BLEU-4 with an explicit brevity penalty \cite{papineni2002bleu, feng2021survey}. While Jaccard measures set-level vocabulary overlap, BLEU evaluates ordered $n$-gram precision up to 4-grams, capturing local phrase structure. The metric is computed against the seed text as:
 \begin{equation}
-    \text{BLEU}(x, \tilde{x}) = \text{BP} \cdot \exp\left(\sum_{n=1}^4 w_n \ln p_n(x, \tilde{x})\right)
+    \text{BLEU}(x, \tilde{x}) = \text{BP}(x, \tilde{x}) \cdot \exp\left(\sum_{n=1}^4 w_n \ln p_n(x, \tilde{x})\right)
 \end{equation}
-Candidates are admitted if $\text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}}$, ensuring that key structural phrases and idioms are preserved. This rigorous syntactic filter is especially critical for formal text where subtle sentiment hedging relies on precise multi-word collocations. By penalizing arbitrary syntactic permutations, BLEU pruning prevents the insertion of disruptive polarity-inverting clauses. Consequently, the resulting augmented corpus exhibits high grammatical fluency and structural coherence.
+where $w_n = 0.25$ denotes uniform weighting across $n$-gram orders up to 4, $p_n(x, \tilde{x})$ represents modified $n$-gram precision, and $\text{BP}(x, \tilde{x})$ is the brevity penalty defined as:
+\begin{equation}
+    \text{BP}(x, \tilde{x}) = \begin{cases}
+        1, & \text{if } |\tilde{x}| > |x| \\
+        \exp\left(1 - \frac{|x|}{|\tilde{x}|}\right), & \text{if } |\tilde{x}| \le |x|
+    \end{cases}
+\end{equation}
+where $|x|$ and $|\tilde{x}|$ denote the token lengths of the reference seed and candidate continuation, respectively. Candidates are admitted if $\text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}}$, ensuring that key structural phrases and idioms are preserved. This rigorous syntactic filter is especially critical for formal text where subtle sentiment hedging relies on precise multi-word collocations. By penalizing arbitrary syntactic permutations, BLEU pruning prevents the insertion of disruptive polarity-inverting clauses. Consequently, the resulting augmented corpus exhibits high grammatical fluency and structural coherence.
 
 \subsubsection{Empirical Adaptive Thresholding and Zero-Leakage Purging}
 Rather than imposing static heuristics, thresholds $\theta = \mu \pm \sigma$ are calculated empirically over all generated candidates for each dataset. This data-driven approach adapts automatically to the semantic diversity of each corpus. Following threshold pruning, a strict zero-leakage hash verification cross-references all candidates against the validation ($\mathcal{D}_{\text{val}}$) and test ($\mathcal{D}_{\text{test}}$) sets. Any candidate matching an evaluation instance is immediately purged, guaranteeing zero test set contamination.
@@ -179,20 +186,23 @@ This dual condition robustly identifies tail classes across both multi-class and
 \subsubsection{Dynamic Logit-Adjusted Loss}
 To enforce statistically consistent separation margins without deforming feature representations, we incorporate Fisher-consistent Logit Adjustment \cite{menon2021longtail}. The network outputs unnormalized logits $\mathbf{z} \in \mathbb{R}^K$. During training, the logits are shifted by the empirical class log-priors $\log \boldsymbol{\pi}$:
 \begin{equation}
-    \tilde{z}_k = z_k + \tau \cdot \log(\pi_k + 10^{-8})
+    \tilde{z}_k = z_k + \tau(IR) \cdot \log(\pi_k + \epsilon_0)
 \end{equation}
-where $\tau$ is dynamically scaled via a logarithmic rule based on the observed imbalance ratio:
+where $\epsilon_0 = 10^{-8}$ is a numerical stabilizer, and the dynamic temperature scaling parameter $\tau(IR)$ is dynamically scaled via a logarithmic rule based on the observed imbalance ratio:
 \begin{equation}
-    \tau = \begin{cases}
+    \tau(IR) = \begin{cases}
         0.0, & IR \le 2.0 \\
         \text{clip}\left(0.45 \cdot \log_{10}(IR), \; 0.35, \; 1.0\right), & IR > 2.0
     \end{cases}
 \end{equation}
-The Logit-Adjusted Cross-Entropy loss is then computed as:
+The Logit-Adjusted Cross-Entropy loss is then computed directly over shifted logits $\tilde{\mathbf{z}}$ as:
 \begin{equation}
-    \mathcal{L}_{\text{LA}}(y, \mathbf{z}) = -\log \left( \frac{\exp\left(z_y + \tau \log \pi_y\right)}{\sum_{j=1}^K \exp\left(z_j + \tau \log \pi_j\right)} \right)
+\begin{aligned}
+    \mathcal{L}_{\text{LA}}(y, \mathbf{z}) &= -\log \left( \frac{\exp(\tilde{z}_y)}{\sum_{j=1}^K \exp(\tilde{z}_j)} \right) \\
+    &= -\log \left( \frac{\mathrm{e}^{z_y + \tau(IR) \log (\pi_y + \epsilon_0)}}{\sum_{j=1}^K \mathrm{e}^{z_j + \tau(IR) \log (\pi_j + \epsilon_0)}} \right)
+\end{aligned}
 \end{equation}
-This formulation enforces larger relative margins for rare classes, expanding their decision boundaries in latent representation space. In contrast to heuristic weighting schemes, logit adjustment is provably Fisher-consistent for balanced multiclass error. Furthermore, during inference, if validation tracking detects a density shift where $\pi_k^{\text{val}} > 1.25 \pi_k^{\text{train}}$, a post-hoc test prior correction is applied: $\hat{z}_k = z_k - \tau_{\text{eval}} \log(\pi_k)$ with $\tau_{\text{eval}} = 0.5 \tau$. This inference-time adjustment guarantees robust generalization across non-stationary test distributions.
+This formulation enforces larger relative margins for rare classes, expanding their decision boundaries in latent representation space. In contrast to heuristic weighting schemes, logit adjustment is provably Fisher-consistent for balanced multiclass error. Furthermore, during inference, if validation tracking detects a density shift where $\pi_k^{\text{val}} > 1.25 \pi_k^{\text{train}}$, a post-hoc test prior correction is applied: $\hat{z}_k = z_k - \tau_{\text{eval}} \log(\pi_k + \epsilon_0)$ with $\tau_{\text{eval}} = 0.5 \tau(IR)$. This inference-time adjustment guarantees robust generalization across non-stationary test distributions.
 
 \subsubsection{Gradient-Starvation Target Oversampling}
 When batch size $B=64$ and minority prior $\pi_k \ll 1/B$, mini-batches frequently contain zero minority samples, starving the optimizer of minority gradient signals. Under standard uniform sampling, the expected number of minority instances per mini-batch drops well below unity. To overcome this optimization bottleneck, AIC computes an integer replication multiplier $m_k$ inversely proportional to the class prior:
@@ -218,7 +228,7 @@ In complex social media domains characterized by overlapping affective boundarie
 \begin{equation}
     P_{\text{ens}}(y = k \mid x) = \sum_{m=1}^{M} w_m \cdot P_m(y = k \mid x)
 \end{equation}
-The ensemble incorporates models fine-tuned on diverse data variants, including ECU-filtered, COS-filtered, and baseline training subsets. Soft probability pooling effectively reduces predictive variance and smooths out individual model hallucinations. Furthermore, ensembling ensures that classification confidence is distributed across multiple distinct contextual representations. Empirical evaluation demonstrates that this collective decision mechanism significantly improves discrimination on fine-grained affective boundaries.
+where $M$ is the total number of constituent ensemble models, $P_m(y = k \mid x)$ is the posterior class probability predicted by the $m$-th model, and $w_m \ge 0$ represents the scalar ensemble weight assigned to model $m$, subject to the simplex constraint $\sum_{m=1}^M w_m = 1$. In our empirical setup, we instantiate $M=3$ diverse backbones fine-tuned on ECU-filtered, COS-filtered, and baseline training subsets, parameterized with uniform convex weights $w_m = \frac{1}{M} = \frac{1}{3}$. Soft probability pooling effectively reduces predictive variance and smooths out individual model hallucinations. Furthermore, ensembling ensures that classification confidence is distributed across multiple distinct contextual representations. Empirical evaluation demonstrates that this collective decision mechanism significantly improves discrimination on fine-grained affective boundaries.
 
 \section{Experimental Setup}
 \label{sec:experimental_setup}
@@ -254,14 +264,31 @@ Models were optimized using the AdamW optimizer with a linear learning rate warm
 \subsection{Evaluation Metrics}
 \label{subsec:metrics}
 
-Given the severe class imbalance present across multiple targets, relying solely on standard Accuracy is deeply deceptive. A naive majority classifier can report over $94\%$ accuracy on HoASA while failing to classify a single negative complaint correctly. Under severe label skewness, global metrics disproportionately reflect majority performance while masking catastrophic failures on rare classes. To provide a rigorous and balanced evaluation, we employ six complementary metrics that evaluate both global precision and individual class recall:
+Given the severe class imbalance present across multiple targets, relying solely on standard Accuracy is deeply deceptive. A naive majority classifier can report over $94\%$ accuracy on HoASA while failing to classify a single negative complaint correctly. Under severe label skewness, global metrics disproportionately reflect majority performance while masking catastrophic failures on rare classes. To provide a rigorous and balanced evaluation, we evaluate performance using the multi-class confusion matrix $\mathbf{C} \in \mathbb{N}^{K \times K}$, where element $C_{jk}$ denotes the number of test instances with ground-truth label $j$ predicted as class $k$. We formalize six complementary metrics:
 \begin{enumerate}
-    \item \textbf{Standard Accuracy:} Global proportion of correctly classified instances.
-    \item \textbf{Macro-Precision:} Unweighted arithmetic mean of per-class precisions: $\text{Prec}_{\text{macro}} = \frac{1}{K} \sum_{k=1}^K \text{Prec}_k$.
-    \item \textbf{Macro-Recall:} Unweighted arithmetic mean of per-class recalls: $\text{Rec}_{\text{macro}} = \frac{1}{K} \sum_{k=1}^K \text{Rec}_k$.
-    \item \textbf{Macro-F1:} Harmonic mean of macro-precision and macro-recall, assigning equal importance to every category regardless of sample frequency.
-    \item \textbf{Balanced Accuracy (BAcc):} Equivalent to Macro-Recall, representing the unweighted average recall across all categories.
-    \item \textbf{Matthews Correlation Coefficient (MCC, $R_K$):} Multi-class correlation coefficient capturing contingency quality across all classes \cite{zhang2023deep}.
+    \item \textbf{Standard Accuracy ($\text{Acc}$):} Global proportion of correctly classified instances across all classes:
+    \begin{equation}
+        \text{Acc} = \frac{\sum_{k=1}^K C_{kk}}{\sum_{j=1}^K \sum_{k=1}^K C_{jk}}
+    \end{equation}
+    \item \textbf{Macro-Precision ($\text{Prec}_{\text{macro}}$):} Unweighted arithmetic mean of per-class precisions:
+    \begin{equation}
+        \text{Prec}_{\text{macro}} = \frac{1}{K} \sum_{k=1}^K \text{Prec}_k = \frac{1}{K} \sum_{k=1}^K \frac{C_{kk}}{\sum_{j=1}^K C_{jk}}
+    \end{equation}
+    \item \textbf{Macro-Recall ($\text{Rec}_{\text{macro}}$):} Unweighted arithmetic mean of per-class recalls:
+    \begin{equation}
+        \text{Rec}_{\text{macro}} = \frac{1}{K} \sum_{k=1}^K \text{Rec}_k = \frac{1}{K} \sum_{k=1}^K \frac{C_{kk}}{\sum_{j=1}^K C_{kj}}
+    \end{equation}
+    \item \textbf{Macro-F1 ($\text{F1}_{\text{macro}}$):} Harmonic mean of precision and recall calculated independently for each category and averaged without weighting:
+    \begin{equation}
+        \text{F1}_{\text{macro}} = \frac{1}{K} \sum_{k=1}^K \frac{2 \cdot \text{Prec}_k \cdot \text{Rec}_k}{\text{Prec}_k + \text{Rec}_k + \epsilon_0}
+    \end{equation}
+    where $\epsilon_0 = 10^{-8}$ prevents division by zero for unpredicted tail classes.
+    \item \textbf{Balanced Accuracy ($\text{BAcc}$):} Equivalent to Macro-Recall, representing the unweighted average recall across all categories: $\text{BAcc} = \text{Rec}_{\text{macro}}$.
+    \item \textbf{Matthews Correlation Coefficient ($R_K$):} The multi-class generalization of Matthews Correlation Coefficient computed from contingency matrix $\mathbf{C}$ \cite{zhang2023deep}:
+    \begin{equation}
+        R_K = \frac{c \cdot s - \sum_{k=1}^K p_k t_k}{\sqrt{\left(s^2 - \sum_{k=1}^K p_k^2\right)\left(s^2 - \sum_{k=1}^K t_k^2\right)}}
+    \end{equation}
+    where $c = \sum_{k=1}^K C_{kk}$ is the total number of correctly classified samples, $s = \sum_{j=1}^K \sum_{k=1}^K C_{jk}$ is the total evaluation sample count, $p_k = \sum_{j=1}^K C_{jk}$ is the total number of predictions for class $k$, and $t_k = \sum_{j=1}^K C_{kj}$ is the true support count for class $k$.
 \end{enumerate}
 These metrics collectively capture both fine-grained per-class discrimination and aggregate classification reliability. By reporting both Macro-F1 and Balanced Accuracy, we ensure that minority improvements are evaluated without distortion from class priors. In addition, the Matthews Correlation Coefficient provides a rigorous contingency measure that penalizes asymmetric false positives and false negatives. Together, these indicators establish a robust benchmark for comparing algorithmic interventions under severe class imbalance.
 
