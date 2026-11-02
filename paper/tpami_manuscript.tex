@@ -153,7 +153,10 @@ Let $\phi: \mathcal{X} \to \mathcal{H}$ denote a nonlinear sentence embedding ma
     \end{equation}
     \item Dense Metric Euclidean Distance:
     \begin{equation}
-        d_{\text{ECU}}(x, \tilde{x}) = \|\phi(x) - \phi(\tilde{x})\|_\mathcal{H} = \sqrt{2 - 2 S_{\text{COS}}(x, \tilde{x})}
+    \begin{aligned}
+        d_{\text{ECU}}(x, \tilde{x}) &= \|\phi(x) - \phi(\tilde{x})\|_\mathcal{H} \\
+        &= \sqrt{2 - 2 S_{\text{COS}}(x, \tilde{x})}
+    \end{aligned}
     \end{equation}
     \item Discrete Token Jaccard Lattice Metric:
     \begin{equation}
@@ -207,6 +210,13 @@ Integrating the conditional expectation over the bounded diameter of $\mathcal{M
 \begin{remark}
 Theorem \ref{thm:wasserstein_bound} provides a formal guarantee that unconstrained generation cannot arbitrarily corrupt class distributions. By simultaneously raising $\theta_{\text{COS}}$ and $\theta_{\text{BLEU}}$, the generated distribution $\tilde{P}_k^{\Omega}$ is provably constrained to an $\epsilon$-neighborhood of the true data manifold. This result explains why heuristic augmentation often degrades performance, whereas our dual-space filtering consistently preserves classification integrity. In subsequent sections, this geometric guarantee serves as the foundation for optimizing decision boundaries via Fisher-consistent loss formulations.
 \end{remark}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{similarity_distribution_histograms.png}
+\caption{Empirical probability density distributions and adaptive selection cutoffs for dual-space projection metrics ($\theta_{\text{ECU}}$, $\theta_{\text{COS}}$, $\theta_{\text{JAC}}$, $\theta_{\text{BLEU}}$) across candidate continuation sequences. Vertical dashed lines mark empirical filtering thresholds, strictly suppressing off-manifold generative drift while admitting faithful tail samples.}
+\label{fig:sim_histograms}
+\end{figure*}
 \section{Provably Consistent Adaptive Boundary Calibration}
 \label{sec:boundary_calibration}
 
@@ -408,6 +418,61 @@ Figs. \ref{fig:cm_hoasa} and \ref{fig:cm_smsa} illustrate the normalized conting
 \end{figure}
 
 Fig. \ref{fig:hoasa_metrics} tracks the convergence trajectory of classification metrics on HoASA across training epochs. Unlike Weighted Cross-Entropy, which displays volatile oscillations, our architecture demonstrates smooth monotonic convergence across Accuracy, Precision, Recall, and Macro-F1. This empirical stability directly reflects the gradient covariance bounds established in Theorem 3, proving that targeted oversampling maintains steady gradient flow throughout optimization. Together, these results validate that our dual-space generative projection and Fisher-consistent logit calibration establish a Pareto-optimal frontier for long-tailed sequence classification. The absence of catastrophic forgetting or loss oscillations confirms the practical efficacy of our theoretical bounds in real-world deployment.
+
+\subsection{Latent Geometry and Neural Collapse Audit}
+\label{subsec:latent_geometry}
+
+To empirically inspect the geometric mechanisms underlying representation learning under acute skewness, Fig. \ref{fig:tsne_geometry} visualizes the 2D t-SNE latent representations extracted from the penultimate transformer layer. Under baseline ERM, the representations of acute tail categories (e.g., negative complaints in HoASA) are severely compressed and absorbed into the dominant neutral manifold, illustrating the geometric manifestation of majority boundary collapse. Under our proposed density-constrained augmentation and adaptive calibration, the latent feature space undergoes structural restructuring: minority clusters detach from majority boundaries and form tight, linearly separable topological clusters with preserved intra-class cohesion.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{tpami_tsne_latent_geometry.png}
+\caption{2D t-SNE latent representation space geometry across benchmark corpora. Under baseline ERM (left panels), severe class imbalance collapses rare minority representations into majority clusters. Under our proposed density-constrained augmentation with adaptive calibration (right panels), minority representations establish distinct, compact geometric manifolds with well-defined separation margins.}
+\label{fig:tsne_geometry}
+\end{figure*}
+
+Furthermore, Fig. \ref{fig:margin_singular} audits the Neural Collapse phenomenon through empirical margin distribution cumulative distribution functions (CDFs) and the singular value spectrum of representation covariance. Whereas baseline ERM yields degraded margins with heavy left-tail probability mass (indicative of negative classification margins), the proposed architecture shifts the entire margin CDF rightward, ensuring positive minimum margins across classes. The singular value spectrum confirms that our framework arrests rank collapse, maintaining high-dimensional feature expressiveness without gradient starvation.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{tpami_margin_cdf_and_singular_spectrum.png}
+\caption{Representation margin distribution CDFs and singular value spectrum auditing Neural Collapse. Left: Cumulative distribution of classification margins, illustrating the substantial rightward shift toward positive margins under the proposed framework. Right: Singular value spectrum of penultimate feature covariance, confirming preserved dimensional expressiveness and the prevention of feature rank collapse.}
+\label{fig:margin_singular}
+\end{figure*}
+
+\subsection{Imbalance Sweeps and Uncertainty Calibration}
+\label{subsec:imbalance_calibration}
+
+Fig. \ref{fig:imbalance_sweep} evaluates model resilience across controlled Imbalance Ratios ($IR \in [1\times, 200\times]$) and synthetic label noise perturbations. While baseline ERM and cost-sensitive weighting exhibit catastrophic performance degradation as $IR$ exceeds $20\times$, our framework displays stable logarithmic graceful degradation, empirically verifying Theorem 2's asymptotic Fisher consistency.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{tpami_imbalance_sweep_and_noise_stress.png}
+\caption{Stress testing representation robustness under controlled conditions. Left: Performance trajectory across controlled Imbalance Ratios ($IR$ from $1\times$ to $200\times$), demonstrating stable performance retention under acute skewness. Right: Robustness against synthetic label noise injection, confirming that dual-space semantic filtering prevents noisy label memorization.}
+\label{fig:imbalance_sweep}
+\end{figure*}
+
+Fig. \ref{fig:reliability_ece} presents reliability diagrams and Expected Calibration Error (ECE) metrics. Standard deep networks trained on imbalanced data are notoriously overconfident on majority predictions while under-confident on rare classes. By shifting logits according to empirical class frequencies, our framework reduces ECE by up to $64\%$, establishing reliable confidence estimation essential for high-stakes decision support systems.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{tpami_reliability_diagrams_ece.png}
+\caption{Reliability diagrams and Expected Calibration Error (ECE) across benchmark testbeds. Baseline models display pronounced miscalibration and overconfidence. The proposed adaptive calibration framework systematically aligns predicted probabilities with true empirical accuracy, yielding well-calibrated confidence scores.}
+\label{fig:reliability_ece}
+\end{figure*}
+
+\subsection{Optimization Dynamics and Convergence Trajectories}
+\label{subsec:opt_dynamics}
+
+Fig. \ref{fig:training_dynamics} tracks the cross-entropy training loss and validation Macro-F1 across training epochs for SmSA and HoASA. While baseline ERM displays erratic convergence due to minority gradient starvation, the proposed architecture exhibits smooth, monotonic optimization. The augmented data regularizes loss curvature, lowering the asymptotic training loss floor and accelerating convergence toward the optimal validation checkpoint.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{training_dynamics_convergence_curves.png}
+\caption{Training cross-entropy loss and validation Macro-F1 convergence curves across epochs for SmSA and HoASA. The proposed density-constrained generative augmentation coupled with adaptive boundary calibration stabilizes optimization, preventing gradient starvation and accelerating convergence.}
+\label{fig:training_dynamics}
+\end{figure*}
+
 \section{Conclusion}
 \label{sec:conclusion}
 

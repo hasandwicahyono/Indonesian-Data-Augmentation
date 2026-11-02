@@ -260,6 +260,13 @@ These metrics collectively capture both fine-grained per-class discrimination an
 
 This section details the empirical findings obtained across the benchmark suite. We analyze classification trajectories across multiple evaluation criteria to establish the statistical validity of our framework. The analysis is structured into three subsections: Section \ref{subsec:benchmark_perf} discusses the overall benchmark performance across all datasets and provides fine-grained breakdowns for SmSA and HoASA; Section \ref{subsec:metric_comp} evaluates the comparative trade-offs between dense and lexical filtering spaces; and Section \ref{subsec:ensemble_results} presents the results of multi-model ensembling on noisy social affect classification. Together, these subsections demonstrate the generalizability of our proposed architecture.
 
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{all_datasets_benchmark_comparison.png}
+\caption{Empirical cross-dataset benchmarking dashboard across all four evaluation targets (HoASA, SmSA, EmoT, MovieOpini), contrasting baseline ERM against single-metric filtering and the proposed automated imbalance calibration (AIC) pipeline.}
+\label{fig:all_benchmarks}
+\end{figure*}
+
 \begin{table*}[!t]
 \caption{Comprehensive Classification Benchmark Results Across Four Datasets and Augmentation Variants}
 \label{tab:main_results}
@@ -306,7 +313,14 @@ The HoASA dataset presents an acute test of robustness under extreme class skewn
 \subsection{Comparative Analysis of Semantic Filtering Metrics}
 \label{subsec:metric_comp}
 
-A critical finding of this investigation centers on the behavioral divergence between dense vector similarity (COS, ECU) and lexical collocation metrics (JAC, BLEU). On formal document tasks with moderate imbalance (SmSA), lexical collocation filtering (BLEU) proved vastly superior. Because formal neutral text relies on nuanced hedging and objective adjectives, surface $n$-gram constraints prevented generative decoders from introducing polarizing sentiment terms. In contrast, on extreme class scarcity (HoASA), dense cosine embedding filtering was required to capture diverse paraphrastic complaints that lacked exact token overlap with the limited seed prompts. This distinction demonstrates that optimal metric selection is fundamentally dependent on corpus domain and the severity of label skewness.
+A critical finding of this investigation centers on the behavioral divergence between dense vector similarity (COS, ECU) and lexical collocation metrics (JAC, BLEU). Fig. \ref{fig:similarity_histograms} illustrates the empirical probability density distributions and admission thresholds across candidate continuation sequences. On formal document tasks with moderate imbalance (SmSA), lexical collocation filtering (BLEU) proved vastly superior. Because formal neutral text relies on nuanced hedging and objective adjectives, surface $n$-gram constraints prevented generative decoders from introducing polarizing sentiment terms. In contrast, on extreme class scarcity (HoASA), dense cosine embedding filtering was required to capture diverse paraphrastic complaints that lacked exact token overlap with the limited seed prompts. This distinction demonstrates that optimal metric selection is fundamentally dependent on corpus domain and the severity of label skewness.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{similarity_distribution_histograms.png}
+\caption{Probability density distributions and dynamic cutoff thresholds for dual-space semantic metrics (ECU, COS, JAC, BLEU) across candidate continuation sequences. Vertical dashed lines mark empirical selection thresholds ($\mu + \sigma$), strictly suppressing off-manifold generative drift.}
+\label{fig:similarity_histograms}
+\end{figure*}
 
 \subsection{Multi-Model Ensembling on Informal Social Affect (EmoT)}
 \label{subsec:ensemble_results}
@@ -348,6 +362,18 @@ As indicated in Table \ref{tab:ablation}, removing semantic similarity filtering
 \label{subsec:emoji_ablation}
 
 Ablating emoji semantic mapping on colloquial corpora (EmoT and HoASA) incurs a drop in Macro-Recall for expressive classes (e.g., \textit{anger} and \textit{love}). Grounding unicode emojis in the empirical Multidimensional Lexicon of Emojis \cite{godard2022multidimensional} and converting them into explicit lexical tokens (\texttt{\_emosi\_cinta\_}, \texttt{\_emosi\_marah\_}) provides IndoBERT's WordPiece tokenizer with direct morphological anchors, preventing emoji byte fallback representations from fragmenting sentence meaning. Without these semantic anchors, unicode emojis are either split into meaningless byte sequences or mapped to out-of-vocabulary tokens. This lexical fragmentation impairs the self-attention layers from attending to critical emotional cues in informal text.
+
+\subsection{Training Dynamics and Convergence Trajectories}
+\label{subsec:convergence}
+
+Fig. \ref{fig:convergence_curves} examines the optimization dynamics by tracking training cross-entropy loss and validation Macro-F1 across epochs for SmSA and HoASA. Under standard ERM, minority gradients suffer severe variance, causing erratic validation trajectories and early plateauing. In contrast, our proposed density-constrained augmentation coupled with adaptive calibration maintains smooth, monotonic convergence, achieving lower asymptotic cross-entropy loss and stabilizing validation performance without risk of representation collapse.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{training_dynamics_convergence_curves.png}
+\caption{Training cross-entropy loss and validation Macro-F1 convergence curves across epochs for SmSA (document sentiment) and HoASA (aspect hotel reviews). Proposed augmentation with adaptive logit calibration achieves smoother optimization and superior asymptotic validation Macro-F1.}
+\label{fig:convergence_curves}
+\end{figure*}
 
 \section{Conclusion}
 \label{sec:conclusion}
