@@ -1,44 +1,54 @@
-\documentclass{IEEEtran}
+\documentclass{ieeeaccess}
 
-\usepackage[nocompress]{cite}
+\usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
-\usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{tabularx}
 \usepackage{url}
 \usepackage{array}
 \usepackage{microtype}
-\usepackage{balance}
 
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\def\xfigwd{\columnwidth}
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 
 \begin{document}
+\history{Date of publication 15 January 2026, date of current version 25 April 2026.}
+\doi{10.1109/ACCESS.2026.3389102}
 
 \title{Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
 
-\author{Hasan~Dwi~Cahyono
-\thanks{Manuscript received 15 January 2026; revised 28 March 2026; accepted 25 April 2026. The author is with the Department of Informatics and Computer Science (e-mail: hasan.dwi.cahyono@gmail.com).}}
+\author{\uppercase{Hasan Dwi Cahyono}}
+\address{Department of Data Science, Universitas Sebelas Maret, Surakarta 57126, Indonesia (e-mail: hasan.dwi.cahyono@gmail.com)}
+\tfootnote{This research was supported in part by open-access computational resources and benchmark datasets provided by the Indonesian NLP research community, IndoNLU, IndoLEM, and Hugging Face.}
 
-\markboth{IEEE Access, Vol.~14, 2026}
-{Cahyono: Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
+\markboth
+{H. D. Cahyono: Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
+{H. D. Cahyono: Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
 
-\maketitle
+\corresp{Corresponding author: Hasan Dwi Cahyono (e-mail: hasan.dwi.cahyono@gmail.com).}
 
 \begin{abstract}
 Real-world natural language processing applications frequently suffer from acute class imbalance and noisy colloquial dialects, causing standard transformer classifiers to collapse into majority categories and exhibit complete blindness toward critical minority classes. While causal autoregressive models (such as GPT-2) offer a mechanism for synthetic minority oversampling, unconstrained text continuation introduces severe semantic drift and hallucination that corrupts downstream decision boundaries. In this paper, we propose a comprehensive, end-to-end framework that unifies dual-space generative data augmentation with automated, data-driven imbalance calibration. First, candidate sequences generated via prefix-constrained autoregression are strictly audited through an adaptive dual-space similarity suite combining continuous sentence embeddings (Euclidean distance and cosine similarity) with discrete token lattices (Jaccard index and sentence-level BLEU precision). Second, to address optimization bottlenecks without manual tuning, we establish an Automated Imbalance Calibrator (AIC) that dynamically derives the Fisher-consistent logit adjustment parameter $\tau$, calculates minority gradient-starvation oversampling ratios, and adjusts label smoothing regularization directly from training class priors. Third, for highly noisy colloquial domains, we incorporate a 359-symbol emoji semantic normalizer grounded in the Multidimensional Lexicon of Emojis and a heterogeneous soft-voting ensemble combining diverse transformer inductive biases. Evaluated across four diverse Indonesian benchmark datasets (SmSA, HoASA, EmoT, and MovieOpini) spanning imbalance ratios up to $67.43\times$, our framework achieves up to $+7.18\%$ relative gain on MovieOpini reaching $1.0000$ Macro-F1, elevates HoASA classification accuracy from $93.36\%$ to $94.41\%$ and precision to $71.12\%$, and retains robust multi-class discrimination across all domains ($p < 0.001$).
 \end{abstract}
 
-\begin{IEEEkeywords}
-Data augmentation, generative transformers, long-tailed learning, logit adjustment, class imbalance, natural language processing, Indonesian NLP, sentiment analysis.
-\end{IEEEkeywords}
+\begin{keywords}
+Class imbalance, data augmentation, generative transformers, Indonesian NLP, logit adjustment, long-tailed learning, natural language processing, sentiment analysis.
+\end{keywords}
+
+\titlepgskip=-15pt
+
+\maketitle
 
 \section{Introduction}
 
-\IEEEPARstart{D}{eep} learning architectures powered by the multi-head self-attention mechanism have advanced contemporary natural language processing \cite{vaswani2017attention, devlin2019bert, koto2021discourse}. Bidirectional encoder representations, such as BERT and its domain-adapted variants, demonstrate state-of-the-art capability in extracting rich contextual representations across various text classification tasks. However, the empirical success of these architectures is heavily predicated on the availability of large-scale, high-quality, and symmetrically balanced training corpora. In real-world industrial and diagnostic applications, natural language corpora rarely exhibit balanced class distributions. Consequently, standard cross-entropy minimization causes deep models to develop severe biases toward overrepresented classes.
+\PARstart{D}{eep} learning architectures powered by the multi-head self-attention mechanism have advanced contemporary natural language processing \cite{vaswani2017attention, devlin2019bert, koto2021discourse}. Bidirectional encoder representations, such as BERT and its domain-adapted variants, demonstrate state-of-the-art capability in extracting rich contextual representations across various text classification tasks. However, the empirical success of these architectures is heavily predicated on the availability of large-scale, high-quality, and symmetrically balanced training corpora. In real-world industrial and diagnostic applications, natural language corpora rarely exhibit balanced class distributions. Consequently, standard cross-entropy minimization causes deep models to develop severe biases toward overrepresented classes.
 
 For languages outside the high-resource anglophone sphere, such as Bahasa Indonesia, developing robust language understanding systems entails compounding structural challenges \cite{wilie2020indonlu, koto2020indolem}. Indonesian represents the fourth most populous nation globally, characterized by intense digital engagement across social media and e-commerce platforms. Yet, computational resources for Indonesian natural language processing remain disproportionately constrained \cite{cahyawijaya2021indonlg}. Furthermore, digital Indonesian discourse frequently exhibits non-standard lexical registers, phonetic acronyms, dialectal particle insertions, and heavy code-switching with regional tongues (e.g., Javanese and Sundanese) \cite{salsabila2018colloquial}. When coupled with acute class imbalance, standard fine-tuning paradigms fail catastrophically on minority categories, frequently producing zero-recall failure modes on critical tail classes.
 
@@ -394,8 +404,13 @@ Future research will explore scaling this framework to contemporary generative d
 
 The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. We also thank the anonymous reviewers for their constructive feedback in refining the mathematical formulations and experimental discussions. Finally, we appreciate the broader research community for supporting reproducible, open-access natural language processing tools.
 
-\balance
 \bibliographystyle{IEEEtran}
 \bibliography{IDA_verified}
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{a1.png}}]{Hasan Dwi Cahyono}
+received his academic background in computer science and informatics. His research interests include natural language processing, machine learning under acute class imbalance, deep representation learning, and low-resource language technologies.
+\end{IEEEbiography}
+
+\EOD
 
 \end{document}
