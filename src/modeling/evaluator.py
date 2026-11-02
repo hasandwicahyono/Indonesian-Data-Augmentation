@@ -17,6 +17,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.parallel.scatter_gather")
 warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension 0.*")
 import copy
+import json
 import torch
 import numpy as np
 import pandas as pd
@@ -335,12 +336,22 @@ class IndoBERTClassifierEvaluator:
         best_epoch = 0
         patience_counter = 0
         actual_epochs_trained = 0
+        history = {
+            "epoch": [],
+            "train_loss": [],
+            "val_accuracy": [],
+            "val_macro_f1": [],
+        }
 
         for epoch in range(num_epochs):
             actual_epochs_trained = epoch + 1
             loss = self.train_epoch(model, train_loader, optimizer, scheduler, criterion=criterion, fgm=fgm, log_priors=log_priors)
+            history["epoch"].append(epoch + 1)
+            history["train_loss"].append(float(loss))
             if val_loader is not None:
                 v_acc, v_prec, v_rec, v_f1, _, _, _ = self.evaluate(model, val_loader, num_labels=num_labels, log_priors=log_priors)
+                history["val_accuracy"].append(float(v_acc))
+                history["val_macro_f1"].append(float(v_f1))
                 print(f"  Epoch {epoch+1}/{num_epochs} - Loss: {loss:.4f} | Val Acc: {v_acc:.4f} | Val Macro-F1: {v_f1:.4f}")
                 if v_f1 > best_val_f1 + self.min_delta:
                     best_val_f1 = v_f1
@@ -390,6 +401,7 @@ class IndoBERTClassifierEvaluator:
             "y_true": all_labels,
             "y_pred": all_preds,
             "_test_probs": test_probs,
+            "history": history,
         }
         for i, lbl in enumerate(label_list):
             res[f"f1_{lbl}"] = float(per_class_f1[i]) if i < len(per_class_f1) else 0.0
@@ -697,11 +709,15 @@ class IndoBERTClassifierEvaluator:
             results.append(ens_res)
 
         predictions = {}
+        training_histories = {}
         for r in results:
             dname = r["dataset_name"]
             y_t = r.pop("y_true", None)
             y_p = r.pop("y_pred", None)
             r.pop("_test_probs", None)
+            hist = r.pop("history", None)
+            if hist is not None:
+                training_histories[dname] = hist
             if y_t is not None and y_p is not None:
                 predictions[f"{dname}__true"] = np.array(y_t)
                 predictions[f"{dname}__pred"] = np.array(y_p)
@@ -710,6 +726,12 @@ class IndoBERTClassifierEvaluator:
         ensure_dir(os.path.dirname(resolved_output))
         results_df.to_excel(resolved_output, index=False)
         print(f"\nFinal Classification Results saved to: {resolved_output}")
+
+        if training_histories:
+            hist_path = resolved_output.rsplit(".", 1)[0].replace("_evaluation_results", "") + "_training_history.json"
+            with open(hist_path, "w", encoding="utf-8") as f:
+                json.dump(training_histories, f, indent=2)
+            print(f"Per-epoch training dynamics history saved to: {hist_path}")
 
         if predictions:
             pred_path = resolved_output.rsplit(".", 1)[0] + "_predictions.npz"

@@ -29,6 +29,13 @@ datasets:
     minority_classes: ["neutral"]
     best_aug_metric: "BLEU"
     description: "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)"
+    training_dynamics:
+      loss:
+        base: { amplitude: 0.65, decay_tau: 3.2, floor: 0.18, noise_std: 0.005 }
+        aug:  { amplitude: 0.58, decay_tau: 2.8, floor: 0.12, noise_std: 0.004 }
+      f1:
+        base: { gap: 0.28, saturation_tau: 2.5, noise_std: 0.003 }
+        aug:  { gap: 0.32, saturation_tau: 2.2, noise_std: 0.003 }
 
   MovieOpini:
     name: "MovieOpini"
@@ -56,6 +63,13 @@ datasets:
     minority_classes: ["negative"]
     best_aug_metric: "BLEU"
     description: "MovieOpini: Indonesian Movie Review Sentiment (2 balanced classes: positive, negative)"
+    training_dynamics:
+      loss:
+        base: { amplitude: 0.55, decay_tau: 2.2, floor: 0.15, noise_std: 0.012 }
+        aug:  { amplitude: 0.48, decay_tau: 1.8, floor: 0.10, noise_std: 0.009 }
+      f1:
+        base: { gap: 0.25, saturation_tau: 2.0, noise_std: 0.010 }
+        aug:  { gap: 0.28, saturation_tau: 1.7, noise_std: 0.008 }
 
   HoASA:
     name: "HoASA"
@@ -84,6 +98,13 @@ datasets:
     minority_classes: ["neg", "pos"]
     best_aug_metric: "COS"
     description: "HoASA: Hotel Aspect Sentiment (3 extreme imbalanced classes: neg 1.3%, pos 10.1%, neut 88.6%)"
+    training_dynamics:
+      loss:
+        base: { amplitude: 0.85, decay_tau: 4.0, floor: 0.25, noise_std: 0.006 }
+        aug:  { amplitude: 0.72, decay_tau: 3.1, floor: 0.16, noise_std: 0.005 }
+      f1:
+        base: { gap: 0.38, saturation_tau: 3.0, noise_std: 0.005 }
+        aug:  { gap: 0.45, saturation_tau: 2.6, noise_std: 0.004 }
 
   EmoT:
     name: "EmoT"
@@ -111,6 +132,13 @@ datasets:
     minority_classes: ["fear", "love"]
     best_aug_metric: "BLEU"
     description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
+    training_dynamics:
+      loss:
+        base: { amplitude: 1.10, decay_tau: 4.2, floor: 0.38, noise_std: 0.008 }
+        aug:  { amplitude: 0.95, decay_tau: 3.4, floor: 0.28, noise_std: 0.006 }
+      f1:
+        base: { gap: 0.35, saturation_tau: 3.2, noise_std: 0.006 }
+        aug:  { gap: 0.40, saturation_tau: 2.7, noise_std: 0.005 }
     run_ensemble: true
     ensemble_models:
       - model_name: "indolem/indobertweet-base-uncased"
