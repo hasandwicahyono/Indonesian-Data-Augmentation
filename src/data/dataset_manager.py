@@ -2,9 +2,9 @@
 Dataset manager and loader for Indonesian NLP datasets.
 Provides structured containers (CustomDataset) and automated loaders for the 4 Indonesian datasets:
 1. SmSA (doc-sentiment-prosa)
-2. EmoT (emotion-twitter)
-3. HoASA (absa-airy)
-4. MovieOpini (dataset_tweet_sentiment_opini_film)
+2. HoASA (absa-airy)
+3. EmoT (emotion-twitter)
+4. NusaX-Indonesian (nusax-sentiment-indonesian)
 """
 
 import os
@@ -151,15 +151,15 @@ class IndonesianDatasetsManager:
         name = "NusaX-Indonesian-Binary" if binary_only else "NusaX-Indonesian"
         return CustomDataset(name, train_df, test_df, labels, val=val_df)
 
-    def load_all_datasets(self, include_nusax: bool = False) -> Dict[str, CustomDataset]:
+    def load_all_datasets(self, include_movie_opini: bool = False) -> Dict[str, CustomDataset]:
         """Loads and returns Indonesian datasets."""
         datasets = {
             "SmSA": self.load_smsa(),
-            "EmoT": self.load_emot(),
             "HoASA": self.load_hoasa(),
-            "MovieOpini": self.load_movie_opini(),
+            "EmoT": self.load_emot(),
+            "NusaX-Indonesian": self.load_nusax_indonesian(),
         }
-        if include_nusax:
-            datasets["NusaX-Indonesian"] = self.load_nusax_indonesian()
+        if include_movie_opini:
+            datasets["MovieOpini"] = self.load_movie_opini()
         return datasets
 

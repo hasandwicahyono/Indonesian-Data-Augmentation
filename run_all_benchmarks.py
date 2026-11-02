@@ -2,9 +2,9 @@
 Unified Benchmark Investigation and Visualization Pipeline.
 Runs and visualizes the complete augmentation and classification pipeline across all 4 Indonesian datasets:
 1. SmSA (doc-sentiment-prosa)
-2. MovieOpini (dataset_tweet_sentiment_opini_film)
-3. HoASA (absa-airy)
-4. EmoT (emotion-twitter)
+2. HoASA (absa-airy)
+3. EmoT (emotion-twitter)
+4. NusaX-Indonesian (nusax-sentiment-indonesian)
 
 Features:
 - Executes IndoBERT training and evaluation across 5 variants:
@@ -91,8 +91,8 @@ def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> 
     elif dataset_name == "EmoT":
         return manager.load_emot()
     elif dataset_name in ["NusaX", "NusaX-Indonesian"]:
-        # Choose binary_only=True for 2-class or False for 3-class
-        return manager.load_nusax_indonesian(binary_only=True)
+        # Standard 3-class curated benchmark (500 train, 100 val, 400 test)
+        return manager.load_nusax_indonesian(binary_only=False)
     else:
         raise ValueError(f"Unknown dataset name: {dataset_name}")
 
@@ -172,7 +172,7 @@ def compute_and_save_dataset_statistics(
         ("SmSA", "Document Sentiment", manager.load_smsa),
         ("HoASA", "Aspect Hotel Sentiment", manager.load_hoasa),
         ("EmoT", "Twitter Emotion Analysis", manager.load_emot),
-        ("MovieOpini", "Film Review Sentiment", manager.load_movie_opini),
+        ("NusaX-Indonesian", "Curated Sentiment Analysis", manager.load_nusax_indonesian),
     ]
 
     records = []
@@ -445,10 +445,10 @@ def plot_cross_dataset_summary(
 ) -> str:
     """
     Builds a 4-panel comprehensive dashboard displaying performance
-    comparisons across all 4 datasets (SmSA, MovieOpini, HoASA, EmoT).
+    comparisons across all 4 datasets (SmSA, HoASA, EmoT, NusaX-Indonesian).
     """
     os.makedirs(output_dir, exist_ok=True)
-    datasets = [d for d in ["SmSA", "MovieOpini", "HoASA", "EmoT"] if d in all_results]
+    datasets = [d for d in ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"] if d in all_results]
     if not datasets:
         return ""
 
@@ -1005,8 +1005,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--datasets",
         nargs="+",
-        default=["SmSA", "MovieOpini", "HoASA", "EmoT"],
-        help="Datasets to evaluate (choices: SmSA, MovieOpini, HoASA, EmoT, all)",
+        default=["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"],
+        help="Datasets to evaluate (choices: SmSA, HoASA, EmoT, NusaX-Indonesian, all)",
     )
     parser.add_argument(
         "--plot_only",
@@ -1176,7 +1176,7 @@ if __name__ == "__main__":
 
     selected = args.datasets
     if "all" in [s.lower() for s in selected]:
-        selected = ["SmSA", "MovieOpini", "HoASA", "EmoT"]
+        selected = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
 
     run_benchmark_pipeline(
         target_datasets=selected,

@@ -30,13 +30,13 @@
     "Imbalance Ratio (IR)": "1.73x (Mild)"
   },
   {
-    "Dataset": "MovieOpini",
-    "Domain / Task": "Film Review Sentiment",
-    "Classes (K)": 2,
-    "Train Size": 139,
-    "Val Size": 31,
-    "Test Size": 30,
-    "Label Distribution (Train)": "positive: 70 (50.4%), negative: 69 (49.6%)",
-    "Imbalance Ratio (IR)": "1.01x (Balanced)"
+    "Dataset": "NusaX-Indonesian",
+    "Domain / Task": "Curated Sentiment Analysis",
+    "Classes (K)": 3,
+    "Train Size": 500,
+    "Val Size": 100,
+    "Test Size": 400,
+    "Label Distribution (Train)": "negative: 192 (38.4%), positive: 189 (37.8%), neutral: 119 (23.8%)",
+    "Imbalance Ratio (IR)": "1.61x (Mild)"
   }
 ]

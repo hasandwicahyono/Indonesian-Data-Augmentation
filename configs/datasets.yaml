@@ -1,5 +1,5 @@
 # Dataset Configuration & Model Training Hyperparameters
-# Used across Indonesian Data Augmentation (SmSA, MovieOpini, HoASA, EmoT)
+# Used across Indonesian Data Augmentation (SmSA, HoASA, EmoT, NusaX-Indonesian)
 
 datasets:
   SmSA:

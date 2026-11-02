@@ -9,3 +9,14 @@ HoASA,ECU,0.2222,0.971,0.8889
 HoASA,COS,0.2222,0.9731,0.9
 HoASA,JAC,0.2222,0.9711,0.8861
 HoASA,BLEU,0.2222,0.9711,0.8861
+EmoT,Baseline,0.0,0.0,0.0
+EmoT,ECU,0.0,0.0,0.0
+EmoT,COS,0.0,0.0,0.0
+EmoT,JAC,0.0,0.0,0.0
+EmoT,BLEU,0.0,0.0,0.0
+EmoT,Ensemble,0.0,0.0,0.0
+NusaX-Indonesian,Baseline,1.0,0.0,1.0
+NusaX-Indonesian,ECU,0.9655,0.0,0.9677
+NusaX-Indonesian,COS,0.9677,0.0,0.9655
+NusaX-Indonesian,JAC,0.9677,0.0,0.9655
+NusaX-Indonesian,BLEU,1.0,0.0,1.0

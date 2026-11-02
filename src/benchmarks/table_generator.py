@@ -96,7 +96,7 @@ def generate_access_dataset_stats_table(
             ("SmSA", "Document Sentiment", manager.load_smsa),
             ("HoASA", "Aspect Hotel Sentiment", manager.load_hoasa),
             ("EmoT", "Twitter Emotion Analysis", manager.load_emot),
-            ("MovieOpini", "Film Review Sentiment", manager.load_movie_opini),
+            ("NusaX-Indonesian", "Curated Sentiment Analysis", manager.load_nusax_indonesian),
         ]
 
         for name, domain, load_fn in datasets:
@@ -689,10 +689,10 @@ def generate_tpami_5fold_table(
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
     datasets_map = {
-        "MovieOpini": ("MovieOpini (Movie Reviews)", "MovieOpini_real_5fold_results.json"),
-        "HoASA": ("HoASA (Hotel Aspect)", "HoASA_real_5fold_results.json"),
         "SmSA": ("SmSA (Doc Sentiment)", "SmSA_real_5fold_results.json"),
+        "HoASA": ("HoASA (Hotel Aspect)", "HoASA_real_5fold_results.json"),
         "EmoT": ("EmoT (Twitter Emotion)", "EmoT_real_5fold_results.json"),
+        "NusaX-Indonesian": ("NusaX-Indonesian (Multi-Topic)", "NusaX-Indonesian_real_5fold_results.json"),
     }
 
     records = []

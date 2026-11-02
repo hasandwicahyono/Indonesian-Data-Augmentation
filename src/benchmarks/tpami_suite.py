@@ -516,12 +516,12 @@ def generate_tpami_comparative_baselines_table() -> pd.DataFrame:
     directly from run_all_benchmarks evaluation files (data/results/{dataset}_evaluation_results.xlsx).
     """
     records = []
-    datasets = ["HoASA", "SmSA", "EmoT", "MovieOpini"]
+    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
     labels_map = {
-        "HoASA": "HoASA (Hotel)",
         "SmSA": "SmSA (Prosa)",
+        "HoASA": "HoASA (Hotel)",
         "EmoT": "EmoT (Twitter)",
-        "MovieOpini": "MovieOpini (Movies)",
+        "NusaX-Indonesian": "NusaX-Indonesian (Multi-Topic)",
     }
 
     for ds_name in datasets:
@@ -828,10 +828,10 @@ def generate_tpami_lexical_diversity_table(
 
     manager = IndonesianDatasetsManager()
     datasets_to_eval = [
-        ("HoASA", manager.load_hoasa),
         ("SmSA", manager.load_smsa),
-        ("MovieOpini", manager.load_movie_opini),
+        ("HoASA", manager.load_hoasa),
         ("EmoT", manager.load_emot),
+        ("NusaX-Indonesian", manager.load_nusax_indonesian),
     ]
 
     records = []

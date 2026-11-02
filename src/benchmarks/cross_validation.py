@@ -49,7 +49,13 @@ def run_real_5fold_cv_for_dataset(
 
     manager = IndonesianDatasetsManager()
     cfg = load_dataset_config(dataset_name)
-    load_fn = getattr(manager, f"load_{dataset_name.lower()}")
+    ds_key = dataset_name.lower().replace("-", "_")
+    if hasattr(manager, f"load_{ds_key}"):
+        load_fn = getattr(manager, f"load_{ds_key}")
+    elif dataset_name in ["NusaX", "NusaX-Indonesian"]:
+        load_fn = manager.load_nusax_indonesian
+    else:
+        load_fn = getattr(manager, f"load_{dataset_name.lower()}")
     ds = load_fn()
     model_name = cfg.get("model_name", "indobenchmark/indobert-base-p1")
     use_la = cfg.get("use_logit_adjustment", False)
@@ -88,7 +94,7 @@ def run_real_5fold_cv_for_dataset(
 
     evaluator = IndoBERTClassifierEvaluator(
         model_name=model_name,
-        max_len=128 if dataset_name != "MovieOpini" else 96,
+        max_len=cfg.get("max_len", 128),
         batch_size=batch_size,
         epochs=epochs,
         lr=2e-5,

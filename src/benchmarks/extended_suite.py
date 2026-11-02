@@ -536,7 +536,7 @@ def run_stratified_5fold_cv_all_datasets() -> pd.DataFrame:
     """
     import json
     np.random.seed(42)
-    datasets = ["MovieOpini", "HoASA", "SmSA", "EmoT"]
+    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
     cv_records = []
 
     fold_perf = {}
