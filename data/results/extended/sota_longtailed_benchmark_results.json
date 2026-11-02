@@ -134,5 +134,57 @@
       "MCC": 0.741,
       "p-value": "$p = 0.091$"
     }
+  ],
+  "NusaX-Indonesian": [
+    {
+      "Method / Objective Formulation": "Standard Cross-Entropy (Baseline ERM)",
+      "Accuracy": 0.885,
+      "Macro-Prec": 0.8812,
+      "Macro-Rec": 0.8745,
+      "Macro-F1": 0.8778,
+      "BAcc": 0.8745,
+      "MCC": 0.8256,
+      "p-value": "---"
+    },
+    {
+      "Method / Objective Formulation": "Weighted Cross-Entropy (Inverse Freq.)",
+      "Accuracy": 0.8725,
+      "Macro-Prec": 0.869,
+      "Macro-Rec": 0.868,
+      "Macro-F1": 0.8685,
+      "BAcc": 0.868,
+      "MCC": 0.8095,
+      "p-value": "$p = 0.284$"
+    },
+    {
+      "Method / Objective Formulation": "Focal Loss ($\\gamma = 2.0$)",
+      "Accuracy": 0.8925,
+      "Macro-Prec": 0.891,
+      "Macro-Rec": 0.885,
+      "Macro-F1": 0.888,
+      "BAcc": 0.885,
+      "MCC": 0.8385,
+      "p-value": "$p = 0.115$"
+    },
+    {
+      "Method / Objective Formulation": "LDAM-DRW",
+      "Accuracy": 0.9025,
+      "Macro-Prec": 0.9015,
+      "Macro-Rec": 0.897,
+      "Macro-F1": 0.8992,
+      "BAcc": 0.897,
+      "MCC": 0.8525,
+      "p-value": "$p < 0.05$"
+    },
+    {
+      "Method / Objective Formulation": "Class-Balanced Loss (CB-Loss, $\\beta = 0.999$)",
+      "Accuracy": 0.905,
+      "Macro-Prec": 0.903,
+      "Macro-Rec": 0.899,
+      "Macro-F1": 0.901,
+      "BAcc": 0.899,
+      "MCC": 0.856,
+      "p-value": "$p < 0.05$"
+    }
   ]
 }

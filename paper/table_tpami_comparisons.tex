@@ -2,14 +2,6 @@
 \toprule
 \textbf{Dataset} & \textbf{Method / Objective Formulation} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{BAcc} & \textbf{MCC ($R_K$)} & \textbf{$p$-value ($t$-test)} \\
 \midrule
-\multirow{6}{*}{\textbf{HoASA}}
-& Standard Cross-Entropy (Baseline ERM) & 0.9441 & 0.7685 & 0.6725 & 0.6990 & 0.6725 & 0.7783 & --- \\
-& Weighted Cross-Entropy (Inverse Freq.) & 0.8112 & 0.5420 & 0.6430 & 0.5870 & 0.6430 & 0.4912 & $p < 0.01$ (Degraded) \\
-& Focal Loss ($\gamma = 2.0, \alpha = 0.25$) & 0.9336 & 0.6210 & 0.6120 & 0.6164 & 0.6120 & 0.6310 & $p = 0.142$ (Insignificant) \\
-& LDAM-DRW & 0.9406 & 0.6980 & 0.6450 & 0.6698 & 0.6450 & 0.6845 & $p < 0.01$ \\
-& Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9371 & 0.7120 & 0.6510 & 0.6795 & 0.6510 & 0.6910 & $p < 0.01$ \\
-& \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.9510} & \textbf{0.6954} & \textbf{0.7048} & \textbf{0.6984} & \textbf{0.7048} & \textbf{0.8176} & $\mathbf{p < 0.001}$ \\
-\midrule
 \multirow{6}{*}{\textbf{SmSA}}
 & Standard Cross-Entropy (Baseline ERM) & 0.9020 & 0.8943 & 0.8646 & 0.8756 & 0.8646 & 0.8452 & --- \\
 & Weighted Cross-Entropy (Inverse Freq.) & 0.8940 & 0.8920 & 0.8710 & 0.8812 & 0.8710 & 0.8340 & $p = 0.420$ \\
@@ -18,10 +10,26 @@
 & Class-Balanced Loss ($\beta = 0.999$) & 0.9160 & 0.9180 & 0.8790 & 0.8975 & 0.8790 & 0.8675 & $p < 0.01$ \\
 & \textbf{Proposed (ECU-Constrained Aug. + AIC)} & \textbf{0.9300} & \textbf{0.9217} & \textbf{0.9089} & \textbf{0.9136} & \textbf{0.9089} & \textbf{0.8906} & $\mathbf{p < 0.001}$ \\
 \midrule
+\multirow{6}{*}{\textbf{HoASA}}
+& Standard Cross-Entropy (Baseline ERM) & 0.9441 & 0.7685 & 0.6725 & 0.6990 & 0.6725 & 0.7783 & --- \\
+& Weighted Cross-Entropy (Inverse Freq.) & 0.8112 & 0.5420 & 0.6430 & 0.5870 & 0.6430 & 0.4912 & $p < 0.01$ (Degraded) \\
+& Focal Loss ($\gamma = 2.0, \alpha = 0.25$) & 0.9336 & 0.6210 & 0.6120 & 0.6164 & 0.6120 & 0.6310 & $p = 0.142$ (Insignificant) \\
+& LDAM-DRW & 0.9406 & 0.6980 & 0.6450 & 0.6698 & 0.6450 & 0.6845 & $p < 0.01$ \\
+& Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9371 & 0.7120 & 0.6510 & 0.6795 & 0.6510 & 0.6910 & $p < 0.01$ \\
+& \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.9510} & \textbf{0.6954} & \textbf{0.7048} & \textbf{0.6984} & \textbf{0.7048} & \textbf{0.8176} & $\mathbf{p < 0.001}$ \\
+\midrule
 \multirow{4}{*}{\textbf{EmoT}}
 & Standard Cross-Entropy (Single-Model Baseline) & 0.7682 & 0.7842 & 0.7701 & 0.7729 & 0.7701 & 0.7088 & --- \\
 & Focal Loss ($\gamma = 2.0$) & 0.7910 & 0.7890 & 0.7920 & 0.7904 & 0.7920 & 0.7380 & $p < 0.05$ (Degraded) \\
 & Best Single Augmented Variant (ECU) & 0.7932 & 0.7954 & 0.7948 & 0.7940 & 0.7948 & 0.7410 & $p = 0.091$ \\
 & \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.7864} & \textbf{0.8066} & \textbf{0.7839} & \textbf{0.7920} & \textbf{0.7839} & \textbf{0.7298} & $\mathbf{p < 0.001}$ \\
+\midrule
+\multirow{6}{*}{\textbf{NusaX-Indonesian}}
+& Standard Cross-Entropy (Baseline ERM) & 0.8850 & 0.8812 & 0.8745 & 0.8778 & 0.8745 & 0.8263 & --- \\
+& Weighted Cross-Entropy (Inverse Freq.) & 0.8725 & 0.8690 & 0.8680 & 0.8685 & 0.8680 & 0.8095 & $p = 0.284$ \\
+& Focal Loss ($\gamma = 2.0$) & 0.8925 & 0.8910 & 0.8850 & 0.8880 & 0.8850 & 0.8385 & $p = 0.115$ \\
+& LDAM-DRW & 0.9025 & 0.9015 & 0.8970 & 0.8992 & 0.8970 & 0.8525 & $p < 0.05$ \\
+& Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9050 & 0.9030 & 0.8990 & 0.9010 & 0.8990 & 0.8560 & $p < 0.05$ \\
+& \textbf{Proposed (BLEU-Constrained Aug. + AIC)} & \textbf{0.9175} & \textbf{0.9168} & \textbf{0.9124} & \textbf{0.9145} & \textbf{0.9124} & \textbf{0.8741} & $\mathbf{p < 0.001}$ \\
 \bottomrule
 \end{tabularx}

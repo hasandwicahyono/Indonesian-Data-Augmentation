@@ -15,8 +15,8 @@ EmoT,COS-Augmented,3647,0.7864,0.8066,0.7839,0.792,0.0191,+2.47%
 EmoT,JAC-Augmented,3644,0.7636,0.7849,0.7645,0.7713,-0.0016,-0.20%
 EmoT,BLEU-Augmented,3647,0.7841,0.7939,0.7822,0.7871,0.0142,+1.83%
 EmoT,Ensemble-Augmented,3648,0.7773,0.7913,0.7762,0.7807,0.0078,+1.01%
-NusaX-Indonesian,Baseline (Not-Augmented),139,1.0,1.0,1.0,1.0,0.0,---
-NusaX-Indonesian,ECU-Augmented,150,0.9667,0.9688,0.9667,0.9666,-0.0334,-3.34%
-NusaX-Indonesian,COS-Augmented,140,0.9667,0.9688,0.9667,0.9666,-0.0334,-3.34%
-NusaX-Indonesian,JAC-Augmented,139,0.9667,0.9688,0.9667,0.9666,-0.0334,-3.34%
-NusaX-Indonesian,BLEU-Augmented,142,1.0,1.0,1.0,1.0,0.0,+0.00%
+NusaX-Indonesian,Baseline (Not-Augmented),500,0.885,0.8812,0.8745,0.8778,0.0,---
+NusaX-Indonesian,ECU-Augmented,542,0.9125,0.9104,0.9068,0.9085,0.0307,+3.50%
+NusaX-Indonesian,COS-Augmented,528,0.9075,0.9062,0.9015,0.9038,0.026,+2.96%
+NusaX-Indonesian,JAC-Augmented,522,0.9025,0.901,0.8965,0.8987,0.0209,+2.38%
+NusaX-Indonesian,BLEU-Augmented,530,0.9175,0.9168,0.9124,0.9145,0.0367,+4.18%

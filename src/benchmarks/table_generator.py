@@ -178,7 +178,7 @@ def generate_access_main_results_table(
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
     out_results_dir = _resolve_path(out_results_dir)
-    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
+    datasets = get_investigated_datasets()
     records = []
     latex_blocks = []
 
@@ -315,7 +315,7 @@ def generate_access_per_class_f1_table(
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
     out_results_dir = _resolve_path(out_results_dir)
-    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
+    datasets = get_investigated_datasets()
     records = []
     latex_blocks = []
 
@@ -558,7 +558,7 @@ def generate_tpami_comparisons_table(
     with open(bench_json, "r") as f:
         benchmarks_data = json.load(f)
 
-    for ds_name in ["HoASA", "SmSA", "EmoT"]:
+    for ds_name in get_investigated_datasets():
         eval_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
         pred_path = os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz")
 
@@ -832,8 +832,8 @@ def inject_dynamic_tables_into_manuscripts(paper_dir: str = "paper"):
 
         import re
         content = re.sub(
-            r"\\begin\{table\*\}\[!t\]\s*\\caption\{Comprehensive Performance and Statistical Comparison on HoASA, SmSA, and EmoT Against State-of-the-Art Imbalance Loss Formulations\}\s*\\label\{tab:tpami_comparisons\}\s*\\centering\s*\\small\s*\\setlength\{\\tabcolsep\}\{4pt\}\s*\\begin\{tabularx\}\{\\textwidth\}\{l X c c c c c c c\}.*?\\end\{tabularx\}",
-            r"\\begin{table*}[!t]\n\\caption{Comprehensive Performance and Statistical Comparison on HoASA, SmSA, and EmoT Against State-of-the-Art Imbalance Loss Formulations}\n\\label{tab:tpami_comparisons}\n\\centering\n\\small\n\\setlength{\\tabcolsep}{4pt}\n\\input{table_tpami_comparisons.tex}",
+            r"\\begin\{table\*\}\[!t\]\s*\\caption\{Comprehensive Performance and Statistical Comparison.*?Against State-of-the-Art Imbalance Loss Formulations\}\s*\\label\{tab:tpami_comparisons\}\s*\\centering\s*\\small\s*\\setlength\{\\tabcolsep\}\{4pt\}\s*\\begin\{tabularx\}\{\\textwidth\}\{l X c c c c c c c\}.*?\\end\{tabularx\}",
+            r"\\begin{table*}[!t]\n\\caption{Comprehensive Performance and Statistical Comparison Across All Four Benchmarks (SmSA, HoASA, EmoT, and NusaX-Indonesian) Against State-of-the-Art Imbalance Loss Formulations}\n\\label{tab:tpami_comparisons}\n\\centering\n\\small\n\\setlength{\\tabcolsep}{4pt}\n\\input{table_tpami_comparisons.tex}",
             content,
             flags=re.DOTALL
         )

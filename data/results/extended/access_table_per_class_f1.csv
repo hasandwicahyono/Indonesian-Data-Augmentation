@@ -15,8 +15,8 @@ EmoT,COS,0.0,0.0,0.0
 EmoT,JAC,0.0,0.0,0.0
 EmoT,BLEU,0.0,0.0,0.0
 EmoT,Ensemble,0.0,0.0,0.0
-NusaX-Indonesian,Baseline,1.0,0.0,1.0
-NusaX-Indonesian,ECU,0.9655,0.0,0.9677
-NusaX-Indonesian,COS,0.9677,0.0,0.9655
-NusaX-Indonesian,JAC,0.9677,0.0,0.9655
-NusaX-Indonesian,BLEU,1.0,0.0,1.0
+NusaX-Indonesian,Baseline,0.9026,0.8251,0.9058
+NusaX-Indonesian,ECU,0.9255,0.8742,0.9258
+NusaX-Indonesian,COS,0.9215,0.8681,0.9218
+NusaX-Indonesian,JAC,0.918,0.8602,0.918
+NusaX-Indonesian,BLEU,0.931,0.8817,0.9308
