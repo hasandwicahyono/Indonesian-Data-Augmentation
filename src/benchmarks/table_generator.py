@@ -175,7 +175,7 @@ def generate_access_main_results_table(
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
     out_results_dir = _resolve_path(out_results_dir)
-    datasets = ["SmSA", "HoASA", "EmoT", "MovieOpini"]
+    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
     records = []
     latex_blocks = []
 
@@ -312,7 +312,7 @@ def generate_access_per_class_f1_table(
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
     out_results_dir = _resolve_path(out_results_dir)
-    datasets = ["SmSA", "HoASA"]
+    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
     records = []
     latex_blocks = []
 

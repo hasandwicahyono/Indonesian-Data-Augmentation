@@ -90,6 +90,9 @@ def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> 
         return manager.load_hoasa(aspect_target="general")
     elif dataset_name == "EmoT":
         return manager.load_emot()
+    elif dataset_name in ["NusaX", "NusaX-Indonesian"]:
+        # Choose binary_only=True for 2-class or False for 3-class
+        return manager.load_nusax_indonesian(binary_only=True)
     else:
         raise ValueError(f"Unknown dataset name: {dataset_name}")
 
