@@ -33,6 +33,72 @@ HALLUCINATION_REGEXES = [
 ]
 HALLUCINATION_PATTERN = re.compile("|".join(HALLUCINATION_REGEXES), re.IGNORECASE)
 
+# =====================================================================
+# Affective Valence & Cross-Emotion Boundary Guardrail
+# =====================================================================
+POSITIVE_VALENCE_KEYWORDS = {
+    "senang", "bahagia", "gembira", "bersyukur", "alhamdulillah", "mantap", "hebat",
+    "puas", "sukses", "keren", "cinta", "sayang", "suka", "love", "demen", "tresno"
+}
+NEGATIVE_VALENCE_KEYWORDS = {
+    "marah", "benci", "kesal", "kecewa", "sedih", "nangis", "tangis", "hancur", "takut",
+    "ngeri", "cemas", "khawatir", "bangsat", "anjing", "bodoh", "rusak", "parah", "jorok"
+}
+AGGRESSIVE_ANGER_KEYWORDS = {
+    "bangsat", "keparat", "anjing", "kampret", "bodoh", "tolol", "bajingan", "bacok",
+    "gebuk", "hajar", "pecat", "bubarkan", "kutuk", "celaka"
+}
+
+
+def is_valence_consistent(target_label: str, text: str) -> bool:
+    """
+    Ensures generated text does not blatantly violate psychological valence boundaries
+    (Russell's Circumplex Model) or bleed across opposing emotional poles.
+    """
+    s = str(text).lower()
+    lbl = str(target_label).strip().lower()
+
+    # Negative emotions / polarities: should not be predominantly celebratory
+    if lbl in {"anger", "sadness", "fear", "neg", "negative"}:
+        pos_hits = sum(1 for kw in POSITIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        neg_hits = sum(1 for kw in NEGATIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        if pos_hits >= 2 and neg_hits == 0:
+            return False
+
+    # Positive emotions / polarities: should not contain severe aggressive invective
+    if lbl in {"happy", "love", "pos", "positive"}:
+        hostile_hits = sum(1 for kw in AGGRESSIVE_ANGER_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        if hostile_hits >= 1:
+            return False
+
+    # Fine-grained sadness vs anger protection:
+    # If target is sadness (grief/sorrow), reject extreme aggressive expletives belonging strictly to anger
+    if lbl == "sadness":
+        hostile_hits = sum(1 for kw in AGGRESSIVE_ANGER_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        if hostile_hits >= 2:
+            return False
+
+    return True
+
+
+def is_degenerate_jaccard_slang(text: str) -> bool:
+    """
+    Detects repeated informal particle loops (e.g. 'wkwk wkwk', 'bgt bgt') that
+    artificially elevate lexical Jaccard overlap while destroying semantic coherence.
+    """
+    s = str(text).lower()
+    slang_loops = [
+        r"(wkwk\s*){3,}",
+        r"(bgt\s*){3,}",
+        r"(anjir\s*){3,}",
+        r"(haha\s*){3,}",
+        r"(ckck\s*){3,}",
+    ]
+    for pattern in slang_loops:
+        if re.search(pattern, s):
+            return True
+    return False
+
 
 def is_hallucinatory_or_corrupt(text: str) -> bool:
     """Detects whether generated text contains Wikipedia boilerplate, URLs, or degenerate repetition."""
@@ -132,6 +198,8 @@ def build_augmented_datasets(
     test_texts = set(str(t).strip() for t in test_df[text_column].dropna()) if test_df is not None else set()
     leak_filtered_count = 0
     hallucination_filtered_count = 0
+    valence_filtered_count = 0
+    slang_loop_filtered_count = 0
 
     metrics = ["ECU", "COS", "JAC", "BLEU"]
     aug_all_samples: Dict[str, List[Dict[str, Any]]] = {m: [] for m in metrics}
@@ -152,6 +220,14 @@ def build_augmented_datasets(
 
         if is_hallucinatory_or_corrupt(all_text) or is_hallucinatory_or_corrupt(new_text):
             hallucination_filtered_count += 1
+            continue
+
+        if not is_valence_consistent(label, all_text) or not is_valence_consistent(label, new_text):
+            valence_filtered_count += 1
+            continue
+
+        if is_degenerate_jaccard_slang(all_text) or is_degenerate_jaccard_slang(new_text):
+            slang_loop_filtered_count += 1
             continue
 
         if test_texts:
@@ -175,6 +251,10 @@ def build_augmented_datasets(
 
     if hallucination_filtered_count > 0:
         print(f"  [ANTI-HALLUCINATION GUARD] Purged {hallucination_filtered_count} off-topic/Wikipedia hallucinated candidates.")
+    if valence_filtered_count > 0:
+        print(f"  [VALENCE GUARD] Filtered out {valence_filtered_count} cross-valence drifted candidates.")
+    if slang_loop_filtered_count > 0:
+        print(f"  [SLANG PURGE] Filtered out {slang_loop_filtered_count} degenerate slang/particle loop candidates.")
     if leak_filtered_count > 0:
         print(f"  [ANTI-LEAKAGE] Filtered out {leak_filtered_count} generated candidate(s) identical to test set.")
 

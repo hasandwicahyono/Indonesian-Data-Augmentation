@@ -133,12 +133,13 @@ datasets:
     use_class_weights: false
     use_logit_adjustment: true
     logit_adj_tau: 0.8
-    eval_logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.35
     target_oversample:
       neg: 8
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 1.0
+    aspect_prompt_prefix: "[Aspek: Umum / Keseluruhan Hotel] "
     minority_classes: ["neg", "pos"]
     best_aug_metric: "COS"
     description: "HoASA: Hotel Aspect Sentiment (3 extreme imbalanced classes: neg 1.3%, pos 10.1%, neut 88.6%)"
@@ -173,7 +174,11 @@ datasets:
     label_smoothing: 0.08
     use_fgm: true
     fgm_epsilon: 1.0
-    minority_classes: ["fear", "love"]
+    minority_classes: ["fear", "love", "sadness"]
+    valence_guardrail: true
+    valence_map:
+      positive: ["happy", "love"]
+      negative: ["anger", "sadness", "fear"]
     best_aug_metric: "BLEU"
     description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
     training_dynamics:
