@@ -60,3 +60,4 @@ class ClassificationDataset(Dataset):
             ).squeeze(0),
             "label": torch.tensor(label_id, dtype=torch.long),
         }
+

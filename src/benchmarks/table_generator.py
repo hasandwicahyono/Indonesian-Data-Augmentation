@@ -483,7 +483,7 @@ def generate_access_ablation_table(
     if loaded_records is None:
         raise FileNotFoundError(
             f"Missing ablation experimental records file ('{ablation_cache}' or '{ablation_csv}'). "
-            "Please run 'python run_all_benchmarks.py' or 'python run_extended_benchmarks.py' to generate the ablation suite results."
+            "Please run 'python run_all_benchmarks.py' or 'python -m src.benchmarks.extended_suite' to generate the ablation suite results."
         )
 
     print(f"  [Access Table 4] Populating dynamically from file: {source_file}")
@@ -703,7 +703,7 @@ def generate_tpami_5fold_table(
         if not os.path.exists(json_path):
             raise FileNotFoundError(
                 f"Missing 5-fold cross validation file: '{json_path}'. "
-                "Please run 'python run_all_benchmarks.py --run_cv' or 'python execute_real_cross_validation.py' to produce this file."
+                "Please run 'python run_all_benchmarks.py --run_cv' or 'python -m src.benchmarks.cross_validation' to produce this file."
             )
 
         with open(json_path, "r") as f:
@@ -957,7 +957,7 @@ def generate_all_dynamic_tables(
     gen_csv = os.path.join(extended_results_dir, "generative_models_comparison.csv")
     gen_tex = os.path.join(paper_dir, "table_generative_models_comparison.tex")
     try:
-        from benchmark_generative_models import benchmark_candidate_generative_models
+        from src.augmentation.generative_models import benchmark_candidate_generative_models
         df_gen = benchmark_candidate_generative_models(
             output_csv=gen_csv,
             output_tex=gen_tex,

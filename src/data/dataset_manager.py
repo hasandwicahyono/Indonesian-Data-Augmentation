@@ -135,3 +135,4 @@ class IndonesianDatasetsManager:
             "HoASA": self.load_hoasa(),
             "MovieOpini": self.load_movie_opini(),
         }
+

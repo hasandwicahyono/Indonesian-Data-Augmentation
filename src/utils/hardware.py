@@ -39,3 +39,4 @@ def get_process_memory_gb() -> float:
     """Returns current process RAM utilization in gigabytes."""
     proc = psutil.Process(os.getpid())
     return float(proc.memory_info().rss / (1024**3))
+

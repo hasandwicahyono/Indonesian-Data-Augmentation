@@ -79,3 +79,4 @@ def compile_latex_manuscripts(paper_dir: str = "paper") -> bool:
             success = False
 
     return success
+

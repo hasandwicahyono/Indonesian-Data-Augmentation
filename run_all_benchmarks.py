@@ -49,12 +49,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List, Tuple, Any, Optional
 
-from DatasetsManager import IndonesianDatasetsManager, CustomDataset
-from Augmenter import IndonesianAugmenter
-from run_augmentation_filter import build_augmented_datasets, export_augmented_datasets
-from run_classification_eval import IndoBERTClassifierEvaluator
-from ImbalanceCalibrator import AutoImbalanceCalibrator
-from run_tpami_full_suite import (
+from src.data import IndonesianDatasetsManager, CustomDataset
+from src.augmentation import IndonesianAugmenter
+from src.augmentation.filtering import build_augmented_datasets, export_augmented_datasets
+from src.modeling import IndoBERTClassifierEvaluator, AutoImbalanceCalibrator
+from src.benchmarks import (
     generate_tpami_tsne_plots,
     generate_tpami_margin_and_svd_plots,
     generate_tpami_sota_longtailed_table,
@@ -65,102 +64,17 @@ from run_tpami_full_suite import (
     generate_tpami_computational_budget_table,
     generate_tpami_lexical_diversity_table,
     generate_tpami_training_dynamics_plot,
+    run_real_5fold_cv_for_dataset,
+    plot_similarity_distributions,
+    generate_all_dynamic_tables,
 )
-from execute_real_cross_validation import run_real_5fold_cv_for_dataset
-from run_extended_benchmarks import plot_similarity_distributions
+from src.utils.config import load_dataset_config
 
 
 # =====================================================================
-# Dataset Specific Optimal Parameter Configurations
+# Dataset Specific Optimal Parameter Configurations (Loaded from configs/datasets.yaml)
 # =====================================================================
-DATASET_CONFIGS = {
-    "SmSA": {
-        "model_name": "indobenchmark/indobert-base-p1",
-        "max_len": 128,
-        "batch_size": 64,
-        "epochs": 50,
-        "lr": 2e-5,
-        "weight_decay": 0.01,
-        "patience": 5,
-        "early_stopping": True,
-        "use_preprocessing": True,
-        "use_class_weights": True,  # Uses automatic square-root smoothing guard
-        "use_logit_adjustment": True,        # Logit Adjustment (Menon et al., ICML 2020) for neutral margin
-        "logit_adj_tau": 0.6,
-        "eval_logit_adj_tau": 0.3,          # Rebalances prior shift (train 10.4% vs test 17.6%)
-        "target_oversample": {"neutral": 2}, # 2x Neutral Oversampler to balance neutral volume
-        "label_smoothing": 0.05,
-        "use_fgm": True,
-        "fgm_epsilon": 0.5,
-        "minority_classes": ["neutral"],     # Dedicate Phase 1 GPT-2 augmentation budget exclusively to neutral
-        "description": "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)",
-    },
-    "MovieOpini": {
-        "model_name": "indolem/indobertweet-base-uncased",
-        "max_len": 96,
-        "batch_size": 64,
-        "epochs": 50,
-        "lr": 2e-5,
-        "weight_decay": 0.02,
-        "patience": 5,
-        "early_stopping": True,
-        "use_preprocessing": True,
-        "use_class_weights": False,  # Balanced 50/50 dataset
-        "label_smoothing": 0.10,     # Regularization for low-data regime (140 samples)
-        "use_fgm": True,
-        "fgm_epsilon": 1.0,
-        "minority_classes": ["negative", "positive"],
-        "description": "MovieOpini: Indonesian Movie Tweets (2 classes: negative, positive)",
-    },
-    "HoASA": {
-        "model_name": "indobenchmark/indobert-base-p1",
-        "max_len": 128,
-        "batch_size": 64,
-        "epochs": 50,
-        "lr": 2e-5,
-        "weight_decay": 0.01,
-        "patience": 5,
-        "early_stopping": True,
-        "use_preprocessing": True,
-        "use_class_weights": False,  # False is critical: preserves 94.75%+ accuracy on 88.6% neut
-        "use_logit_adjustment": True,      # Logit Adjustment (Menon et al., ICML 2020) for minority negative recall
-        "logit_adj_tau": 0.8,
-        "eval_logit_adj_tau": 0.0,
-        "target_oversample": {"neg": 8},   # 8x Negative Oversampler
-        "label_smoothing": 0.05,
-        "use_fgm": True,
-        "fgm_epsilon": 1.0,
-        "minority_classes": ["neg", "pos"],
-        "description": "HoASA: Airy Rooms Aspect Reviews (3 classes: neg, neut, pos)",
-    },
-    "EmoT": {
-        "model_name": "indolem/indobertweet-base-uncased",
-        "max_len": 128,
-        "batch_size": 64,
-        "epochs": 50,
-        "lr": 1e-5,
-        "weight_decay": 0.01,
-        "patience": 5,
-        "early_stopping": True,
-        "use_preprocessing": True,
-        "use_class_weights": True,   # Boosts minority fear and love classes
-        "use_logit_adjustment": False,
-        "logit_adj_tau": 1.0,
-        "eval_logit_adj_tau": 0.0,
-        "target_oversample": None,
-        "run_ensemble": True,
-        "ensemble_models": [
-            {"model_name": "indolem/indobertweet-base-uncased", "weight": 0.50},
-            {"model_name": "indobenchmark/indobert-base-p1", "weight": 0.30},
-            {"model_name": "cahya/bert-base-indonesian-522M", "weight": 0.20},
-        ],
-        "label_smoothing": 0.08,     # Regularizes overlapping emotion boundaries
-        "use_fgm": True,
-        "fgm_epsilon": 1.0,
-        "minority_classes": ["fear", "love"],
-        "description": "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)",
-    },
-}
+DATASET_CONFIGS = load_dataset_config()
 
 
 # =====================================================================
@@ -735,7 +649,7 @@ def run_all_tpami_access_suite(
     # 13. Generative Backbone Models Benchmark & Comparison (First-Gen vs Contemporary)
     print("\n>>> [TPAMI / Access Test 13] Benchmarking and Comparing Generative Backbone Models...")
     try:
-        from benchmark_generative_models import benchmark_candidate_generative_models
+        from src.augmentation.generative_models import benchmark_candidate_generative_models
         gen_df = benchmark_candidate_generative_models(
             output_csv=os.path.join(results_dir, "generative_models_comparison.csv"),
             output_tex=os.path.join(paper_dir, "table_generative_models_comparison.tex"),
@@ -747,7 +661,7 @@ def run_all_tpami_access_suite(
 
     # 14. Dynamic Manuscript Tables for IEEE Access and IEEE TPAMI
     print("\n>>> [TPAMI / Access Test 14] Generating All Dynamic Tables and Compiling Manuscripts...")
-    from generate_dynamic_paper_tables import generate_all_dynamic_tables
+    from src.benchmarks.table_generator import generate_all_dynamic_tables
     dyn_tables = generate_all_dynamic_tables(
         results_dir="data/results",
         extended_results_dir=results_dir,
@@ -1030,7 +944,7 @@ def run_benchmark_pipeline(
     # -------------------------------------------------------------
     print("\n>>> [STEP 2b] Computing and saving architectural ablation analysis to persistent files...")
     try:
-        from generate_dynamic_paper_tables import generate_access_ablation_table
+        from src.benchmarks.table_generator import generate_access_ablation_table
         generate_access_ablation_table(
             results_dir=results_dir,
             out_results_dir="data/results/extended",

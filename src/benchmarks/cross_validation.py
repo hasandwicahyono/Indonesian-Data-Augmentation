@@ -26,6 +26,7 @@ from src.modeling.evaluator import IndoBERTClassifierEvaluator
 from src.augmentation.filtering import is_hallucinatory_or_corrupt
 from src.utils.path_utils import resolve_path, ensure_dir
 from src.utils.hardware import resolve_device
+from src.utils.config import load_dataset_config
 
 
 def run_real_5fold_cv_for_dataset(
@@ -47,32 +48,13 @@ def run_real_5fold_cv_for_dataset(
     print("=" * 80)
 
     manager = IndonesianDatasetsManager()
-    if dataset_name == "MovieOpini":
-        ds = manager.load_movie_opini()
-        model_name = "indobenchmark/indobert-base-p1"
-        use_la = False
-        tau = 0.0
-        best_aug_metric = "BLEU"
-    elif dataset_name == "HoASA":
-        ds = manager.load_hoasa()
-        model_name = "indobenchmark/indobert-base-p1"
-        use_la = True
-        tau = 0.8
-        best_aug_metric = "COS"
-    elif dataset_name == "EmoT":
-        ds = manager.load_emot()
-        model_name = "indolem/indobertweet-base-uncased"
-        use_la = False
-        tau = 0.0
-        best_aug_metric = "BLEU"
-    elif dataset_name == "SmSA":
-        ds = manager.load_smsa()
-        model_name = "indobenchmark/indobert-base-p1"
-        use_la = True
-        tau = 0.6
-        best_aug_metric = "BLEU"
-    else:
-        raise ValueError(f"Unknown dataset: {dataset_name}")
+    cfg = load_dataset_config(dataset_name)
+    load_fn = getattr(manager, f"load_{dataset_name.lower()}")
+    ds = load_fn()
+    model_name = cfg.get("model_name", "indobenchmark/indobert-base-p1")
+    use_la = cfg.get("use_logit_adjustment", False)
+    tau = cfg.get("logit_adj_tau", 0.0)
+    best_aug_metric = cfg.get("best_aug_metric", "BLEU")
 
     full_df = pd.concat([ds.train, ds.test], ignore_index=True)
     if max_samples_per_fold is not None and len(full_df) > max_samples_per_fold:
@@ -195,3 +177,4 @@ def run_real_5fold_cv_for_dataset(
     print(f"Saved real experimental metrics to: {out_json}")
 
     return fold_results
+

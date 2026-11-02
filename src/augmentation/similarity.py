@@ -118,3 +118,4 @@ def calculate_bleu_scores(
         return float(round(b1, 4)), float(round(b2, 4)), float(round(b3, 4)), float(round(b4, 4))
     except Exception:
         return 0.0, 0.0, 0.0, 0.0
+

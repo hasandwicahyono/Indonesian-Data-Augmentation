@@ -58,50 +58,14 @@ plt.rcParams["font.size"] = 10
 
 
 # =====================================================================
-# 1. Distinct-1 and Distinct-2 Diversity Metrics
+# 1. Distinct-1 and Distinct-2 Diversity Metrics (via src.utils.metrics)
 # =====================================================================
-def compute_distinct_n(texts: List[str], n: int = 1) -> float:
-    """Computes Distinct-n metric: unique n-grams / total n-grams."""
-    total_ngrams = 0
-    unique_ngrams = set()
-
-    for text in texts:
-        tokens = str(text).lower().split()
-        if len(tokens) < n:
-            continue
-        for i in range(len(tokens) - n + 1):
-            ngram = tuple(tokens[i : i + n])
-            unique_ngrams.add(ngram)
-            total_ngrams += 1
-
-    if total_ngrams == 0:
-        return 0.0
-    return len(unique_ngrams) / float(total_ngrams)
-
-
-def compute_entropy(texts: List[str]) -> float:
-    """Computes Shannon Entropy of word distribution."""
-    words = []
-    for text in texts:
-        words.extend(str(text).lower().split())
-    if not words:
-        return 0.0
-    counts = Counter(words)
-    total = len(words)
-    return -sum((c / total) * math.log2(c / total) for c in counts.values())
-
 
 def evaluate_lexical_diversity(dataset_name: str = "HoASA") -> pd.DataFrame:
     """Computes Distinct-1, Distinct-2, and Shannon Entropy across baseline and all augmented variants."""
     manager = IndonesianDatasetsManager()
-    if dataset_name == "SmSA":
-        ds = manager.load_smsa()
-    elif dataset_name == "EmoT":
-        ds = manager.load_emot()
-    elif dataset_name == "HoASA":
-        ds = manager.load_hoasa()
-    else:
-        ds = manager.load_movie_opini()
+    load_fn = getattr(manager, f"load_{dataset_name.lower()}", manager.load_hoasa)
+    ds = load_fn()
 
     rows = []
     # Baseline
@@ -599,10 +563,7 @@ def run_stratified_5fold_cv_all_datasets() -> pd.DataFrame:
         if not loaded:
             print(f"  [Real Experiment Execution] Executing real 5-fold CV for {ds_name}...")
             try:
-                try:
-                    from src.benchmarks.cross_validation import run_real_5fold_cv_for_dataset
-                except ImportError:
-                    from execute_real_cross_validation import run_real_5fold_cv_for_dataset
+                from src.benchmarks.cross_validation import run_real_5fold_cv_for_dataset
                 cv_data = run_real_5fold_cv_for_dataset(ds_name, epochs=1, max_samples_per_fold=200)
                 fold_perf[ds_name]["Baseline"] = [round(x, 4) for x in cv_data["baseline_f1"]]
                 prop_k = cv_data.get("variant_name", "BLEU (Best)")
@@ -614,7 +575,7 @@ def run_stratified_5fold_cv_all_datasets() -> pd.DataFrame:
         if not loaded:
             raise FileNotFoundError(
                 f"Missing 5-fold cross validation file: '{json_path}'. "
-                f"Please run 'python run_all_benchmarks.py --run_cv' or 'python execute_real_cross_validation.py' to produce this file for {ds_name}."
+                f"Please run 'python run_all_benchmarks.py --run_cv' or 'python -m src.benchmarks.cross_validation' to produce this file for {ds_name}."
             )
 
     for dname, variants in fold_perf.items():

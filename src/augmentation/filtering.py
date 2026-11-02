@@ -48,108 +48,207 @@ def is_hallucinatory_or_corrupt(text: str) -> bool:
     words = s.lower().split()
     if len(words) >= 5:
         distinct_ratio = len(set(words)) / len(words)
-        if distinct_ratio < 0.35:  # Over 65% repetitive tokens
+        if distinct_ratio < 0.40:
+            return True
+        trigrams = [" ".join(words[i : i + 3]) for i in range(len(words) - 2)]
+        if len(trigrams) >= 3 and len(set(trigrams)) / len(trigrams) < 0.35:
             return True
 
     return False
 
 
-def compute_dynamic_thresholds(
+def clean_and_truncate_continuation(text: str) -> str:
+    """Strips citation brackets and truncates open trailing fragments to the last sentence terminator."""
+    s = str(text).strip()
+    s = re.sub(r"\[\d+\]", "", s)
+    s = s.replace("&apos;", "'").replace("&quot;", '"')
+    s = re.sub(r"\s+", " ", s).strip()
+
+    last_punct = max(s.rfind("."), s.rfind("!"), s.rfind("?"))
+    if last_punct > 15:
+        s = s[: last_punct + 1].strip()
+
+    return s
+
+
+def compute_similarity_thresholds(df: pd.DataFrame) -> Dict[str, float]:
+    """Computes mean similarity thresholds across valid dataset rows."""
+    thresholds = {
+        "ECU": float(df["ecu_similarity"].mean()) if "ecu_similarity" in df else 0.5,
+        "COS": float(df["cos_similarity"].mean()) if "cos_similarity" in df else 0.5,
+        "JAC": float(df["jacc_similarity"].mean()) if "jacc_similarity" in df else 0.3,
+        "BLEU": float(df["bleu_sim_1"].mean()) if "bleu_sim_1" in df else 0.2,
+    }
+    return thresholds
+
+
+compute_dynamic_thresholds = compute_similarity_thresholds
+
+
+def check_threshold(
+    value: float,
+    label: str,
+    metric: str,
+    thresholds: Dict[str, float],
+    labels_to_augment: List[str],
+    min_floor: Optional[float] = None,
+) -> bool:
+    """Checks whether metric meets or exceeds threshold for minority classes with an absolute safety floor."""
+    target_labels = [l.strip().lower() for l in labels_to_augment]
+    if str(label).strip().lower() not in target_labels:
+        return False
+
+    metric_key = metric.upper()
+    if metric_key not in thresholds:
+        return False
+
+    try:
+        val = float(value)
+        cutoff = thresholds[metric_key]
+        if min_floor is not None:
+            cutoff = max(cutoff, min_floor)
+        return val >= cutoff
+    except (ValueError, TypeError):
+        return False
+
+
+def build_augmented_datasets(
     df: pd.DataFrame,
-    ecu_col: str = "ecu_similarity",
-    cos_col: str = "cos_similarity",
-    jacc_col: str = "jacc_similarity",
-    bleu_col: str = "bleu_sim_1",
-) -> Dict[str, float]:
-    """Computes arithmetic mean thresholds for each similarity metric."""
-    return {
-        "ECU": float(df[ecu_col].mean()),
-        "COS": float(df[cos_col].mean()),
-        "JAC": float(df[jacc_col].mean()),
-        "BLEU": float(df[bleu_col].mean()),
+    labels_to_augment: List[str],
+    base_train_df: Optional[pd.DataFrame] = None,
+    test_df: Optional[pd.DataFrame] = None,
+    text_column: str = "text",
+    label_column: str = "label",
+    all_text_column: str = "all_text",
+    new_text_column: str = "new_text",
+) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame], Dict[str, float]]:
+    """
+    Constructs augmented datasets for All-Text and New-Text variants across the 4 similarity metrics.
+    Applies strict Anti-Hallucination verification and suffix-level semantic grounding.
+    """
+    thresholds = compute_similarity_thresholds(df)
+    print(f"Computed Similarity Thresholds: {thresholds}")
+
+    test_texts = set(str(t).strip() for t in test_df[text_column].dropna()) if test_df is not None else set()
+    leak_filtered_count = 0
+    hallucination_filtered_count = 0
+
+    metrics = ["ECU", "COS", "JAC", "BLEU"]
+    aug_all_samples: Dict[str, List[Dict[str, Any]]] = {m: [] for m in metrics}
+    aug_new_samples: Dict[str, List[Dict[str, Any]]] = {m: [] for m in metrics}
+    growth_counts = {m: 0 for m in metrics}
+
+    safety_floors = {
+        "ECU": 0.20,
+        "COS": 0.35,
+        "JAC": 0.10,
+        "BLEU": 0.08,
     }
 
+    for _, row in df.iterrows():
+        label = row[label_column]
+        all_text = clean_and_truncate_continuation(row.get(all_text_column, row.get(text_column, "")))
+        new_text = clean_and_truncate_continuation(row.get(new_text_column, ""))
 
-def filter_augmented_data(
-    intermediate_df: pd.DataFrame,
-    thresholds: Optional[Dict[str, float]] = None,
-    filter_hallucinations: bool = True,
-    metric_cols: Optional[Dict[str, str]] = None,
-) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Filters generated samples based on similarity thresholds.
-    Returns nested dictionary:
-    {
-        'ECU': {'all_text': df, 'new_text': df},
-        'COS': {'all_text': df, 'new_text': df},
-        'JAC': {'all_text': df, 'new_text': df},
-        'BLEU': {'all_text': df, 'new_text': df},
-    }
-    """
-    if metric_cols is None:
-        metric_cols = {
-            "ECU": "ecu_similarity",
-            "COS": "cos_similarity",
-            "JAC": "jacc_similarity",
-            "BLEU": "bleu_sim_1",
+        if is_hallucinatory_or_corrupt(all_text) or is_hallucinatory_or_corrupt(new_text):
+            hallucination_filtered_count += 1
+            continue
+
+        if test_texts:
+            if str(all_text).strip() in test_texts or str(new_text).strip() in test_texts:
+                leak_filtered_count += 1
+                continue
+
+        metric_values = {
+            "ECU": row.get("ecu_similarity", 0.0),
+            "COS": row.get("cos_similarity", 0.0),
+            "JAC": row.get("jacc_similarity", 0.0),
+            "BLEU": row.get("bleu_sim_1", 0.0),
         }
 
-    if thresholds is None:
-        thresholds = compute_dynamic_thresholds(intermediate_df)
+        for m in metrics:
+            floor = safety_floors.get(m, 0.1)
+            if check_threshold(metric_values[m], label, m, thresholds, labels_to_augment, min_floor=floor):
+                growth_counts[m] += 1
+                aug_all_samples[m].append({"text": all_text, "label": label})
+                aug_new_samples[m].append({"text": new_text if new_text else all_text, "label": label})
 
-    results: Dict[str, Dict[str, pd.DataFrame]] = {}
+    if hallucination_filtered_count > 0:
+        print(f"  [ANTI-HALLUCINATION GUARD] Purged {hallucination_filtered_count} off-topic/Wikipedia hallucinated candidates.")
+    if leak_filtered_count > 0:
+        print(f"  [ANTI-LEAKAGE] Filtered out {leak_filtered_count} generated candidate(s) identical to test set.")
 
-    for metric, col in metric_cols.items():
-        thresh = thresholds[metric]
-        valid_mask = intermediate_df[col] >= thresh
+    effective_base = base_train_df[[text_column, label_column]].copy() if base_train_df is not None else df[[text_column, label_column]].copy()
+    effective_base.columns = ["text", "label"]
 
-        filtered = intermediate_df[valid_mask].copy()
+    result_all = {}
+    result_new = {}
+    for m in metrics:
+        aug_all_df = pd.DataFrame(aug_all_samples[m])
+        aug_new_df = pd.DataFrame(aug_new_samples[m])
+        result_all[m] = pd.concat([effective_base, aug_all_df], ignore_index=True) if len(aug_all_df) > 0 else effective_base.copy()
+        result_new[m] = pd.concat([effective_base, aug_new_df], ignore_index=True) if len(aug_new_df) > 0 else effective_base.copy()
 
-        # Strict Anti-Hallucination & Quality Verification
-        if filter_hallucinations:
-            before_cnt = len(filtered)
-            bad_mask = filtered["new_text"].apply(is_hallucinatory_or_corrupt)
-            filtered = filtered[~bad_mask].copy()
-            discarded = before_cnt - len(filtered)
-            if discarded > 0:
-                print(f"  [{metric}] Discarded {discarded} hallucinatory / degenerate samples ({discarded/before_cnt:.1%}).")
+    print("Augmentation Summary (Growth Counts after Quality Verification):")
+    base_count = len(effective_base)
+    for m in metrics:
+        growth = growth_counts[m]
+        pct = (growth / base_count) * 100.0 if base_count > 0 else 0.0
+        print(f"  - {m}: Added {growth} clean samples (+{pct:.2f}%) -> Total {len(result_all[m])}")
 
-        # Prepare All-Text variant (original seed + generated continuation)
-        all_text_df = pd.DataFrame({
-            "text": filtered["all_text"],
-            "label": filtered["label"],
-        })
+    return result_all, result_new, thresholds
 
-        # Prepare New-Text variant (pure generated continuation)
-        new_text_df = pd.DataFrame({
-            "text": filtered["new_text"],
-            "label": filtered["label"],
-        })
 
-        results[metric] = {
-            "all_text": all_text_df,
-            "new_text": new_text_df,
-        }
+filter_augmented_data = build_augmented_datasets
 
-    return results
+
+def purge_hallucinations_from_existing_csv(csv_path: str, raw_base_texts: Optional[set] = None) -> int:
+    """
+    Surgically removes Wikipedia hallucinations and corrupt sequences from an existing augmented CSV file.
+    Preserves authentic raw baseline training samples.
+    """
+    resolved_path = resolve_path(csv_path)
+    if not os.path.exists(resolved_path):
+        return 0
+
+    df = pd.read_csv(resolved_path)
+    initial_len = len(df)
+
+    if raw_base_texts:
+        is_raw = df["text"].astype(str).str.strip().isin(raw_base_texts)
+        is_corrupt = df["text"].apply(is_hallucinatory_or_corrupt)
+        drop_mask = (~is_raw) & is_corrupt
+    else:
+        drop_mask = df["text"].apply(is_hallucinatory_or_corrupt)
+
+    purged_count = int(drop_mask.sum())
+    if purged_count > 0:
+        cleaned_df = df[~drop_mask].copy().reset_index(drop=True)
+        cleaned_df.to_csv(resolved_path, index=False)
+        print(f"  [SCRUBBED] {os.path.basename(resolved_path)}: Purged {purged_count} hallucinated samples ({initial_len} -> {len(cleaned_df)})")
+    return purged_count
 
 
 def export_augmented_datasets(
-    filtered_dict: Dict[str, Dict[str, pd.DataFrame]],
     dataset_name: str,
-    output_base_dir: str = "data/augmented",
+    all_text_dfs: Dict[str, pd.DataFrame],
+    new_text_dfs: Dict[str, pd.DataFrame],
+    output_dir: str = "data/augmented",
 ) -> None:
-    """Exports filtered augmented sets into standard project directories."""
-    all_dir = resolve_path(os.path.join(output_base_dir, "all_text"))
-    new_dir = resolve_path(os.path.join(output_base_dir, "new_text"))
+    """Exports augmented datasets into structured CSV files."""
+    all_dir = resolve_path(os.path.join(output_dir, "all_text"))
+    new_dir = resolve_path(os.path.join(output_dir, "new_text"))
     ensure_dir(all_dir)
     ensure_dir(new_dir)
 
-    for metric, variants in filtered_dict.items():
-        all_path = os.path.join(all_dir, f"{dataset_name}-Augmented-{metric}-ALL-Text-Final.csv")
-        new_path = os.path.join(new_dir, f"{dataset_name}-Augmented-{metric}-NEW-Text-Final.csv")
+    for metric, df in all_text_dfs.items():
+        fname = f"{dataset_name}-Augmented-{metric}-ALL-Text-Final.csv"
+        path = os.path.join(all_dir, fname)
+        df.to_csv(path, index=False)
+        print(f"Saved All-Text: {path} ({len(df)} rows)")
 
-        variants["all_text"].to_csv(all_path, index=False)
-        variants["new_text"].to_csv(new_path, index=False)
-        print(f"  Saved {metric} All-Text: {all_path} ({len(variants['all_text'])} samples)")
-        print(f"  Saved {metric} New-Text: {new_path} ({len(variants['new_text'])} samples)")
+    for metric, df in new_text_dfs.items():
+        fname = f"{dataset_name}-Augmented-{metric}-New-Text-Final.csv"
+        path = os.path.join(new_dir, fname)
+        df.to_csv(path, index=False)
+        print(f"Saved New-Text: {path} ({len(df)} rows)")

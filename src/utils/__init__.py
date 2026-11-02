@@ -1,5 +1,6 @@
 """
-Utils package for Indonesian Data Augmentation.
+General utilities package for Indonesian Data Augmentation.
+Contains path handling, metrics computation, hardware inspection, LaTeX compilation, and configuration loading.
 """
 
 from src.utils.path_utils import resolve_path, ensure_dir, get_project_root
@@ -12,6 +13,13 @@ from src.utils.metrics import (
 )
 from src.utils.hardware import resolve_device, get_process_memory_gb
 from src.utils.latex import compile_latex_manuscripts
+from src.utils.config import (
+    load_config,
+    load_dataset_config,
+    load_models_config,
+    load_preprocessor_config,
+    load_benchmark_config,
+)
 
 __all__ = [
     "resolve_path",
@@ -25,4 +33,9 @@ __all__ = [
     "resolve_device",
     "get_process_memory_gb",
     "compile_latex_manuscripts",
+    "load_config",
+    "load_dataset_config",
+    "load_models_config",
+    "load_preprocessor_config",
+    "load_benchmark_config",
 ]

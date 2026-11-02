@@ -2,101 +2,32 @@
 Indonesian Text Preprocessor for Data Augmentation and Classification.
 Adapted for Bahasa Indonesia to replace ArabertPreprocessor from the original research.
 Handles social media text, reviews, casing, elongation, URLs, mentions, emojis, and slang normalization.
+Loads default vocabulary and mapping dictionaries dynamically from configs/preprocessor.yaml.
 """
 
 import re
 import string
 from typing import Optional, Dict
 
-# Emoji semantic mapping for Indonesian emotion and sentiment analysis
-EMOJI_SENTIMENT_DICT: Dict[str, str] = {
-    # Anger / Marah
-    "😡": " _emosi_marah_ ", "😠": " _emosi_marah_ ", "🤬": " _emosi_marah_ ", "👿": " _emosi_marah_ ",
-    "💢": " _emosi_marah_ ", "😤": " _emosi_marah_ ", "🖕": " _emosi_marah_ ", "😾": " _emosi_marah_ ",
-    # Sadness / Sedih
-    "😭": " _emosi_sedih_ ", "😢": " _emosi_sedih_ ", "😞": " _emosi_sedih_ ", "😔": " _emosi_sedih_ ",
-    "💔": " _emosi_sedih_ ", "😿": " _emosi_sedih_ ", "🥺": " _emosi_sedih_ ", "😥": " _emosi_sedih_ ",
-    "😓": " _emosi_sedih_ ", "😪": " _emosi_sedih_ ", "🥀": " _emosi_sedih_ ",
-    # Fear / Takut / Cemas
-    "😱": " _emosi_takut_ ", "😨": " _emosi_takut_ ", "😰": " _emosi_takut_ ", "😧": " _emosi_takut_ ",
-    "🥶": " _emosi_takut_ ", "😖": " _emosi_takut_ ", "😬": " _emosi_takut_ ", "😳": " _emosi_takut_ ",
-    # Love / Cinta / Sayang
-    "❤️": " _emosi_cinta_ ", "💖": " _emosi_cinta_ ", "💕": " _emosi_cinta_ ", "💓": " _emosi_cinta_ ",
-    "🥰": " _emosi_cinta_ ", "😍": " _emosi_cinta_ ", "😚": " _emosi_cinta_ ", "😻": " _emosi_cinta_ ",
-    "😘": " _emosi_cinta_ ", "💗": " _emosi_cinta_ ", "💘": " _emosi_cinta_ ", "💙": " _emosi_cinta_ ",
-    "💜": " _emosi_cinta_ ", "💛": " _emosi_cinta_ ", "💚": " _emosi_cinta_ ", "🤍": " _emosi_cinta_ ",
-    # Happy / Bahagia / Senang
-    "🤣": " _emosi_bahagia_ ", "😂": " _emosi_bahagia_ ", "😄": " _emosi_bahagia_ ", "😆": " _emosi_bahagia_ ",
-    "😊": " _emosi_bahagia_ ", "🥳": " _emosi_bahagia_ ", "😁": " _emosi_bahagia_ ", "😹": " _emosi_bahagia_ ",
-    "😃": " _emosi_bahagia_ ", "🙂": " _emosi_bahagia_ ", "😀": " _emosi_bahagia_ ", "✨": " _emosi_bahagia_ ",
-    "🎉": " _emosi_bahagia_ ", "👏": " _emosi_bahagia_ ", "👍": " _emosi_bahagia_ ",
-}
+from src.utils.config import load_preprocessor_config
 
-# ASCII emoticons mapping
-EMOTICON_DICT: Dict[str, str] = {
-    ":)": " _emosi_bahagia_ ", ":-)": " _emosi_bahagia_ ", ":D": " _emosi_bahagia_ ",
-    ":-D": " _emosi_bahagia_ ", "xD": " _emosi_bahagia_ ", "XD": " _emosi_bahagia_ ",
-    "xd": " _emosi_bahagia_ ", "^^": " _emosi_bahagia_ ", "^_^": " _emosi_bahagia_ ",
-    ":(": " _emosi_sedih_ ", ":-(": " _emosi_sedih_ ", ":'(": " _emosi_sedih_ ",
-    ":'-(": " _emosi_sedih_ ", "T_T": " _emosi_sedih_ ", "T.T": " _emosi_sedih_ ",
-    "T-T": " _emosi_sedih_ ", ";-;": " _emosi_sedih_ ", ":<": " _emosi_sedih_ ",
-    "</3": " _emosi_sedih_ ",
-    ":O": " _emosi_takut_ ", ":-O": " _emosi_takut_ ", ":o": " _emosi_takut_ ",
-    ":-o": " _emosi_takut_ ", ">_<": " _emosi_takut_ ",
-    ">:[": " _emosi_marah_ ", ">:(": " _emosi_marah_ ", ":@": " _emosi_marah_ ",
-    "<3": " _emosi_cinta_ ", ":*": " _emosi_cinta_ ",
-}
 
-# Default common Indonesian slang dictionary for social media text
-INDONESIAN_SLANG_DICT: Dict[str, str] = {
-    "yg": "yang",
-    "dgn": "dengan",
-    "tp": "tapi",
-    "bgt": "banget",
-    "gk": "tidak",
-    "gak": "tidak",
-    "ga": "tidak",
-    "ngga": "tidak",
-    "nggak": "tidak",
-    "tdk": "tidak",
-    "sdh": "sudah",
-    "udh": "sudah",
-    "udah": "sudah",
-    "blm": "belum",
-    "krn": "karena",
-    "bisaa": "bisa",
-    "jd": "jadi",
-    "jgn": "jangan",
-    "bkn": "bukan",
-    "klo": "kalau",
-    "kalo": "kalau",
-    "kl": "kalau",
-    "sm": "sama",
-    "org": "orang",
-    "sy": "saya",
-    "gw": "saya",
-    "gue": "saya",
-    "lu": "kamu",
-    "lo": "kamu",
-    "km": "kamu",
-    "bgtu": "begitu",
-    "trs": "terus",
-    "skrg": "sekarang",
-    "lg": "lagi",
-    "dr": "dari",
-    "pd": "pada",
-    "utk": "untuk",
-    "dlm": "dalam",
-    "aja": "saja",
-    "aj": "saja",
-    "bener": "benar",
-    "bener2": "benar-benar",
-    "banget2": "sangat",
-    "bgtt": "banget",
-    "mantul": "mantap betul",
-    "gokil": "gila keren",
-    "parah": "sangat buruk",
-}
+def _get_default_dicts():
+    try:
+        cfg = load_preprocessor_config()
+        slang = cfg.get("slang_dict", {})
+        emoji = cfg.get("emoji_sentiment_dict", {})
+        emoticon = cfg.get("emoticon_dict", {})
+        return slang, emoji, emoticon
+    except Exception:
+        return {}, {}, {}
+
+
+_DEFAULT_SLANG, _DEFAULT_EMOJI, _DEFAULT_EMOTICON = _get_default_dicts()
+
+INDONESIAN_SLANG_DICT: Dict[str, str] = _DEFAULT_SLANG
+EMOJI_SENTIMENT_DICT: Dict[str, str] = _DEFAULT_EMOJI
+EMOTICON_DICT: Dict[str, str] = _DEFAULT_EMOTICON
 
 
 class IndonesianPreprocessor:
@@ -125,23 +56,29 @@ class IndonesianPreprocessor:
         self.map_emojis = map_emojis
         self.map_emoticons = map_emoticons
 
-        self.emoji_dict = emoji_dict or EMOJI_SENTIMENT_DICT
-        self.emoticon_dict = emoticon_dict or EMOTICON_DICT
-        self.slang_dict = slang_dict or INDONESIAN_SLANG_DICT
+        # Initialize dictionaries from config if not explicitly overridden
+        if slang_dict is None or emoji_dict is None or emoticon_dict is None:
+            cfg_slang, cfg_emoji, cfg_emoticon = _get_default_dicts()
+        else:
+            cfg_slang, cfg_emoji, cfg_emoticon = {}, {}, {}
+
+        self.slang_dict = slang_dict if slang_dict is not None else cfg_slang
+        self.emoji_dict = emoji_dict if emoji_dict is not None else cfg_emoji
+        self.emoticon_dict = emoticon_dict if emoticon_dict is not None else cfg_emoticon
 
     def preprocess(self, text: str) -> str:
         """Applies comprehensive Indonesian preprocessing to the input string."""
         if not isinstance(text, str):
             text = str(text)
 
-        # 1. Map emojis to sentiment/emotion tokens before lowercasing or punctuation stripping
-        if self.map_emojis:
+        # 1. Map emojis to sentiment/emotion tokens
+        if self.map_emojis and self.emoji_dict:
             for emoji, token in self.emoji_dict.items():
                 if emoji in text:
                     text = text.replace(emoji, token)
 
         # 2. Map ASCII emoticons
-        if self.map_emoticons:
+        if self.map_emoticons and self.emoticon_dict:
             for emo, token in self.emoticon_dict.items():
                 if emo in text:
                     text = text.replace(emo, token)
@@ -154,7 +91,7 @@ class IndonesianPreprocessor:
         if self.remove_mentions:
             text = re.sub(r"@\w+", "", text)
 
-        # 5. Hashtag removal or keep token
+        # 5. Hashtag normalization
         if self.remove_hashtags:
             text = re.sub(r"#\w+", "", text)
         else:
@@ -169,7 +106,7 @@ class IndonesianPreprocessor:
             text = re.sub(r"(.)\1{2,}", r"\1\1", text)
 
         # 8. Normalize slang
-        if self.normalize_slang:
+        if self.normalize_slang and self.slang_dict:
             tokens = text.split()
             tokens = [self.slang_dict.get(t, t) for t in tokens]
             text = " ".join(tokens)

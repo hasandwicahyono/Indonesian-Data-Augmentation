@@ -69,10 +69,7 @@ def generate_tpami_tsne_plots(
     Derived dynamically from real test set sentences and actual prediction outcomes
     stored in data/results/HoASA_evaluation_results_predictions.npz.
     """
-    try:
-        from src.data.dataset_manager import IndonesianDatasetsManager
-    except ImportError:
-        from DatasetsManager import IndonesianDatasetsManager
+    from src.data.dataset_manager import IndonesianDatasetsManager
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.decomposition import TruncatedSVD
     from sklearn.manifold import TSNE
@@ -174,10 +171,7 @@ def generate_tpami_margin_and_svd_plots(
     2. Normalized Singular Value Spectrum of class representation covariance matrices
        computed via real SVD on genuine corpus embeddings.
     """
-    try:
-        from src.data.dataset_manager import IndonesianDatasetsManager
-    except ImportError:
-        from DatasetsManager import IndonesianDatasetsManager
+    from src.data.dataset_manager import IndonesianDatasetsManager
     from sklearn.feature_extraction.text import TfidfVectorizer
 
     manager = IndonesianDatasetsManager()
@@ -278,10 +272,7 @@ def generate_tpami_sota_longtailed_table() -> pd.DataFrame:
     Dynamically loads real baseline and proposed evaluation metrics from data/results/*.xlsx
     and structured experimental records.
     """
-    try:
-        from src.benchmarks.table_generator import generate_tpami_comparisons_table
-    except ImportError:
-        from generate_dynamic_paper_tables import generate_tpami_comparisons_table
+    from src.benchmarks.table_generator import generate_tpami_comparisons_table
     df, _ = generate_tpami_comparisons_table(
         results_dir="data/results",
         paper_dir="paper",
@@ -507,10 +498,7 @@ def generate_tpami_5fold_cv_table(output_csv: str = "data/results/extended/tpami
     Dynamically loads real experimental trial results from JSON files,
     guaranteeing that all values are derived from actual experiments without hard-coding.
     """
-    try:
-        from src.benchmarks.table_generator import generate_tpami_5fold_table
-    except ImportError:
-        from generate_dynamic_paper_tables import generate_tpami_5fold_table
+    from src.benchmarks.table_generator import generate_tpami_5fold_table
     df, _ = generate_tpami_5fold_table(
         results_dir=os.path.dirname(output_csv),
         paper_dir="paper",
@@ -630,32 +618,6 @@ def generate_tpami_comparative_baselines_table() -> pd.DataFrame:
     print("\n[TPAMI Comparative Baselines Table: EDA & Back-Translation (Dynamically Derived)]")
     print(df.to_string(index=False))
     return df
-
-
-def compute_distinct_n(texts: List[str], n: int = 1) -> float:
-    """Computes Distinct-n metric: unique n-grams / total n-grams."""
-    total_ngrams = 0
-    unique_ngrams = set()
-    for text in texts:
-        tokens = str(text).lower().split()
-        if len(tokens) < n:
-            continue
-        for i in range(len(tokens) - n + 1):
-            unique_ngrams.add(tuple(tokens[i : i + n]))
-            total_ngrams += 1
-    return len(unique_ngrams) / float(total_ngrams) if total_ngrams > 0 else 0.0
-
-
-def compute_entropy(texts: List[str]) -> float:
-    """Computes Shannon Entropy of word distribution."""
-    words = []
-    for text in texts:
-        words.extend(str(text).lower().split())
-    if not words:
-        return 0.0
-    counts = Counter(words)
-    total = len(words)
-    return -sum((c / total) * math.log2(c / total) for c in counts.values())
 
 
 # =====================================================================
@@ -861,10 +823,7 @@ def generate_tpami_lexical_diversity_table(
     the actual corpus files (original dataset and augmented variants).
     Guarantees no hard-coded diversity metrics.
     """
-    try:
-        from src.data.dataset_manager import IndonesianDatasetsManager
-    except ImportError:
-        from DatasetsManager import IndonesianDatasetsManager
+    from src.data.dataset_manager import IndonesianDatasetsManager
 
     manager = IndonesianDatasetsManager()
     datasets_to_eval = [

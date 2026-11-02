@@ -56,78 +56,82 @@ The 4 datasets accommodate the exact experimental diversity of the original rese
 Indonesian-Data-Augmentation/
 ├── README.md                           # Documentation and usage guide
 ├── requirements.txt                    # Project dependencies
-├── IndonesianPreprocessor.py           # Indonesian text cleaning, elongation, and slang normalization
-├── ClassificationDataset.py            # PyTorch Dataset for IndoBERT tokenization & label mapping
-├── DatasetsManager.py                  # Dataset loader for SmSA, EmoT, HoASA, and MovieOpini
-├── SimilarityMeasures.py               # Euclidean, Cosine, Jaccard, and BLEU-1..4 metrics
-├── Augmenter.py                        # Core generator & similarity scoring engine
-├── run_generation.py                   # CLI: Phase 1 (Text Generation & Similarity scoring)
-├── run_augmentation_filter.py          # CLI: Phase 2 (Similarity threshold filtering & dataset export)
-├── run_classification_eval.py          # CLI: Phase 3 (IndoBERT fine-tuning & paired t-test evaluation)
-├── run_all_benchmarks.py               # CLI: Unified benchmark runner & visualizer for SmSA, MovieOpini, HoASA, EmoT
-├── notebooks/
-│   ├── SmSA_Indonesian_Augmentation_and_Classification.ipynb
-│   ├── EmoT_Indonesian_Augmentation_and_Classification.ipynb
-│   ├── HoASA_Indonesian_Augmentation_and_Classification.ipynb
-│   └── MovieOpini_Indonesian_Augmentation_and_Classification.ipynb
-└── data/
-    ├── raw/                            # Intermediate generated samples with similarity scores
-    ├── augmented/
-    │   ├── all_text/                   # Original + Generated text datasets (ECU, COS, JAC, BLEU)
-    │   └── new_text/                   # Generated text datasets (ECU, COS, JAC, BLEU)
-    └── results/                        # Final classification metrics, F1 comparisons, and paired t-tests
+├── run_all_benchmarks.py               # Master CLI: Unified benchmark runner, ablation suite & visualizer
+├── configs/                            # Modular YAML configuration files
+│   ├── datasets.yaml                   # Dataset hyperparameters, imbalance calibrations & training settings
+│   ├── models.yaml                     # Model registry for generative backbone candidates
+│   ├── preprocessor.yaml               # Slang dictionary, emoji sentiment mappings & emoticons
+│   └── benchmarks.yaml                 # Prompts, SOTA baselines & experimental configurations
+├── src/                                # Core modular Python package
+│   ├── data/                           # Data handling and preprocessing
+│   │   ├── preprocessor.py             # Text cleaning, slang normalization, emoji translation
+│   │   ├── dataset_manager.py          # Unified loader for SmSA, EmoT, HoASA, MovieOpini
+│   │   └── classification.py           # PyTorch Dataset for IndoBERT tokenization & label mapping
+│   ├── augmentation/                   # Augmentation algorithms & filtering
+│   │   ├── registry.py                 # Generative model registry
+│   │   ├── similarity.py               # Euclidean, Cosine, Jaccard, and BLEU-1..4 metrics
+│   │   ├── baselines.py                # EDA and backtranslation baseline augmenters
+│   │   ├── augmenter.py                # Core generative augmentation & similarity engine
+│   │   ├── filtering.py                # Threshold calculation, hallucination purge & dataset export
+│   │   └── generative_models.py        # Generative model comparison & benchmarking
+│   ├── modeling/                       # Model training and calibration
+│   │   ├── calibrator.py               # Imbalance calibrator, logit adjustment & loss functions
+│   │   ├── adversarial.py              # Fast Gradient Method (FGM) regularization
+│   │   └── evaluator.py                # IndoBERT classifier training and evaluation
+│   ├── benchmarks/                     # Benchmark suites and table generators
+│   │   ├── cross_validation.py         # 5-fold cross-validation with paired t-tests
+│   │   ├── table_generator.py          # Dynamic LaTeX tables generator for IEEE Access & TPAMI
+│   │   ├── tpami_suite.py              # TPAMI experimental suite (ECE, margins, t-SNE, etc.)
+│   │   └── extended_suite.py           # Extended benchmarks (diversity, ablations, baselines)
+│   └── utils/                          # Shared general-purpose utilities
+│       ├── config.py                   # Central YAML configuration loader
+│       ├── path_utils.py               # Standardized repository paths
+│       ├── metrics.py                  # Statistical metrics, Distinct-N, entropy
+│       ├── hardware.py                 # Hardware and execution environment detectors
+│       └── latex.py                    # LaTeX manuscript compilation utilities
+├── notebooks/                          # Interactive exploratory notebooks
+├── paper/                              # LaTeX manuscript, tables, and figures
+└── data/                               # Raw, augmented, and experimental results
 ```
 
 ---
 
-## 4. The 3-Phase Augmentation Workflow
+## 4. The Augmentation & Benchmark Workflow
 
-### Phase 1: Text Generation & Similarity Scoring
-Generate continuation sequences for dataset records using an Indonesian causal language model and compute embeddings:
-```bash
-# Display all candidate models in the registry (First-Gen 2020-2021 vs. Contemporary 2024)
-python run_generation.py --list_models
+### Configuration-Driven Architecture
+All hyperparameters, model registries, slang normalizations, and dataset specifications are externalized in `configs/*.yaml`:
+* `configs/datasets.yaml`: Learning rates, batch sizes, epochs, logit adjustment $\tau$, oversampling factors, label smoothing, and FGM $\epsilon$.
+* `configs/models.yaml`: First-Gen (2020-2021) and Contemporary Foundation (2024) causal language models.
+* `configs/preprocessor.yaml`: Indonesian slang mapping dictionary and sentiment emoji translations.
+* `configs/benchmarks.yaml`: Benchmark prompts, SOTA baseline parameters, and experimental configurations.
 
-# Run generation with First-Gen baseline (cahya/gpt2-small-indonesian-522M)
-python run_generation.py --dataset SmSA --gen_model gpt2-small --sample_limit 500
+### Running Benchmarks & Augmentations
+The unified runner `run_all_benchmarks.py` coordinates the complete end-to-end pipeline:
 
-# Run generation with Contemporary Foundation model (sail/Sailor-0.5B or Qwen/Qwen2.5-0.5B)
-python run_generation.py --dataset SmSA --gen_model sailor-0.5b --sample_limit 500
-```
-Outputs intermediate data with `ecu_similarity`, `cos_similarity`, `jacc_similarity`, and `bleu_sim_1` to `data/raw/`.
-
-### Phase 2: Similarity Threshold Filtering & Class Augmentation
-Calculate average metric thresholds and augment only under-represented minority classes:
-```bash
-python run_augmentation_filter.py \
-  --input_file data/raw/SmSA-Augmented-raw.csv \
-  --dataset_name SmSA \
-  --minority_classes negative neutral
-```
-Produces the 4 final augmented datasets:
-- `SmSA-Augmented-ECU-ALL-Text-Final.csv`
-- `SmSA-Augmented-COS-ALL-Text-Final.csv`
-- `SmSA-Augmented-JAC-ALL-Text-Final.csv`
-- `SmSA-Augmented-BLE-ALL-Text-Final.csv`
-
-### Phase 3: IndoBERT Classifier Fine-Tuning & Evaluation
-Train and evaluate `indobenchmark/indobert-base-p1` on baseline vs. all 4 similarity-filtered datasets:
-```bash
-python run_classification_eval.py
-```
-Outputs Accuracy, Macro-Precision, Macro-Recall, Macro-F1 improvement, and paired t-test results to `data/results/`.
-
-### Phase 4: Unified Benchmark Runner & Visualization Suite
-To run all investigations across **SmSA**, **MovieOpini**, **HoASA**, and **EmoT**, and generate publication-ready performance comparison plots and confusion matrices:
 ```bash
 # Run complete benchmark on all 4 datasets
 python run_all_benchmarks.py
 
-# Or run specific dataset(s)
-python run_all_benchmarks.py --datasets SmSA EmoT
+# Or run generation phase with a specific generative model
+python run_all_benchmarks.py --run_generation --gen_model sailor-0.5b
 
-# Or generate/update all visualization and confusion matrix plots instantly from existing results
+# Or run 5-fold cross-validation with statistical paired t-tests
+python run_all_benchmarks.py --run_cv
+
+# Or generate/update all figures, dynamic LaTeX tables, and compile manuscripts instantly
 python run_all_benchmarks.py --plot_only
+```
+
+You can also execute individual modular components directly:
+```bash
+# Benchmark candidate generative backbones
+python -m src.augmentation.generative_models
+
+# Run 5-fold cross validation suite
+python -m src.benchmarks.cross_validation
+
+# Generate dynamic LaTeX tables and compile IEEE Access & TPAMI manuscripts
+python -m src.benchmarks.table_generator
 ```
 Generated artifacts in `data/results/figures/`:
 * `{dataset}_metrics_comparison.png` & `.pdf`: 4-metric bar chart (Accuracy, Precision, Recall, Macro-F1) comparing Baseline vs. ECU vs. COS vs. JAC vs. BLEU.

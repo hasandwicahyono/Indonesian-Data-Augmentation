@@ -1,0 +1,128 @@
+# Dataset Configuration & Model Training Hyperparameters
+# Used across Indonesian Data Augmentation (SmSA, MovieOpini, HoASA, EmoT)
+
+datasets:
+  SmSA:
+    name: "SmSA"
+    domain: "Document Sentiment"
+    task: "Sentiment Analysis"
+    num_classes: 3
+    classes: ["negative", "neutral", "positive"]
+    model_name: "indobenchmark/indobert-base-p1"
+    max_len: 128
+    batch_size: 64
+    epochs: 50
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 5
+    early_stopping: true
+    use_preprocessing: true
+    use_class_weights: true
+    use_logit_adjustment: true
+    logit_adj_tau: 0.6
+    eval_logit_adj_tau: 0.3
+    target_oversample:
+      neutral: 2
+    label_smoothing: 0.05
+    use_fgm: true
+    fgm_epsilon: 0.5
+    minority_classes: ["neutral"]
+    best_aug_metric: "BLEU"
+    description: "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)"
+
+  MovieOpini:
+    name: "MovieOpini"
+    domain: "Film Review Sentiment"
+    task: "Sentiment Analysis"
+    num_classes: 2
+    classes: ["negative", "positive"]
+    model_name: "indolem/indobertweet-base-uncased"
+    max_len: 96
+    batch_size: 16
+    epochs: 25
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 3
+    early_stopping: true
+    use_preprocessing: true
+    use_class_weights: false
+    use_logit_adjustment: false
+    logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.0
+    target_oversample: null
+    label_smoothing: 0.08
+    use_fgm: true
+    fgm_epsilon: 1.0
+    minority_classes: ["negative"]
+    best_aug_metric: "BLEU"
+    description: "MovieOpini: Indonesian Movie Review Sentiment (2 balanced classes: positive, negative)"
+
+  HoASA:
+    name: "HoASA"
+    domain: "Aspect Hotel Sentiment"
+    task: "Aspect-Based Sentiment Analysis"
+    num_classes: 3
+    classes: ["neg", "neut", "pos"]
+    model_name: "indobenchmark/indobert-base-p1"
+    max_len: 128
+    batch_size: 64
+    epochs: 50
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 5
+    early_stopping: true
+    use_preprocessing: true
+    use_class_weights: false
+    use_logit_adjustment: true
+    logit_adj_tau: 0.8
+    eval_logit_adj_tau: 0.0
+    target_oversample:
+      neg: 8
+    label_smoothing: 0.05
+    use_fgm: true
+    fgm_epsilon: 1.0
+    minority_classes: ["neg", "pos"]
+    best_aug_metric: "COS"
+    description: "HoASA: Hotel Aspect Sentiment (3 extreme imbalanced classes: neg 1.3%, pos 10.1%, neut 88.6%)"
+
+  EmoT:
+    name: "EmoT"
+    domain: "Twitter Emotion Analysis"
+    task: "Emotion Classification"
+    num_classes: 5
+    classes: ["anger", "fear", "happy", "love", "sadness"]
+    model_name: "indolem/indobertweet-base-uncased"
+    max_len: 128
+    batch_size: 32
+    epochs: 40
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 4
+    early_stopping: true
+    use_preprocessing: true
+    use_class_weights: true
+    use_logit_adjustment: false
+    logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.0
+    target_oversample: null
+    label_smoothing: 0.08
+    use_fgm: true
+    fgm_epsilon: 1.0
+    minority_classes: ["fear", "love"]
+    best_aug_metric: "BLEU"
+    description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
+    run_ensemble: true
+    ensemble_models:
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.50
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.30
+      - model_name: "cahya/bert-base-indonesian-522M"
+        weight: 0.20
+    ensemble_configs:
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.50
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.30
+      - model_name: "cahya/bert-base-indonesian-522M"
+        weight: 0.20

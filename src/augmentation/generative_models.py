@@ -34,6 +34,7 @@ from sentence_transformers import SentenceTransformer
 from src.utils.path_utils import resolve_path, ensure_dir
 from src.utils.hardware import resolve_device
 from src.utils.metrics import compute_distinct_n, compute_entropy
+from src.utils.config import load_benchmark_config
 from src.augmentation.similarity import (
     cos_similarity,
     jaccard_similarity,
@@ -43,21 +44,14 @@ from src.augmentation.registry import GENERATIVE_MODELS_REGISTRY
 from src.data.preprocessor import IndonesianPreprocessor
 
 
-# Standard diverse Indonesian test prompts covering informal, review, and emotion domains
-BENCHMARK_PROMPTS = [
-    "Pelayanan di hotel ini sangat mengecewakan dan staf tidak ramah sama sekali",
-    "Kamar sangat bersih, pemandangan indah, dan sarapan pagi sangat lezat memuaskan",
-    "Film ini memiliki alur cerita yang sangat menarik dengan akting memukau",
-    "Saya merasa sangat takut dan cemas ketika mendengar kabar gempa bumi kemarin",
-    "Pengalaman berbelanja di aplikasi ini sungguh membahagiakan dan prosesnya cepat",
-    "Makanannya terasa hambar dan porsinya terlalu sedikit untuk harga yang mahal",
-    "Suasana kafe sangat nyaman dan tenang untuk bekerja maupun membaca buku",
-    "Saya sangat marah karena barang pesanan datang dalam keadaan rusak total",
-    "Pemandangan alam di tempat wisata ini luar biasa indah dan udaranya sejuk",
-    "Harga tiket bioskop sekarang cukup terjangkau dengan fasilitas yang nyaman",
-    "Koneksi internet sering terputus dan respon customer service sangat lambat",
-    "Sangat bersyukur bisa berkumpul bersama keluarga di hari libur yang menyenangkan",
-]
+def _get_default_prompts() -> List[str]:
+    try:
+        cfg = load_benchmark_config()
+        return cfg.get("generative_benchmark", {}).get("prompts", [])
+    except Exception:
+        return []
+
+BENCHMARK_PROMPTS = _get_default_prompts()
 
 
 def compute_distinct_ngrams(texts: List[str]) -> Tuple[float, float, float]:
@@ -263,3 +257,4 @@ def benchmark_candidate_generative_models(
 
     _export_latex_table(df, tex_path)
     return df
+

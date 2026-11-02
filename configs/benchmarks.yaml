@@ -1,0 +1,44 @@
+# Benchmark Parameters, SOTA Baselines, and Prompts
+
+generative_benchmark:
+  max_new_tokens: 32
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.2
+  no_repeat_ngram_size: 3
+  prompts:
+    - "Pelayanan di hotel ini sangat mengecewakan dan staf tidak ramah sama sekali"
+    - "Kamar sangat bersih, pemandangan indah, dan sarapan pagi sangat lezat memuaskan"
+    - "Film ini memiliki alur cerita yang sangat menarik dengan akting memukau"
+    - "Saya merasa sangat takut dan cemas ketika mendengar kabar gempa bumi kemarin"
+    - "Pengalaman berbelanja di aplikasi ini sungguh membahagiakan dan prosesnya cepat"
+    - "Makanannya terasa hambar dan porsinya terlalu sedikit untuk harga yang mahal"
+    - "Suasana kafe sangat nyaman dan tenang untuk bekerja maupun membaca buku"
+    - "Saya sangat marah karena barang pesanan datang dalam keadaan rusak total"
+    - "Pemandangan alam di tempat wisata ini luar biasa indah dan udaranya sejuk"
+    - "Harga tiket bioskop sekarang cukup terjangkau dengan fasilitas yang nyaman"
+    - "Koneksi internet sering terputus dan respon customer service sangat lambat"
+    - "Sangat bersyukur bisa berkumpul bersama keluarga di hari libur yang menyenangkan"
+
+sota_baselines:
+  focal_loss:
+    gamma: 2.0
+    alpha: 0.25
+  cb_loss:
+    beta: 0.999
+  ldam_drw:
+    max_m: 0.5
+    s: 30
+
+cross_validation:
+  n_splits: 5
+  seed: 42
+  default_epochs: 2
+
+paths:
+  results_dir: "data/results"
+  extended_results_dir: "data/results/extended"
+  figures_dir: "data/results/figures"
+  extended_figures_dir: "data/figures"
+  paper_dir: "paper"
+  augmented_dir: "data/augmented"
