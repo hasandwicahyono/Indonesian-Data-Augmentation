@@ -83,11 +83,40 @@ def load_mle_emoji_lexicon(
         return cfg.get("emoji_sentiment_dict", {})
 
 
+def load_colloquial_lexicon(csv_path: Optional[str] = None) -> Dict[str, str]:
+    """
+    Loads the Colloquial Indonesian Lexicon established by Salsabila et al. (2018)
+    [Proceedings of the 2018 International Conference on Asian Language Processing (IALP), pp. 226-229].
+    Reads data/slangs/colloquial-indonesian-lexicon.csv, normalizing colloquial Indonesian
+    slang, abbreviations, and informal word forms to standard formal Indonesian equivalents.
+    """
+    p = resolve_path(csv_path or os.path.join("data", "slangs", "colloquial-indonesian-lexicon.csv"))
+    if not os.path.exists(p):
+        cfg = load_preprocessor_config()
+        return cfg.get("slang_dict", {})
+    try:
+        import pandas as pd
+        df = pd.read_csv(p)
+        clean_df = df.dropna(subset=["slang", "formal"])
+        slang_map = dict(zip(
+            clean_df["slang"].astype(str).str.lower().str.strip(),
+            clean_df["formal"].astype(str).str.lower().str.strip()
+        ))
+        return slang_map
+    except Exception:
+        cfg = load_preprocessor_config()
+        return cfg.get("slang_dict", {})
+
+
 def _get_default_dicts():
     try:
         cfg = load_preprocessor_config()
         slang = cfg.get("slang_dict", {})
+        if not slang:
+            slang = load_colloquial_lexicon()
         emoji = cfg.get("emoji_sentiment_dict", {})
+        if not emoji:
+            emoji = load_mle_emoji_lexicon()
         emoticon = cfg.get("emoticon_dict", {})
         return slang, emoji, emoticon
     except Exception:
