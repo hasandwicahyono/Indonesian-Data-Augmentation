@@ -7,7 +7,7 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
-Database file #1: IDA.bib
+Database file #1: IDA_verified.bib
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
@@ -15,42 +15,42 @@ Database file #1: IDA.bib
 Done.
 You've used 49 entries,
             4087 wiz_defined-function locations,
-            1074 strings with 18590 characters,
-and the built_in function-call counts, 51195 in all, are:
-= -- 3907
-> -- 1428
-< -- 525
-+ -- 860
-- -- 293
-* -- 2500
-:= -- 6709
+            1075 strings with 19029 characters,
+and the built_in function-call counts, 50966 in all, are:
+= -- 3824
+> -- 1539
+< -- 488
++ -- 904
+- -- 323
+* -- 2483
+:= -- 6637
 add.period$ -- 98
 call.type$ -- 49
 change.case$ -- 48
-chr.to.int$ -- 1344
+chr.to.int$ -- 1248
 cite$ -- 49
-duplicate$ -- 3368
-empty$ -- 4112
-format.name$ -- 281
-if$ -- 12172
+duplicate$ -- 3387
+empty$ -- 4120
+format.name$ -- 317
+if$ -- 12131
 int.to.chr$ -- 0
 int.to.str$ -- 49
-missing$ -- 578
+missing$ -- 611
 newline$ -- 170
 num.names$ -- 49
-pop$ -- 1428
+pop$ -- 1544
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 3915
+skip$ -- 3900
 stack$ -- 0
-substring$ -- 3346
-swap$ -- 3004
-text.length$ -- 77
+substring$ -- 3132
+swap$ -- 2978
+text.length$ -- 72
 text.prefix$ -- 0
 top$ -- 5
 type$ -- 49
 warning$ -- 0
-while$ -- 238
+while$ -- 223
 width$ -- 51
-write$ -- 490
+write$ -- 485

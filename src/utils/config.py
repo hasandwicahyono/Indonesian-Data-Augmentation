@@ -84,3 +84,4 @@ def load_preprocessor_config() -> Dict[str, Dict[str, str]]:
 def load_benchmark_config() -> Dict[str, Any]:
     """Returns the benchmark settings and prompts from configs/benchmarks.yaml."""
     return load_config("benchmarks")
+

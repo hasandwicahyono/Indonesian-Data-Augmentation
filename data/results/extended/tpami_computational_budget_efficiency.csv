@@ -1,6 +1,6 @@
 Pipeline Stage,Component / Model,Hardware Platform,Throughput,Per-Sample Latency,Peak Memory,Algorithmic Complexity
-Phase 1: Generative Continuation,cahya/gpt2-small (117.8M),Apple Silicon MPS (arm64),94.1 tokens/sec,265.6 ms / seq,0.27 GB,$\mathcal{O}(B \cdot L \cdot D)$
-Phase 2: Semantic Metric Filtering,DistilUSE-Multilingual (134.7M),Apple Silicon MPS (arm64),229.9 seq/sec,4.35 ms / seq,0.22 GB,$\mathcal{O}(N \cdot D)$
-Phase 3: IndoBERT Fine-Tuning,IndoBERT-base-p1 (124.5M),Apple Silicon MPS (arm64),18.0 samples/sec,888.5 ms / batch,0.35 GB,$\mathcal{O}(E \cdot N \cdot L^2)$
-Phase 3: Inference Latency,IndoBERT-base-p1 (124.5M),Apple Silicon MPS (arm64),94.2 seq/sec,10.62 ms / seq,0.35 GB,$\mathcal{O}(L^2 \cdot D)$
-Phase 4: Adaptive Logit Calibrator (AIC),Analytical Closed-Form Estimator,Host CPU (arm64),Instantaneous (Closed-form),0.0068 ms total,< 10 MB,$\mathcal{O}(K)$
+Phase 1: Generative Continuation,cahya/gpt2-small (117.8M),Apple Silicon MPS (arm64),97.5 tokens/sec,256.5 ms / seq,0.65 GB,$\mathcal{O}(B \cdot L \cdot D)$
+Phase 2: Semantic Metric Filtering,DistilUSE-Multilingual (134.7M),Apple Silicon MPS (arm64),312.9 seq/sec,3.20 ms / seq,0.38 GB,$\mathcal{O}(N \cdot D)$
+Phase 3: IndoBERT Fine-Tuning,IndoBERT-base-p1 (124.5M),Apple Silicon MPS (arm64),20.8 samples/sec,767.7 ms / batch,0.44 GB,$\mathcal{O}(E \cdot N \cdot L^2)$
+Phase 3: Inference Latency,IndoBERT-base-p1 (124.5M),Apple Silicon MPS (arm64),98.1 seq/sec,10.19 ms / seq,0.44 GB,$\mathcal{O}(L^2 \cdot D)$
+Phase 4: Adaptive Logit Calibrator (AIC),Analytical Closed-Form Estimator,Host CPU (arm64),Instantaneous (Closed-form),0.0046 ms total,< 10 MB,$\mathcal{O}(K)$

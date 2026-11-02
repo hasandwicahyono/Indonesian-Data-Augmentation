@@ -126,3 +126,4 @@ models:
       temperature: 0.7
       do_sample: true
     description: "Leading Southeast Asian foundation model with high naturalness in colloquial and formal Indonesian."
+
