@@ -301,6 +301,11 @@ G.~I. Winata, A.~F. Aji, S.~Cahyawijaya, R.~Mahendra, F.~Koto, A.~Romadhony,
   Conference of the European Chapter of the Association for Computational
   Linguistics (EACL)}, 2023, pp. 815--834.
 
+\bibitem{godard2022multidimensional}
+R.~Godard and S.~Holtzman, ``The multidimensional lexicon of emojis: A new tool
+  to assess the emotional content of emojis,'' \emph{Frontiers in Psychology},
+  vol.~13, p. 921388, 2022.
+
 \bibitem{miyato2018virtual}
 T.~Miyato, S.~ichi Maeda, M.~Koyama, and S.~Ishii, ``Virtual adversarial
   training: A regularization method for supervised and semi-supervised

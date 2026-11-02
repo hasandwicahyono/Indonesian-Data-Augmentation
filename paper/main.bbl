@@ -90,6 +90,11 @@ B.~Ding, C.~Qin, L.~Liu, Y.~K. Chia, B.~Li, S.~Joty, and L.~Bing, ``Is {GPT-3}
   the Association for Computational Linguistics (Volume 1: Long Papers)}, 2023,
   pp. 11\,173--11\,195.
 
+\bibitem{godard2022multidimensional}
+R.~Godard and S.~Holtzman, ``The multidimensional lexicon of emojis: A new tool
+  to assess the emotional content of emojis,'' \emph{Frontiers in Psychology},
+  vol.~13, p. 921388, 2022.
+
 \bibitem{wei2019eda}
 J.~Wei and K.~Zou, ``{EDA}: Easy data augmentation techniques for boosting
   performance on text classification tasks,'' in \emph{Proceedings of the 2019

@@ -5,11 +5,82 @@ Handles social media text, reviews, casing, elongation, URLs, mentions, emojis, 
 Loads default vocabulary and mapping dictionaries dynamically from configs/preprocessor.yaml.
 """
 
+import os
 import re
 import string
 from typing import Optional, Dict
 
 from src.utils.config import load_preprocessor_config
+from src.utils.path_utils import resolve_path
+
+
+def load_mle_emoji_lexicon(
+    table1_path: Optional[str] = None,
+    table2_path: Optional[str] = None,
+) -> Dict[str, str]:
+    """
+    Constructs the Multidimensional Lexicon of Emojis (MLE) mapping
+    grounded in Godard & Holtzman (2022) [Frontiers in Psychology, 13:921388].
+    Reads Table 1.XLSX (emotional mean scores across 359 emojis) and
+    Table 2.XLSX (variance and standard error estimates) from data/emoji/,
+    categorizing each emoji into canonical Indonesian affective tokens:
+    _emosi_bahagia_, _emosi_sedih_, _emosi_marah_, _emosi_takut_, _emosi_cinta_.
+    """
+    p1 = resolve_path(table1_path or os.path.join("data", "emoji", "Table 1.XLSX"))
+    p2 = resolve_path(table2_path or os.path.join("data", "emoji", "Table 2.XLSX"))
+
+    if not os.path.exists(p1) or not os.path.exists(p2):
+        # Fallback to preprocessor configuration
+        cfg = load_preprocessor_config()
+        return cfg.get("emoji_sentiment_dict", {})
+
+    try:
+        import pandas as pd
+
+        df1 = pd.read_excel(p1)
+        df2 = pd.read_excel(p2)
+        merged = pd.merge(df1, df2, on=["id", "name", "emoji"])
+
+        def _map_row(row):
+            name = str(row["name"]).lower()
+            if re.search(r"\b(heart|hearts|kiss|kisses|kissing|love|cupid|couple|hug|hugging)\b", name):
+                if "broken heart" not in name:
+                    return " _emosi_cinta_ "
+            if "tears of joy" in name or "rolling on the floor laughing" in name:
+                return " _emosi_bahagia_ "
+            if re.search(r"\b(crying|sob|sad|disappointed|frown|frowning|pensive|broken heart|wilted|droplet|sweat)\b", name):
+                if "grinning face with sweat" not in name and "sweat droplets" not in name:
+                    return " _emosi_sedih_ "
+            if re.search(r"\b(rage|angry|pouting|swearing|vomit|vomiting|nauseat|nauseated|middle finger|devil|horns|skull|poo|unamused)\b", name):
+                return " _emosi_marah_ "
+            if re.search(r"\b(scream|screaming|fear|fearful|anxious|cold|anguish|anguished|grimac|grimacing|plead|pleading)\b", name):
+                return " _emosi_takut_ "
+
+            a = row["anger"]
+            d = row["disgust"]
+            f = row["fear"]
+            s = row["sadness"]
+            pos = row["positive"]
+            neg = row["negative"]
+
+            if neg > pos:
+                max_neg = max(a, d, f, s)
+                if max_neg in (a, d):
+                    return " _emosi_marah_ "
+                elif max_neg == s:
+                    return " _emosi_sedih_ "
+                elif max_neg == f:
+                    return " _emosi_takut_ "
+
+            return " _emosi_bahagia_ "
+
+        mle_dict = {}
+        for _, r in merged.iterrows():
+            mle_dict[str(r["emoji"])] = _map_row(r)
+        return mle_dict
+    except Exception:
+        cfg = load_preprocessor_config()
+        return cfg.get("emoji_sentiment_dict", {})
 
 
 def _get_default_dicts():

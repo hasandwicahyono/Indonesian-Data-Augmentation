@@ -1,161 +1,441 @@
-# Preprocessor Dictionaries for Indonesian NLP
-# Includes Slang Normalization, Sentiment Emoji Mapping, and ASCII Emoticons
-
 slang_dict:
-  yg: "yang"
-  dgn: "dengan"
-  tp: "tapi"
-  bgt: "banget"
-  gk: "tidak"
-  gak: "tidak"
-  ga: "tidak"
-  ngga: "tidak"
-  nggak: "tidak"
-  tdk: "tidak"
-  sdh: "sudah"
-  udh: "sudah"
-  udah: "sudah"
-  blm: "belum"
-  krn: "karena"
-  bisaa: "bisa"
-  jd: "jadi"
-  jgn: "jangan"
-  bkn: "bukan"
-  klo: "kalau"
-  kalo: "kalau"
-  kl: "kalau"
-  sm: "sama"
-  org: "orang"
-  sy: "saya"
-  gw: "saya"
-  gue: "saya"
-  lu: "kamu"
-  lo: "kamu"
-  km: "kamu"
-  bgtu: "begitu"
-  trs: "terus"
-  skrg: "sekarang"
-  lg: "lagi"
-  dr: "dari"
-  pd: "pada"
-  utk: "untuk"
-  dlm: "dalam"
-  aja: "saja"
-  aj: "saja"
-  bener: "benar"
-  bener2: "benar-benar"
-  banget2: "sangat"
-  bgtt: "banget"
-  mantul: "mantap betul"
-  gokil: "gila keren"
-  parah: "sangat buruk"
-
+  yg: yang
+  dgn: dengan
+  tp: tapi
+  bgt: banget
+  gk: tidak
+  gak: tidak
+  ga: tidak
+  ngga: tidak
+  nggak: tidak
+  tdk: tidak
+  sdh: sudah
+  udh: sudah
+  udah: sudah
+  blm: belum
+  krn: karena
+  bisaa: bisa
+  jd: jadi
+  jgn: jangan
+  bkn: bukan
+  klo: kalau
+  kalo: kalau
+  kl: kalau
+  sm: sama
+  org: orang
+  sy: saya
+  gw: saya
+  gue: saya
+  lu: kamu
+  lo: kamu
+  km: kamu
+  bgtu: begitu
+  trs: terus
+  skrg: sekarang
+  lg: lagi
+  dr: dari
+  pd: pada
+  utk: untuk
+  dlm: dalam
+  aja: saja
+  aj: saja
+  bener: benar
+  bener2: benar-benar
+  banget2: sangat
+  bgtt: banget
+  mantul: mantap betul
+  gokil: gila keren
+  parah: sangat buruk
 emoji_sentiment_dict:
-  # Anger / Marah
-  "😡": " _emosi_marah_ "
-  "😠": " _emosi_marah_ "
-  "🤬": " _emosi_marah_ "
-  "👿": " _emosi_marah_ "
-  "💢": " _emosi_marah_ "
-  "😤": " _emosi_marah_ "
-  "🖕": " _emosi_marah_ "
-  "😾": " _emosi_marah_ "
-
-  # Sadness / Sedih
-  "😭": " _emosi_sedih_ "
-  "😢": " _emosi_sedih_ "
-  "😞": " _emosi_sedih_ "
-  "😔": " _emosi_sedih_ "
-  "💔": " _emosi_sedih_ "
-  "😿": " _emosi_sedih_ "
-  "🥺": " _emosi_sedih_ "
-  "😥": " _emosi_sedih_ "
-  "😓": " _emosi_sedih_ "
-  "😪": " _emosi_sedih_ "
-  "🥀": " _emosi_sedih_ "
-
-  # Fear / Takut / Cemas
-  "😱": " _emosi_takut_ "
-  "😨": " _emosi_takut_ "
-  "😰": " _emosi_takut_ "
-  "😧": " _emosi_takut_ "
-  "🥶": " _emosi_takut_ "
-  "😖": " _emosi_takut_ "
-  "😬": " _emosi_takut_ "
-  "😳": " _emosi_takut_ "
-
-  # Love / Cinta / Sayang
-  "❤️": " _emosi_cinta_ "
-  "💖": " _emosi_cinta_ "
-  "💕": " _emosi_cinta_ "
-  "💓": " _emosi_cinta_ "
-  "🥰": " _emosi_cinta_ "
-  "😍": " _emosi_cinta_ "
-  "😚": " _emosi_cinta_ "
-  "😻": " _emosi_cinta_ "
-  "😘": " _emosi_cinta_ "
-  "💗": " _emosi_cinta_ "
-  "💘": " _emosi_cinta_ "
-  "💙": " _emosi_cinta_ "
-  "💜": " _emosi_cinta_ "
-  "💛": " _emosi_cinta_ "
-  "💚": " _emosi_cinta_ "
-  "🤍": " _emosi_cinta_ "
-
-  # Happy / Bahagia / Senang
-  "🤣": " _emosi_bahagia_ "
-  "😂": " _emosi_bahagia_ "
-  "😄": " _emosi_bahagia_ "
-  "😆": " _emosi_bahagia_ "
-  "😊": " _emosi_bahagia_ "
-  "🥳": " _emosi_bahagia_ "
-  "😁": " _emosi_bahagia_ "
-  "😹": " _emosi_bahagia_ "
-  "😃": " _emosi_bahagia_ "
-  "🙂": " _emosi_bahagia_ "
-  "😀": " _emosi_bahagia_ "
-  "✨": " _emosi_bahagia_ "
-  "🎉": " _emosi_bahagia_ "
-  "👏": " _emosi_bahagia_ "
-  "👍": " _emosi_bahagia_ "
-
+  😀: ' _emosi_bahagia_ '
+  😃: ' _emosi_bahagia_ '
+  😄: ' _emosi_bahagia_ '
+  😁: ' _emosi_bahagia_ '
+  😆: ' _emosi_bahagia_ '
+  😅: ' _emosi_bahagia_ '
+  🤣: ' _emosi_bahagia_ '
+  😂: ' _emosi_bahagia_ '
+  🙂: ' _emosi_bahagia_ '
+  🙃: ' _emosi_bahagia_ '
+  😉: ' _emosi_bahagia_ '
+  😊: ' _emosi_bahagia_ '
+  😇: ' _emosi_bahagia_ '
+  🥰: ' _emosi_cinta_ '
+  😍: ' _emosi_cinta_ '
+  🤩: ' _emosi_bahagia_ '
+  😘: ' _emosi_cinta_ '
+  😗: ' _emosi_cinta_ '
+  ☺️: ' _emosi_bahagia_ '
+  😚: ' _emosi_cinta_ '
+  😙: ' _emosi_cinta_ '
+  😋: ' _emosi_bahagia_ '
+  😛: ' _emosi_bahagia_ '
+  😜: ' _emosi_bahagia_ '
+  🤪: ' _emosi_bahagia_ '
+  😝: ' _emosi_bahagia_ '
+  🤑: ' _emosi_bahagia_ '
+  🤗: ' _emosi_bahagia_ '
+  🤭: ' _emosi_bahagia_ '
+  🤫: ' _emosi_bahagia_ '
+  🤔: ' _emosi_bahagia_ '
+  🤐: ' _emosi_bahagia_ '
+  🤨: ' _emosi_bahagia_ '
+  😐: ' _emosi_bahagia_ '
+  😑: ' _emosi_marah_ '
+  😶: ' _emosi_bahagia_ '
+  😏: ' _emosi_bahagia_ '
+  😒: ' _emosi_marah_ '
+  🙄: ' _emosi_bahagia_ '
+  😬: ' _emosi_takut_ '
+  😌: ' _emosi_bahagia_ '
+  😔: ' _emosi_sedih_ '
+  😪: ' _emosi_bahagia_ '
+  🤤: ' _emosi_bahagia_ '
+  😴: ' _emosi_bahagia_ '
+  😷: ' _emosi_bahagia_ '
+  🤒: ' _emosi_sedih_ '
+  🤕: ' _emosi_bahagia_ '
+  🤢: ' _emosi_marah_ '
+  🤮: ' _emosi_marah_ '
+  🤧: ' _emosi_bahagia_ '
+  🥵: ' _emosi_bahagia_ '
+  🥶: ' _emosi_takut_ '
+  🥴: ' _emosi_bahagia_ '
+  😵: ' _emosi_bahagia_ '
+  🤯: ' _emosi_bahagia_ '
+  🤠: ' _emosi_bahagia_ '
+  🥳: ' _emosi_bahagia_ '
+  😎: ' _emosi_bahagia_ '
+  🤓: ' _emosi_bahagia_ '
+  🧐: ' _emosi_bahagia_ '
+  😕: ' _emosi_bahagia_ '
+  😟: ' _emosi_sedih_ '
+  🙁: ' _emosi_sedih_ '
+  ☹: ' _emosi_sedih_ '
+  😮: ' _emosi_bahagia_ '
+  😯: ' _emosi_bahagia_ '
+  😲: ' _emosi_bahagia_ '
+  😳: ' _emosi_bahagia_ '
+  🥺: ' _emosi_takut_ '
+  😨: ' _emosi_takut_ '
+  😰: ' _emosi_sedih_ '
+  😥: ' _emosi_sedih_ '
+  😢: ' _emosi_sedih_ '
+  😭: ' _emosi_sedih_ '
+  😱: ' _emosi_takut_ '
+  😖: ' _emosi_bahagia_ '
+  😣: ' _emosi_bahagia_ '
+  😞: ' _emosi_sedih_ '
+  😓: ' _emosi_sedih_ '
+  😩: ' _emosi_bahagia_ '
+  😫: ' _emosi_bahagia_ '
+  🥱: ' _emosi_marah_ '
+  😤: ' _emosi_bahagia_ '
+  😡: ' _emosi_marah_ '
+  😠: ' _emosi_marah_ '
+  🤬: ' _emosi_marah_ '
+  😈: ' _emosi_marah_ '
+  👿: ' _emosi_marah_ '
+  💀: ' _emosi_marah_ '
+  ☠: ' _emosi_marah_ '
+  💩: ' _emosi_marah_ '
+  🤡: ' _emosi_bahagia_ '
+  👹: ' _emosi_bahagia_ '
+  👻: ' _emosi_bahagia_ '
+  👽: ' _emosi_bahagia_ '
+  🤖: ' _emosi_bahagia_ '
+  😺: ' _emosi_bahagia_ '
+  😹: ' _emosi_bahagia_ '
+  😻: ' _emosi_cinta_ '
+  😼: ' _emosi_bahagia_ '
+  🙀: ' _emosi_bahagia_ '
+  😿: ' _emosi_sedih_ '
+  🙈: ' _emosi_bahagia_ '
+  🙊: ' _emosi_bahagia_ '
+  💋: ' _emosi_cinta_ '
+  💌: ' _emosi_cinta_ '
+  💘: ' _emosi_cinta_ '
+  💝: ' _emosi_cinta_ '
+  💖: ' _emosi_cinta_ '
+  💗: ' _emosi_cinta_ '
+  💓: ' _emosi_cinta_ '
+  💞: ' _emosi_cinta_ '
+  💕: ' _emosi_cinta_ '
+  ❣: ' _emosi_cinta_ '
+  💔: ' _emosi_sedih_ '
+  ❤: ' _emosi_cinta_ '
+  🧡: ' _emosi_cinta_ '
+  💛: ' _emosi_cinta_ '
+  💚: ' _emosi_cinta_ '
+  💙: ' _emosi_cinta_ '
+  💜: ' _emosi_cinta_ '
+  🤎: ' _emosi_cinta_ '
+  🖤: ' _emosi_cinta_ '
+  🤍: ' _emosi_cinta_ '
+  💯: ' _emosi_bahagia_ '
+  💥: ' _emosi_bahagia_ '
+  💫: ' _emosi_bahagia_ '
+  💦: ' _emosi_bahagia_ '
+  💨: ' _emosi_bahagia_ '
+  💣: ' _emosi_bahagia_ '
+  💭: ' _emosi_bahagia_ '
+  💤: ' _emosi_bahagia_ '
+  👋: ' _emosi_bahagia_ '
+  🖐: ' _emosi_bahagia_ '
+  ✋: ' _emosi_bahagia_ '
+  👌: ' _emosi_bahagia_ '
+  ✌: ' _emosi_bahagia_ '
+  🤞: ' _emosi_bahagia_ '
+  🤟: ' _emosi_cinta_ '
+  🤘: ' _emosi_marah_ '
+  🤙: ' _emosi_bahagia_ '
+  👈: ' _emosi_bahagia_ '
+  👉: ' _emosi_bahagia_ '
+  👆: ' _emosi_bahagia_ '
+  🖕: ' _emosi_marah_ '
+  👇: ' _emosi_bahagia_ '
+  ☝: ' _emosi_bahagia_ '
+  👍: ' _emosi_bahagia_ '
+  👎: ' _emosi_sedih_ '
+  ✊: ' _emosi_bahagia_ '
+  👊: ' _emosi_bahagia_ '
+  🤜: ' _emosi_bahagia_ '
+  👏: ' _emosi_bahagia_ '
+  🙌: ' _emosi_bahagia_ '
+  🤲: ' _emosi_bahagia_ '
+  🤝: ' _emosi_bahagia_ '
+  🙏: ' _emosi_bahagia_ '
+  ✍: ' _emosi_bahagia_ '
+  💅: ' _emosi_bahagia_ '
+  💪: ' _emosi_bahagia_ '
+  🧠: ' _emosi_bahagia_ '
+  👀: ' _emosi_bahagia_ '
+  👁: ' _emosi_bahagia_ '
+  👅: ' _emosi_bahagia_ '
+  👄: ' _emosi_bahagia_ '
+  👶: ' _emosi_bahagia_ '
+  👨: ' _emosi_bahagia_ '
+  👩: ' _emosi_bahagia_ '
+  🙅: ' _emosi_bahagia_ '
+  🙆: ' _emosi_bahagia_ '
+  💁: ' _emosi_bahagia_ '
+  🙋: ' _emosi_bahagia_ '
+  🙋‍♀️: ' _emosi_bahagia_ '
+  🙇: ' _emosi_bahagia_ '
+  🤦: ' _emosi_marah_ '
+  🤦‍♂️: ' _emosi_bahagia_ '
+  🤦‍♀️: ' _emosi_bahagia_ '
+  🤷: ' _emosi_bahagia_ '
+  🤷‍♂️: ' _emosi_bahagia_ '
+  🤷‍♀️: ' _emosi_bahagia_ '
+  👸: ' _emosi_bahagia_ '
+  🧚: ' _emosi_bahagia_ '
+  💆: ' _emosi_bahagia_ '
+  🏃: ' _emosi_bahagia_ '
+  🏃‍♀️: ' _emosi_bahagia_ '
+  💃: ' _emosi_bahagia_ '
+  🕺: ' _emosi_bahagia_ '
+  🤸: ' _emosi_bahagia_ '
+  🧘: ' _emosi_bahagia_ '
+  🗣: ' _emosi_bahagia_ '
+  🦍: ' _emosi_bahagia_ '
+  🐶: ' _emosi_bahagia_ '
+  🐕: ' _emosi_bahagia_ '
+  🐺: ' _emosi_bahagia_ '
+  🐱: ' _emosi_bahagia_ '
+  🐈: ' _emosi_bahagia_ '
+  🦁: ' _emosi_bahagia_ '
+  🐯: ' _emosi_bahagia_ '
+  🐐: ' _emosi_bahagia_ '
+  🐰: ' _emosi_bahagia_ '
+  🐻: ' _emosi_bahagia_ '
+  🐾: ' _emosi_bahagia_ '
+  🕊: ' _emosi_bahagia_ '
+  🦅: ' _emosi_bahagia_ '
+  🦉: ' _emosi_bahagia_ '
+  🐸: ' _emosi_bahagia_ '
+  🐍: ' _emosi_bahagia_ '
+  🦋: ' _emosi_bahagia_ '
+  🐝: ' _emosi_bahagia_ '
+  💐: ' _emosi_bahagia_ '
+  🌸: ' _emosi_bahagia_ '
+  🌹: ' _emosi_bahagia_ '
+  🥀: ' _emosi_sedih_ '
+  🌺: ' _emosi_bahagia_ '
+  🌻: ' _emosi_bahagia_ '
+  🌼: ' _emosi_bahagia_ '
+  🌷: ' _emosi_bahagia_ '
+  🌱: ' _emosi_bahagia_ '
+  🌲: ' _emosi_bahagia_ '
+  🌳: ' _emosi_bahagia_ '
+  🌴: ' _emosi_bahagia_ '
+  🌿: ' _emosi_bahagia_ '
+  ☘: ' _emosi_bahagia_ '
+  🍀: ' _emosi_bahagia_ '
+  🍃: ' _emosi_bahagia_ '
+  🍊: ' _emosi_bahagia_ '
+  🍎: ' _emosi_bahagia_ '
+  🍑: ' _emosi_bahagia_ '
+  🍒: ' _emosi_bahagia_ '
+  🍓: ' _emosi_bahagia_ '
+  🍆: ' _emosi_bahagia_ '
+  🍄: ' _emosi_bahagia_ '
+  🍕: ' _emosi_bahagia_ '
+  🍳: ' _emosi_bahagia_ '
+  🍿: ' _emosi_bahagia_ '
+  🍪: ' _emosi_bahagia_ '
+  🎂: ' _emosi_bahagia_ '
+  🍰: ' _emosi_bahagia_ '
+  ☕: ' _emosi_bahagia_ '
+  🍾: ' _emosi_bahagia_ '
+  🍷: ' _emosi_bahagia_ '
+  🍺: ' _emosi_bahagia_ '
+  🍻: ' _emosi_bahagia_ '
+  🥂: ' _emosi_bahagia_ '
+  🔪: ' _emosi_bahagia_ '
+  🌍: ' _emosi_bahagia_ '
+  🌎: ' _emosi_bahagia_ '
+  🌏: ' _emosi_bahagia_ '
+  🌐: ' _emosi_bahagia_ '
+  🏠: ' _emosi_bahagia_ '
+  🏡: ' _emosi_bahagia_ '
+  🚗: ' _emosi_bahagia_ '
+  🚨: ' _emosi_bahagia_ '
+  ✈: ' _emosi_bahagia_ '
+  🚀: ' _emosi_bahagia_ '
+  ⏰: ' _emosi_bahagia_ '
+  🌙: ' _emosi_bahagia_ '
+  🌚: ' _emosi_bahagia_ '
+  ☀: ' _emosi_bahagia_ '
+  🌝: ' _emosi_bahagia_ '
+  🌞: ' _emosi_bahagia_ '
+  ⭐: ' _emosi_bahagia_ '
+  🌟: ' _emosi_bahagia_ '
+  🌌: ' _emosi_bahagia_ '
+  ☁: ' _emosi_bahagia_ '
+  🌈: ' _emosi_bahagia_ '
+  ⚡: ' _emosi_bahagia_ '
+  ❄: ' _emosi_bahagia_ '
+  🔥: ' _emosi_bahagia_ '
+  💧: ' _emosi_sedih_ '
+  🌊: ' _emosi_bahagia_ '
+  ✨: ' _emosi_bahagia_ '
+  🎈: ' _emosi_bahagia_ '
+  🎉: ' _emosi_bahagia_ '
+  🎊: ' _emosi_bahagia_ '
+  🎀: ' _emosi_bahagia_ '
+  🎁: ' _emosi_bahagia_ '
+  🏆: ' _emosi_bahagia_ '
+  🥇: ' _emosi_bahagia_ '
+  ⚽: ' _emosi_bahagia_ '
+  ⚾: ' _emosi_bahagia_ '
+  🏀: ' _emosi_bahagia_ '
+  🏈: ' _emosi_bahagia_ '
+  🥊: ' _emosi_bahagia_ '
+  🎯: ' _emosi_bahagia_ '
+  🔮: ' _emosi_bahagia_ '
+  🎮: ' _emosi_bahagia_ '
+  ♥: ' _emosi_cinta_ '
+  🎨: ' _emosi_bahagia_ '
+  🛍: ' _emosi_bahagia_ '
+  👑: ' _emosi_bahagia_ '
+  💍: ' _emosi_bahagia_ '
+  💎: ' _emosi_bahagia_ '
+  🔊: ' _emosi_bahagia_ '
+  📣: ' _emosi_bahagia_ '
+  🎼: ' _emosi_bahagia_ '
+  🎵: ' _emosi_bahagia_ '
+  🎶: ' _emosi_bahagia_ '
+  🎙: ' _emosi_bahagia_ '
+  🎤: ' _emosi_bahagia_ '
+  🎧: ' _emosi_bahagia_ '
+  📻: ' _emosi_bahagia_ '
+  🎸: ' _emosi_bahagia_ '
+  📱: ' _emosi_bahagia_ '
+  📲: ' _emosi_bahagia_ '
+  ☎: ' _emosi_bahagia_ '
+  📞: ' _emosi_bahagia_ '
+  💻: ' _emosi_bahagia_ '
+  🎥: ' _emosi_bahagia_ '
+  🎬: ' _emosi_bahagia_ '
+  📺: ' _emosi_bahagia_ '
+  📷: ' _emosi_bahagia_ '
+  📸: ' _emosi_bahagia_ '
+  🕯: ' _emosi_bahagia_ '
+  💡: ' _emosi_bahagia_ '
+  📖: ' _emosi_bahagia_ '
+  📚: ' _emosi_bahagia_ '
+  📰: ' _emosi_bahagia_ '
+  💰: ' _emosi_bahagia_ '
+  💵: ' _emosi_bahagia_ '
+  💸: ' _emosi_bahagia_ '
+  📝: ' _emosi_bahagia_ '
+  📈: ' _emosi_bahagia_ '
+  📌: ' _emosi_bahagia_ '
+  📍: ' _emosi_bahagia_ '
+  🔑: ' _emosi_bahagia_ '
+  ⚔: ' _emosi_bahagia_ '
+  🔫: ' _emosi_bahagia_ '
+  ⚖: ' _emosi_bahagia_ '
+  💉: ' _emosi_bahagia_ '
+  ⚠: ' _emosi_bahagia_ '
+  🚫: ' _emosi_bahagia_ '
+  ⬆: ' _emosi_bahagia_ '
+  ➡: ' _emosi_bahagia_ '
+  ⬇: ' _emosi_bahagia_ '
+  ⤵: ' _emosi_bahagia_ '
+  ✝: ' _emosi_bahagia_ '
+  ▶: ' _emosi_bahagia_ '
+  ⭕: ' _emosi_bahagia_ '
+  ✅: ' _emosi_bahagia_ '
+  ✔: ' _emosi_bahagia_ '
+  ❌: ' _emosi_bahagia_ '
+  ‼: ' _emosi_bahagia_ '
+  ⁉: ' _emosi_bahagia_ '
+  ❓: ' _emosi_bahagia_ '
+  ❗: ' _emosi_bahagia_ '
+  ©: ' _emosi_bahagia_ '
+  ®: ' _emosi_bahagia_ '
+  ™: ' _emosi_bahagia_ '
+  '*️⃣': ' _emosi_bahagia_ '
+  🆚: ' _emosi_bahagia_ '
+  🔴: ' _emosi_bahagia_ '
+  🔵: ' _emosi_bahagia_ '
+  ⚫: ' _emosi_bahagia_ '
+  ⚪: ' _emosi_bahagia_ '
+  🏁: ' _emosi_bahagia_ '
+  🏳️‍🌈: ' _emosi_bahagia_ '
+  💢: ' _emosi_marah_ '
+  😾: ' _emosi_marah_ '
+  😧: ' _emosi_takut_ '
+  ❤️: ' _emosi_cinta_ '
 emoticon_dict:
-  # Happy / Bahagia
-  ":)": " _emosi_bahagia_ "
-  ":-)": " _emosi_bahagia_ "
-  ":D": " _emosi_bahagia_ "
-  ":-D": " _emosi_bahagia_ "
-  "xD": " _emosi_bahagia_ "
-  "XD": " _emosi_bahagia_ "
-  "xd": " _emosi_bahagia_ "
-  "^^": " _emosi_bahagia_ "
-  "^_^": " _emosi_bahagia_ "
-
-  # Sadness / Sedih
-  ":(": " _emosi_sedih_ "
-  ":-(": " _emosi_sedih_ "
-  ":'(": " _emosi_sedih_ "
-  ":'-(": " _emosi_sedih_ "
-  "T_T": " _emosi_sedih_ "
-  "T.T": " _emosi_sedih_ "
-  "T-T": " _emosi_sedih_ "
-  ";-;": " _emosi_sedih_ "
-  ":<": " _emosi_sedih_ "
-  "</3": " _emosi_sedih_ "
-
-  # Fear / Takut
-  ":O": " _emosi_takut_ "
-  ":-O": " _emosi_takut_ "
-  ":o": " _emosi_takut_ "
-  ":-o": " _emosi_takut_ "
-  ">_<": " _emosi_takut_ "
-
-  # Anger / Marah
-  ">:[": " _emosi_marah_ "
-  ">:(": " _emosi_marah_ "
-  ":@": " _emosi_marah_ "
-
-  # Love / Cinta
-  "<3": " _emosi_cinta_ "
-  ":*": " _emosi_cinta_ "
-
+  :): ' _emosi_bahagia_ '
+  :-): ' _emosi_bahagia_ '
+  :D: ' _emosi_bahagia_ '
+  :-D: ' _emosi_bahagia_ '
+  xD: ' _emosi_bahagia_ '
+  XD: ' _emosi_bahagia_ '
+  xd: ' _emosi_bahagia_ '
+  ^^: ' _emosi_bahagia_ '
+  ^_^: ' _emosi_bahagia_ '
+  :(: ' _emosi_sedih_ '
+  :-(: ' _emosi_sedih_ '
+  :'(: ' _emosi_sedih_ '
+  :'-(: ' _emosi_sedih_ '
+  T_T: ' _emosi_sedih_ '
+  T.T: ' _emosi_sedih_ '
+  T-T: ' _emosi_sedih_ '
+  ;-;: ' _emosi_sedih_ '
+  :<: ' _emosi_sedih_ '
+  </3: ' _emosi_sedih_ '
+  :O: ' _emosi_takut_ '
+  :-O: ' _emosi_takut_ '
+  :o: ' _emosi_takut_ '
+  :-o: ' _emosi_takut_ '
+  '>_<': ' _emosi_takut_ '
+  '>:[': ' _emosi_marah_ '
+  '>:(': ' _emosi_marah_ '
+  :@: ' _emosi_marah_ '
+  <3: ' _emosi_cinta_ '
+  :*: ' _emosi_cinta_ '
