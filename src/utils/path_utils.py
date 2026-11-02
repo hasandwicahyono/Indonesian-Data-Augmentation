@@ -25,17 +25,41 @@ def get_project_root() -> str:
 
 def resolve_path(path: str) -> str:
     """
-    Resolves relative paths gracefully across execution directories.
-    Checks inside PROJECT_ROOT first, then cwd, then absolute.
+    Resolves relative paths gracefully across execution directories (repo root, notebooks/, subdirectories).
+    Checks inside PROJECT_ROOT first, normalizes leading '../' or './', then checks cwd, then absolute.
     """
+    if not path:
+        return PROJECT_ROOT
     if os.path.isabs(path):
-        return path
-    p_root = os.path.join(PROJECT_ROOT, path)
-    if os.path.exists(p_root):
-        return os.path.abspath(p_root)
+        return os.path.abspath(path)
+
+    # 1. Direct join with PROJECT_ROOT
+    cand1 = os.path.abspath(os.path.join(PROJECT_ROOT, path))
+    if os.path.exists(cand1):
+        return cand1
+
+    # 2. Strip leading '../' or './' if executed from a subfolder like notebooks/
+    clean = path
+    while clean.startswith("../") or clean.startswith("./"):
+        if clean.startswith("../"):
+            clean = clean[3:]
+        elif clean.startswith("./"):
+            clean = clean[2:]
+
+    cand_clean = os.path.abspath(os.path.join(PROJECT_ROOT, clean))
+    if os.path.exists(cand_clean):
+        return cand_clean
+
+    # 3. Check cwd
     if os.path.exists(path):
         return os.path.abspath(path)
-    return p_root
+
+    # 4. Target path for write operations: if points to standard project directories, anchor to PROJECT_ROOT
+    first_part = clean.split(os.sep)[0]
+    if first_part in {"data", "configs", "notebooks", "paper", "src", "results", "figures"}:
+        return cand_clean
+
+    return cand1
 
 
 def ensure_dir(dir_path: str) -> str:
