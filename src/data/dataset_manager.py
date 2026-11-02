@@ -127,12 +127,39 @@ class IndonesianDatasetsManager:
         labels = sorted(list(clean_df["label"].unique()))
         return CustomDataset("MovieOpini", train_df, test_df, labels, val=val_df)
 
-    def load_all_datasets(self) -> Dict[str, CustomDataset]:
-        """Loads and returns all 4 comparable Indonesian datasets."""
-        return {
+    def load_nusax_indonesian(self, binary_only: bool = False) -> CustomDataset:
+        """NusaX Indonesian Sentiment (Winata et al., 2023):
+        Total 1,000 samples (500 train, 100 valid, 400 test) across positive, neutral, negative.
+        If binary_only=True, filters to positive and negative (761 samples, IR ~ 1.01x),
+        serving as a standardized direct equivalent to MovieOpini.
+        """
+        nusax_dir = os.path.join(self.data_dir, "nusax_sentiment_indonesian")
+        train_raw = pd.read_csv(os.path.join(nusax_dir, "train.csv"))
+        val_raw = pd.read_csv(os.path.join(nusax_dir, "valid.csv"))
+        test_raw = pd.read_csv(os.path.join(nusax_dir, "test.csv"))
+
+        train_df = pd.DataFrame({"text": train_raw["text"], "label": train_raw["label"]})
+        val_df = pd.DataFrame({"text": val_raw["text"], "label": val_raw["label"]})
+        test_df = pd.DataFrame({"text": test_raw["text"], "label": test_raw["label"]})
+
+        if binary_only:
+            train_df = train_df[train_df["label"].isin(["positive", "negative"])].reset_index(drop=True)
+            val_df = val_df[val_df["label"].isin(["positive", "negative"])].reset_index(drop=True)
+            test_df = test_df[test_df["label"].isin(["positive", "negative"])].reset_index(drop=True)
+
+        labels = sorted(list(train_df["label"].unique()))
+        name = "NusaX-Indonesian-Binary" if binary_only else "NusaX-Indonesian"
+        return CustomDataset(name, train_df, test_df, labels, val=val_df)
+
+    def load_all_datasets(self, include_nusax: bool = False) -> Dict[str, CustomDataset]:
+        """Loads and returns Indonesian datasets."""
+        datasets = {
             "SmSA": self.load_smsa(),
             "EmoT": self.load_emot(),
             "HoASA": self.load_hoasa(),
             "MovieOpini": self.load_movie_opini(),
         }
+        if include_nusax:
+            datasets["NusaX-Indonesian"] = self.load_nusax_indonesian()
+        return datasets
 

@@ -154,3 +154,30 @@ datasets:
         weight: 0.30
       - model_name: "cahya/bert-base-indonesian-522M"
         weight: 0.20
+
+  NusaX-Indonesian:
+    name: "NusaX-Indonesian"
+    domain: "Multi-Topic Sentiment"
+    task: "Sentiment Analysis"
+    num_classes: 3
+    classes: ["negative", "neutral", "positive"]
+    model_name: "indobenchmark/indobert-base-p1"
+    max_len: 128
+    batch_size: 32
+    epochs: 30
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 4
+    early_stopping: true
+    use_preprocessing: true
+    use_class_weights: false
+    use_logit_adjustment: false
+    logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.0
+    target_oversample: null
+    label_smoothing: 0.05
+    use_fgm: true
+    fgm_epsilon: 0.5
+    minority_classes: []
+    best_aug_metric: "BLEU"
+    description: "NusaX-Indonesian: Curated Sentiment Analysis (Winata et al., 2023, 1000 samples)"
