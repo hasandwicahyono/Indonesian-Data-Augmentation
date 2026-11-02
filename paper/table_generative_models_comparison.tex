@@ -1,4 +1,5 @@
-\begin{tabularx}{\textwidth}{l c l c c c c c c}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l c l c c c c c c}
 \toprule
 \textbf{Generative Model} & \textbf{Params} & \textbf{Architectural Era} & \textbf{Latency (ms)} & \textbf{Throughput (tok/s)} & \textbf{Distinct-1} & \textbf{Distinct-2} & \textbf{Cosine Sim} & \textbf{BLEU-2} \\
 \midrule
@@ -6,4 +7,5 @@
 \textbf{gpt2-flax} & 124M & First-Generation & 235.6 & 135.8 & 0.656 & 0.956 & 0.255 & 0.015 \\
 \textbf{smollm2-135m} & 135M & Contemporary Foundation & 315.3 & 93.8 & 0.813 & 0.993 & 0.013 & 0.001 \\
 \bottomrule
-\end{tabularx}
+\end{tabular}%
+}

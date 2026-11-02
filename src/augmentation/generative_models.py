@@ -80,13 +80,15 @@ def _export_latex_table(df: pd.DataFrame, output_tex: str):
             f"\\textbf{{{name}}} & {params} & {era} & {latency} & {throughput} & {d1} & {d2} & {cos} & {bleu} \\\\"
         )
 
-    tex_content = """\\begin{tabularx}{\\textwidth}{l c l c c c c c c}
+    tex_content = """\\resizebox{\\textwidth}{!}{%
+\\begin{tabular}{l c l c c c c c c}
 \\toprule
 \\textbf{Generative Model} & \\textbf{Params} & \\textbf{Architectural Era} & \\textbf{Latency (ms)} & \\textbf{Throughput (tok/s)} & \\textbf{Distinct-1} & \\textbf{Distinct-2} & \\textbf{Cosine Sim} & \\textbf{BLEU-2} \\\\
 \\midrule
 """ + "\n".join(latex_rows) + """
 \\bottomrule
-\\end{tabularx}"""
+\\end{tabular}%
+}"""
 
     ensure_dir(os.path.dirname(output_tex))
     with open(output_tex, "w") as f:
