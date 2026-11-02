@@ -34,6 +34,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 from src.utils.path_utils import resolve_path, ensure_dir
 from src.utils.metrics import compute_distinct_n, compute_entropy
+from src.utils.config import get_investigated_datasets
 from src.data.dataset_manager import IndonesianDatasetsManager
 from src.data.preprocessor import IndonesianPreprocessor
 from src.data.classification import ClassificationDataset
@@ -536,7 +537,7 @@ def run_stratified_5fold_cv_all_datasets() -> pd.DataFrame:
     """
     import json
     np.random.seed(42)
-    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
+    datasets = get_investigated_datasets()
     cv_records = []
 
     fold_perf = {}

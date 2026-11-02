@@ -53,6 +53,7 @@ from src.data import IndonesianDatasetsManager, CustomDataset
 from src.augmentation import IndonesianAugmenter
 from src.augmentation.filtering import build_augmented_datasets, export_augmented_datasets
 from src.modeling import IndoBERTClassifierEvaluator, AutoImbalanceCalibrator
+from src.utils.config import get_investigated_datasets, get_investigated_settings
 from src.benchmarks import (
     generate_tpami_tsne_plots,
     generate_tpami_margin_and_svd_plots,
@@ -168,12 +169,14 @@ def compute_and_save_dataset_statistics(
     if manager is None:
         manager = IndonesianDatasetsManager()
 
-    datasets = [
-        ("SmSA", "Document Sentiment", manager.load_smsa),
-        ("HoASA", "Aspect Hotel Sentiment", manager.load_hoasa),
-        ("EmoT", "Twitter Emotion Analysis", manager.load_emot),
-        ("NusaX-Indonesian", "Curated Sentiment Analysis", manager.load_nusax_indonesian),
-    ]
+    investigated = get_investigated_datasets()
+    datasets = []
+    for dname in investigated:
+        setting = get_investigated_settings(dname)
+        method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
+        domain = setting.get("domain", "Sentiment Analysis")
+        loader_fn = getattr(manager, method_name) if hasattr(manager, method_name) else manager.load_nusax_indonesian
+        datasets.append((dname, domain, loader_fn))
 
     records = []
     for name, domain, load_fn in datasets:
@@ -448,7 +451,7 @@ def plot_cross_dataset_summary(
     comparisons across all 4 datasets (SmSA, HoASA, EmoT, NusaX-Indonesian).
     """
     os.makedirs(output_dir, exist_ok=True)
-    datasets = [d for d in ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"] if d in all_results]
+    datasets = [d for d in get_investigated_datasets() if d in all_results]
     if not datasets:
         return ""
 
@@ -1002,11 +1005,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run all investigations and generate comparison and confusion matrix visualizations."
     )
+    default_datasets = get_investigated_datasets()
     parser.add_argument(
         "--datasets",
         nargs="+",
-        default=["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"],
-        help="Datasets to evaluate (choices: SmSA, HoASA, EmoT, NusaX-Indonesian, all)",
+        default=default_datasets,
+        help=f"Datasets to evaluate (choices: {', '.join(default_datasets)}, all)",
     )
     parser.add_argument(
         "--plot_only",
@@ -1176,7 +1180,7 @@ if __name__ == "__main__":
 
     selected = args.datasets
     if "all" in [s.lower() for s in selected]:
-        selected = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
+        selected = get_investigated_datasets()
 
     run_benchmark_pipeline(
         target_datasets=selected,

@@ -29,7 +29,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 from src.utils.path_utils import resolve_path, ensure_dir
 from src.utils.metrics import compute_distinct_n, compute_entropy
-from src.utils.config import load_dataset_config
+from src.utils.config import load_dataset_config, get_investigated_datasets, get_investigated_settings
 
 def _resolve_path(p: str) -> str:
     """Resolves relative paths gracefully across execution directories."""
@@ -516,13 +516,9 @@ def generate_tpami_comparative_baselines_table() -> pd.DataFrame:
     directly from run_all_benchmarks evaluation files (data/results/{dataset}_evaluation_results.xlsx).
     """
     records = []
-    datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
-    labels_map = {
-        "SmSA": "SmSA (Prosa)",
-        "HoASA": "HoASA (Hotel)",
-        "EmoT": "EmoT (Twitter)",
-        "NusaX-Indonesian": "NusaX-Indonesian (Multi-Topic)",
-    }
+    datasets = get_investigated_datasets()
+    settings = get_investigated_settings()
+    labels_map = {name: meta.get("display_name", name) for name, meta in settings.items()}
 
     for ds_name in datasets:
         eval_path = _resolve_path(f"data/results/{ds_name}_evaluation_results.xlsx")
@@ -827,12 +823,12 @@ def generate_tpami_lexical_diversity_table(
     from src.data.dataset_manager import IndonesianDatasetsManager
 
     manager = IndonesianDatasetsManager()
-    datasets_to_eval = [
-        ("SmSA", manager.load_smsa),
-        ("HoASA", manager.load_hoasa),
-        ("EmoT", manager.load_emot),
-        ("NusaX-Indonesian", manager.load_nusax_indonesian),
-    ]
+    datasets_to_eval = []
+    for dname in get_investigated_datasets():
+        setting = get_investigated_settings(dname)
+        method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
+        loader_fn = getattr(manager, method_name) if hasattr(manager, method_name) else manager.load_nusax_indonesian
+        datasets_to_eval.append((dname, loader_fn))
 
     records = []
     for dname, loader in datasets_to_eval:

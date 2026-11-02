@@ -5,7 +5,7 @@ Supports dataset hyperparameter lookups, model registries, preprocessor mappings
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import yaml
 
 from src.utils.path_utils import resolve_path, get_project_root
@@ -42,6 +42,29 @@ def load_config(config_name_or_path: str, force_reload: bool = False) -> Dict[st
 
     _CONFIG_CACHE[abs_path] = data
     return data
+
+
+def get_investigated_datasets() -> List[str]:
+    """
+    Returns the canonical one-for-all list of investigated datasets:
+    ['SmSA', 'HoASA', 'EmoT', 'NusaX-Indonesian'].
+    """
+    cfg = load_config("datasets")
+    return list(cfg.get("investigated_datasets", ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]))
+
+
+def get_investigated_settings(dataset_name: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Returns the canonical one-for-all metadata settings for investigated benchmarks.
+    If dataset_name is provided, returns that specific benchmark's configuration dictionary.
+    """
+    cfg = load_config("datasets")
+    settings = cfg.get("investigated_settings", {})
+    if dataset_name is not None:
+        if dataset_name in settings:
+            return settings[dataset_name]
+        return load_dataset_config(dataset_name)
+    return settings
 
 
 def load_dataset_config(dataset_name: Optional[str] = None) -> Dict[str, Any]:

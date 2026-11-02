@@ -152,14 +152,19 @@ class IndonesianDatasetsManager:
         return CustomDataset(name, train_df, test_df, labels, val=val_df)
 
     def load_all_datasets(self, include_movie_opini: bool = False) -> Dict[str, CustomDataset]:
-        """Loads and returns Indonesian datasets."""
-        datasets = {
-            "SmSA": self.load_smsa(),
-            "HoASA": self.load_hoasa(),
-            "EmoT": self.load_emot(),
-            "NusaX-Indonesian": self.load_nusax_indonesian(),
-        }
-        if include_movie_opini:
+        """Loads and returns all investigated Indonesian datasets according to canonical config."""
+        from src.utils.config import get_investigated_datasets, get_investigated_settings
+
+        datasets = {}
+        for dname in get_investigated_datasets():
+            setting = get_investigated_settings(dname)
+            method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
+            if hasattr(self, method_name):
+                datasets[dname] = getattr(self, method_name)()
+            elif dname in ["NusaX", "NusaX-Indonesian"]:
+                datasets[dname] = self.load_nusax_indonesian()
+
+        if include_movie_opini and "MovieOpini" not in datasets:
             datasets["MovieOpini"] = self.load_movie_opini()
         return datasets
 

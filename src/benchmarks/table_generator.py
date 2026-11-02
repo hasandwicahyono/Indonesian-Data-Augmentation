@@ -17,6 +17,7 @@ from typing import Dict, List, Tuple, Any, Optional
 from src.utils.path_utils import resolve_path, ensure_dir
 from src.utils.latex import compile_latex_manuscripts
 from src.data.dataset_manager import IndonesianDatasetsManager
+from src.utils.config import get_investigated_datasets, get_investigated_settings
 
 def _resolve_path(p: str) -> str:
     """Resolves relative paths gracefully across execution directories."""
@@ -92,12 +93,14 @@ def generate_access_dataset_stats_table(
         if manager is None:
             manager = IndonesianDatasetsManager()
 
-        datasets = [
-            ("SmSA", "Document Sentiment", manager.load_smsa),
-            ("HoASA", "Aspect Hotel Sentiment", manager.load_hoasa),
-            ("EmoT", "Twitter Emotion Analysis", manager.load_emot),
-            ("NusaX-Indonesian", "Curated Sentiment Analysis", manager.load_nusax_indonesian),
-        ]
+        investigated = get_investigated_datasets()
+        datasets = []
+        for dname in investigated:
+            setting = get_investigated_settings(dname)
+            method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
+            domain = setting.get("domain", "Sentiment Analysis")
+            loader_fn = getattr(manager, method_name) if hasattr(manager, method_name) else manager.load_nusax_indonesian
+            datasets.append((dname, domain, loader_fn))
 
         for name, domain, load_fn in datasets:
             ds = load_fn()
@@ -688,11 +691,10 @@ def generate_tpami_5fold_table(
     """Dynamically compiles Table 2 of IEEE TPAMI (5-Fold CV Paired t-Test)."""
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
+    settings = get_investigated_settings()
     datasets_map = {
-        "SmSA": ("SmSA (Doc Sentiment)", "SmSA_real_5fold_results.json"),
-        "HoASA": ("HoASA (Hotel Aspect)", "HoASA_real_5fold_results.json"),
-        "EmoT": ("EmoT (Twitter Emotion)", "EmoT_real_5fold_results.json"),
-        "NusaX-Indonesian": ("NusaX-Indonesian (Multi-Topic)", "NusaX-Indonesian_real_5fold_results.json"),
+        name: (meta.get("display_name", name), meta.get("cv_file", f"{name}_real_5fold_results.json"))
+        for name, meta in settings.items()
     }
 
     records = []

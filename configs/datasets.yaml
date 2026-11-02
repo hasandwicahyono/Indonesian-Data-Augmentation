@@ -1,6 +1,50 @@
 # Dataset Configuration & Model Training Hyperparameters
 # Used across Indonesian Data Augmentation (SmSA, HoASA, EmoT, NusaX-Indonesian)
 
+# =====================================================================
+# ONE-FOR-ALL CANONICAL DATASET SETTINGS
+# Single source of truth for all investigated benchmarks, tables, and manuscripts
+# =====================================================================
+investigated_datasets:
+  - "SmSA"
+  - "HoASA"
+  - "EmoT"
+  - "NusaX-Indonesian"
+
+investigated_settings:
+  SmSA:
+    name: "SmSA"
+    display_name: "SmSA (Doc Sentiment)"
+    domain: "Document Sentiment"
+    task: "Sentiment Analysis"
+    loader_method: "load_smsa"
+    cv_file: "SmSA_real_5fold_results.json"
+    eval_file: "SmSA_evaluation_results.xlsx"
+  HoASA:
+    name: "HoASA"
+    display_name: "HoASA (Hotel Aspect)"
+    domain: "Aspect Hotel Sentiment"
+    task: "Aspect-Based Sentiment Analysis"
+    loader_method: "load_hoasa"
+    cv_file: "HoASA_real_5fold_results.json"
+    eval_file: "HoASA_evaluation_results.xlsx"
+  EmoT:
+    name: "EmoT"
+    display_name: "EmoT (Twitter Emotion)"
+    domain: "Twitter Emotion Analysis"
+    task: "Emotion Classification"
+    loader_method: "load_emot"
+    cv_file: "EmoT_real_5fold_results.json"
+    eval_file: "EmoT_evaluation_results.xlsx"
+  NusaX-Indonesian:
+    name: "NusaX-Indonesian"
+    display_name: "NusaX-Indonesian (Multi-Topic)"
+    domain: "Curated Sentiment Analysis"
+    task: "Sentiment Analysis"
+    loader_method: "load_nusax_indonesian"
+    cv_file: "NusaX-Indonesian_real_5fold_results.json"
+    eval_file: "NusaX-Indonesian_evaluation_results.xlsx"
+
 datasets:
   SmSA:
     name: "SmSA"
