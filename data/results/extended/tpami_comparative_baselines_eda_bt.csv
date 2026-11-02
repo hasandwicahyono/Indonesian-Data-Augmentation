@@ -1,30 +1,30 @@
 Dataset,Method,Aug Size,Accuracy,Macro-Prec,Macro-Rec,Macro-F1,Delta F1
-HoASA (Hotel),Baseline (Unaugmented),"2,493",0.9336,0.6966,0.7559,0.7231,---
+HoASA (Hotel),Baseline (Unaugmented),"2,283",0.9441,0.7685,0.6725,0.699,---
 HoASA (Hotel),"EDA (Wei & Zou, 2019)",760,0.9091,0.5427,0.5861,0.5621,-22.27%
 HoASA (Hotel),Back-Translation (MarianMT),760,0.8811,0.5089,0.5751,0.5348,-26.04%
-HoASA (Hotel),Proposed (ECU-Augmented + AIC),"2,705",0.9441,0.7112,0.6873,0.6933,-4.13%
-HoASA (Hotel),Proposed (COS-Augmented + AIC),"2,637",0.9371,0.6768,0.6845,0.679,-6.10%
-HoASA (Hotel),Proposed (JAC-Augmented + AIC),"2,653",0.9336,0.6705,0.6832,0.6748,-6.68%
-HoASA (Hotel),Proposed (BLEU-Augmented + AIC),"2,629",0.9441,0.7112,0.6873,0.6933,-4.13%
-SmSA (Prosa),Baseline (Unaugmented),"12,148",0.94,0.9369,0.9169,0.9254,---
+HoASA (Hotel),Proposed (ECU-Augmented + AIC),"2,601",0.9476,0.6888,0.7034,0.694,-0.72%
+HoASA (Hotel),Proposed (COS-Augmented + AIC),"2,588",0.951,0.6954,0.7048,0.6984,-0.09%
+HoASA (Hotel),Proposed (JAC-Augmented + AIC),"2,588",0.9476,0.6929,0.696,0.6931,-0.85%
+HoASA (Hotel),Proposed (BLEU-Augmented + AIC),"2,589",0.9476,0.6929,0.696,0.6931,-0.85%
+SmSA (Prosa),Baseline (Unaugmented),"11,000",0.902,0.8943,0.8646,0.8756,---
 SmSA (Prosa),"EDA (Wei & Zou, 2019)","1,650",0.806,0.7911,0.8094,0.7793,-15.79%
 SmSA (Prosa),Back-Translation (MarianMT),"1,650",0.798,0.784,0.799,0.7712,-16.66%
-SmSA (Prosa),Proposed (ECU-Augmented + AIC),"13,172",0.918,0.9182,0.8796,0.8939,-3.40%
-SmSA (Prosa),Proposed (COS-Augmented + AIC),"13,014",0.918,0.9206,0.8753,0.8914,-3.67%
-SmSA (Prosa),Proposed (JAC-Augmented + AIC),"12,942",0.914,0.9054,0.8786,0.8886,-3.97%
-SmSA (Prosa),Proposed (BLEU-Augmented + AIC),"12,918",0.92,0.9129,0.879,0.8918,-3.63%
-EmoT (Twitter),Baseline (Unaugmented),"3,520",0.7864,0.7863,0.7911,0.7885,---
+SmSA (Prosa),Proposed (ECU-Augmented + AIC),"12,738",0.93,0.9217,0.9089,0.9136,+4.34%
+SmSA (Prosa),Proposed (COS-Augmented + AIC),"12,264",0.92,0.9246,0.8747,0.8921,+1.88%
+SmSA (Prosa),Proposed (JAC-Augmented + AIC),"12,206",0.916,0.9154,0.8736,0.8888,+1.50%
+SmSA (Prosa),Proposed (BLEU-Augmented + AIC),"12,272",0.916,0.926,0.8671,0.8864,+1.23%
+EmoT (Twitter),Baseline (Unaugmented),"3,520",0.7682,0.7842,0.7701,0.7729,---
 EmoT (Twitter),"EDA (Wei & Zou, 2019)","2,600",0.7318,0.7366,0.7387,0.732,-7.16%
 EmoT (Twitter),Back-Translation (MarianMT),"2,600",0.6568,0.676,0.6821,0.6394,-18.90%
-EmoT (Twitter),Proposed (ECU-Augmented + AIC),"3,914",0.775,0.7786,0.775,0.7759,-1.60%
-EmoT (Twitter),Proposed (COS-Augmented + AIC),"3,835",0.7864,0.7874,0.7893,0.7877,-0.09%
-EmoT (Twitter),Proposed (JAC-Augmented + AIC),"3,760",0.7864,0.7971,0.7825,0.7884,-0.01%
-EmoT (Twitter),Proposed (BLEU-Augmented + AIC),"3,790",0.7818,0.7784,0.7856,0.7816,-0.87%
-EmoT (Twitter),Proposed (Ensemble-Augmented + AIC),"3,761",0.7864,0.7909,0.7862,0.7872,-0.16%
-MovieOpini (Movies),Baseline (Unaugmented),139,0.9333,0.9412,0.9333,0.933,---
+EmoT (Twitter),Proposed (ECU-Augmented + AIC),"3,690",0.7795,0.7824,0.7803,0.7806,+1.00%
+EmoT (Twitter),Proposed (COS-Augmented + AIC),"3,647",0.7864,0.8066,0.7839,0.792,+2.47%
+EmoT (Twitter),Proposed (JAC-Augmented + AIC),"3,644",0.7636,0.7849,0.7645,0.7713,-0.20%
+EmoT (Twitter),Proposed (BLEU-Augmented + AIC),"3,647",0.7841,0.7939,0.7822,0.7871,+1.83%
+EmoT (Twitter),Proposed (Ensemble-Augmented + AIC),"3,648",0.7773,0.7913,0.7762,0.7807,+1.01%
+MovieOpini (Movies),Baseline (Unaugmented),139,1.0,1.0,1.0,1.0,---
 MovieOpini (Movies),"EDA (Wei & Zou, 2019)",169,0.9,0.9018,0.9,0.8999,-3.55%
 MovieOpini (Movies),Back-Translation (MarianMT),169,0.9,0.9018,0.9,0.8999,-3.55%
-MovieOpini (Movies),Proposed (ECU-Augmented + AIC),160,0.9333,0.9412,0.9333,0.933,+0.00%
-MovieOpini (Movies),Proposed (COS-Augmented + AIC),154,1.0,1.0,1.0,1.0,+7.18%
-MovieOpini (Movies),Proposed (JAC-Augmented + AIC),153,1.0,1.0,1.0,1.0,+7.18%
-MovieOpini (Movies),Proposed (BLEU-Augmented + AIC),153,1.0,1.0,1.0,1.0,+7.18%
+MovieOpini (Movies),Proposed (ECU-Augmented + AIC),150,0.9667,0.9688,0.9667,0.9666,-3.34%
+MovieOpini (Movies),Proposed (COS-Augmented + AIC),140,0.9667,0.9688,0.9667,0.9666,-3.34%
+MovieOpini (Movies),Proposed (JAC-Augmented + AIC),139,0.9667,0.9688,0.9667,0.9666,-3.34%
+MovieOpini (Movies),Proposed (BLEU-Augmented + AIC),142,1.0,1.0,1.0,1.0,+0.00%
