@@ -247,7 +247,7 @@ Detailed partition counts and distribution characteristics are summarized in Tab
 \subsection{Model Configurations and Hyperparameters}
 \label{subsec:models}
 
-All neural pipelines were implemented in PyTorch using the Hugging Face \texttt{transformers} library. Downstream classification utilized \texttt{indobenchmark/indobert-base-p1} for formal document tasks (SmSA, HoASA) and \texttt{indolem/indobertweet-base-uncased} for colloquial social domains (EmoT, MovieOpini). Pretrained generative decoders were initialized from \texttt{cahya/gpt2-small-indonesian-522M}. Each model was instantiated with its corresponding domain-specific tokenizer to preserve optimal vocabulary alignment and minimize unknown token substitutions.
+All neural pipelines were implemented in PyTorch using the Hugging Face \texttt{transformers} library. Downstream classification utilized IndoBERT (\texttt{indobenchmark/}\allowbreak\texttt{indobert-}\allowbreak\texttt{base-p1}) for formal document tasks (SmSA, HoASA) and IndoBERTweet (\texttt{indolem/}\allowbreak\texttt{indobertweet-}\allowbreak\texttt{base-uncased}) for colloquial social domains (EmoT, MovieOpini). Pretrained generative decoders were initialized from Indonesian GPT-2 (\texttt{cahya/}\allowbreak\texttt{gpt2-small-}\allowbreak\texttt{indonesian-522M}). Each model was instantiated with its corresponding domain-specific tokenizer to preserve optimal vocabulary alignment and minimize unknown token substitutions.
 
 Models were optimized using the AdamW optimizer with a linear learning rate warmup over the first $10\%$ of total steps, followed by linear decay. Sequence lengths were capped at $128$ tokens for SmSA, HoASA, and EmoT, and $96$ tokens for MovieOpini. Training was conducted with a batch size of $64$, a base learning rate of $2 \times 10^{-5}$ (reduced to $1 \times 10^{-5}$ for EmoT ensembling), and a weight decay coefficient of $0.01$. Adversarial regularization via Fast Gradient Method (FGM) \cite{miyato2018virtual} was enabled with embedding perturbation $\epsilon = 1.0$. Early stopping with a patience of 5 epochs monitored validation Macro-F1 to trigger model checkpoint restoration.
 
@@ -394,7 +394,7 @@ Furthermore, we established the Automated Imbalance Calibrator (AIC), integratin
 \begin{enumerate}
     \item Achieving a perfect \textbf{$1.0000$} Macro-F1 and accuracy on MovieOpini, representing a $+7.18\%$ relative improvement over baseline.
     \item Elevating HoASA classification accuracy from $93.36\%$ to \textbf{$94.41\%$} and Macro-Precision from $69.66\%$ to \textbf{$71.12\%$}, decisively outperforming Weighted Cross-Entropy ($81.12\%$ accuracy, $0.5870$ F1) and Focal Loss ($0.6164$ F1).
-    \item Demonstrating that lexical $n$-gram filtering (BLEU/JAC) is optimal for preserving formal neutral sentiment, whereas dense embedding alignment (COS) is superior under low-data regimes.
+    \item Demonstrating that lexical $n$-gram filtering (BLEU and JAC) is optimal for preserving formal neutral sentiment, whereas dense embedding alignment (COS) excels under low-data regimes.
     \item Maintaining robust multi-class precision on social emotion classification through emoji semantic mapping and multi-model inductive biases.
 \end{enumerate}
 
@@ -402,13 +402,13 @@ Future research will explore scaling this framework to contemporary generative d
 
 \section*{Acknowledgment}
 
-The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. We also thank the anonymous reviewers for their constructive feedback in refining the mathematical formulations and experimental discussions. Finally, we appreciate the broader research community for supporting reproducible, open-access natural language processing tools.
+The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. We also thank the anonymous reviewers for their constructive feedback in refining the mathematical formulations and experimental discussions. Finally, we appreciate the broader research community at Universitas Sebelas Maret for supporting this research through funding and collaboration opportunities.
 
 \bibliographystyle{IEEEtran}
 \bibliography{IDA_verified}
 
 \begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{hasan.jpg}}]{Hasan Dwi Cahyono}
-received his academic background in informatics. His research interests include natural language processing, machine learning under acute class imbalance, deep representation learning, and low-resource language technologies.
+received his academic background in informatics. Since 2014, he has been serving as a researcher at Universitas Sebelas Maret. His research interests include natural language processing, machine learning, deep representation learning, and low-resource language technologies.
 \end{IEEEbiography}
 
 \EOD
