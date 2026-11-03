@@ -1,21 +1,21 @@
 Dataset,Variant,Distinct-1,Distinct-2,Entropy (H)
 SmSA,Baseline (Original Training Set),0.0499,0.3753,9.52
-SmSA,ECU-Augmented (ECU Filtered),0.0519,0.3742,9.62
-SmSA,COS-Augmented (COS Filtered),0.0506,0.3751,9.55
-SmSA,JAC-Augmented (JAC Filtered),0.0502,0.375,9.54
+SmSA,ECU-Augmented (ECU Filtered),0.052,0.3747,9.61
+SmSA,COS-Augmented (COS Filtered),0.0504,0.3751,9.54
+SmSA,JAC-Augmented (JAC Filtered),0.0502,0.3749,9.53
 SmSA,BLEU-Augmented (BLEU Filtered),0.0505,0.3751,9.54
 HoASA,Baseline (Original Training Set),0.1835,0.7091,10.24
-HoASA,ECU-Augmented (ECU Filtered),0.184,0.7019,10.28
-HoASA,COS-Augmented (COS Filtered),0.1838,0.7048,10.26
-HoASA,JAC-Augmented (JAC Filtered),0.1838,0.7048,10.26
-HoASA,BLEU-Augmented (BLEU Filtered),0.1836,0.7044,10.26
+HoASA,ECU-Augmented (ECU Filtered),0.1845,0.7033,10.28
+HoASA,COS-Augmented (COS Filtered),0.1842,0.706,10.26
+HoASA,JAC-Augmented (JAC Filtered),0.1843,0.7063,10.26
+HoASA,BLEU-Augmented (BLEU Filtered),0.1843,0.7063,10.26
 EmoT,Baseline (Original Training Set),0.2586,0.8462,12.16
-EmoT,ECU-Augmented (ECU Filtered),0.2514,0.8268,12.17
-EmoT,COS-Augmented (COS Filtered),0.2534,0.8318,12.17
-EmoT,JAC-Augmented (JAC Filtered),0.2537,0.8326,12.17
-EmoT,BLEU-Augmented (BLEU Filtered),0.2535,0.8319,12.17
+EmoT,ECU-Augmented (ECU Filtered),0.2517,0.8277,12.17
+EmoT,COS-Augmented (COS Filtered),0.2531,0.8316,12.17
+EmoT,JAC-Augmented (JAC Filtered),0.2532,0.8319,12.17
+EmoT,BLEU-Augmented (BLEU Filtered),0.2532,0.8319,12.17
 NusaX-Indonesian,Baseline (Original Training Set),0.3283,0.8606,10.28
-NusaX-Indonesian,ECU-Augmented (ECU Filtered),0.325,0.8453,10.34
-NusaX-Indonesian,COS-Augmented (COS Filtered),0.3255,0.8538,10.29
-NusaX-Indonesian,JAC-Augmented (JAC Filtered),0.3259,0.8547,10.29
-NusaX-Indonesian,BLEU-Augmented (BLEU Filtered),0.3259,0.8533,10.31
+NusaX-Indonesian,ECU-Augmented (ECU Filtered),0.3267,0.8445,10.37
+NusaX-Indonesian,COS-Augmented (COS Filtered),0.3266,0.855,10.3
+NusaX-Indonesian,JAC-Augmented (JAC Filtered),0.3264,0.8556,10.29
+NusaX-Indonesian,BLEU-Augmented (BLEU Filtered),0.3254,0.8515,10.3

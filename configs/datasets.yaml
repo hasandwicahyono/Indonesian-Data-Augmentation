@@ -228,7 +228,7 @@ datasets:
     classes: ["negative", "neutral", "positive"]
     model_name: "indobenchmark/indobert-base-p1"
     max_len: 128
-    batch_size: 32
+    batch_size: 16
     epochs: 30
     lr: 2.0e-5
     weight_decay: 0.01
