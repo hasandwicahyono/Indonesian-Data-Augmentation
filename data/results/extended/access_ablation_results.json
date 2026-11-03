@@ -1,8 +1,8 @@
 [
   {
     "Configuration": "Full Proposed Pipeline",
-    "HoASA F1": 0.6984,
-    "SmSA F1": 0.9136
+    "HoASA F1": 0.6977,
+    "SmSA F1": 0.9114
   },
   {
     "Configuration": "\\quad $-$ w/o Logit Adjustment ($\\tau=0$)",
@@ -32,6 +32,6 @@
   {
     "Configuration": "Baseline (Unaugmented ERM)",
     "HoASA F1": 0.699,
-    "SmSA F1": 0.8756
+    "SmSA F1": 0.8936
   }
 ]

@@ -184,7 +184,7 @@ def plot_similarity_distributions(
         ax.set_title(f"{dataset_name}: {m_name} Distribution", fontsize=11, fontweight="bold")
         ax.set_xlabel("Metric Value", fontsize=10)
         ax.set_ylabel("Probability Density", fontsize=10)
-        ax.legend(loc="upper right" if "Distance" in m_name else "upper left", fontsize=8.5, frameon=True)
+        ax.legend(loc="upper left" if "Distance" in m_name else "upper right", fontsize=8.5, frameon=True)
         ax.grid(True, linestyle=":", alpha=0.6)
 
     plt.suptitle(f"Multi-Metric Dual-Space Similarity Distributions and Adaptive Threshold Boundaries ({dataset_name})", fontsize=13, fontweight="bold", y=0.99)
