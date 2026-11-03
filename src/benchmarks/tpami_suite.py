@@ -216,7 +216,8 @@ def generate_tpami_margin_and_svd_plots(
     ax1.set_xlabel("Classification Margin $\\gamma$")
     ax1.set_ylabel("Cumulative Empirical Density $P(\\Gamma \\leq \\gamma)$")
     ax1.set_xlim(-3.0, 4.0)
-    ax1.legend(loc="upper left", frameon=True)
+    ax1.legend(bbox_to_anchor=(1.05, 0.5), loc="upper left", borderaxespad=0.0, frameon=True)
+    # ax1.legend(loc="upper left", frameon=True)
     ax1.grid(True, linestyle=":", alpha=0.6)
 
     # Panel B: Real Singular Value Spectrum from actual corpus covariance
@@ -252,7 +253,8 @@ def generate_tpami_margin_and_svd_plots(
     ax2.set_ylabel("Normalized Singular Value ($\\sigma_k / \\sigma_1$)")
     ax2.set_xticks(np.arange(1, min(21, len(sv_maj) + 1), 2))
     ax2.set_yscale("log")
-    ax2.legend(loc="lower left", frameon=True)
+    ax2.legend(bbox_to_anchor=(1.05, 0.5), loc="upper left", borderaxespad=0.0, frameon=True)
+    # ax2.legend(loc="lower left", frameon=True)
     ax2.grid(True, linestyle=":", alpha=0.6)
 
     plt.suptitle("Empirical Diagnostic Analysis: Margin CDF Shift and Singular Spectrum (Real Test Data)", fontsize=13, fontweight="bold", y=1.02)
