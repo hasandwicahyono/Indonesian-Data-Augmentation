@@ -58,6 +58,15 @@ def is_valence_consistent(target_label: str, text: str) -> bool:
     s = str(text).lower()
     lbl = str(target_label).strip().lower()
 
+    # Neutral class protection (NusaX & SmSA):
+    # Neutral statements should remain objective and not contain intense emotional markers
+    if lbl in {"neut", "neutral"}:
+        pos_hits = sum(1 for kw in POSITIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        neg_hits = sum(1 for kw in NEGATIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        hostile_hits = sum(1 for kw in AGGRESSIVE_ANGER_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        if hostile_hits >= 1 or pos_hits >= 2 or neg_hits >= 2:
+            return False
+
     # Negative emotions / polarities: should not be predominantly celebratory
     if lbl in {"anger", "sadness", "fear", "neg", "negative"}:
         pos_hits = sum(1 for kw in POSITIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))

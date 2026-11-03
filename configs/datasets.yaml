@@ -64,14 +64,14 @@ datasets:
     use_class_weights: true
     use_logit_adjustment: true
     logit_adj_tau: 0.6
-    eval_logit_adj_tau: 0.3
+    eval_logit_adj_tau: 0.25
     target_oversample:
       neutral: 2
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 0.5
     minority_classes: ["neutral"]
-    best_aug_metric: "BLEU"
+    best_aug_metric: "COS"
     description: "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)"
     training_dynamics:
       loss:
@@ -80,6 +80,21 @@ datasets:
       f1:
         base: { gap: 0.28, saturation_tau: 2.5, noise_std: 0.003 }
         aug:  { gap: 0.32, saturation_tau: 2.2, noise_std: 0.003 }
+    run_ensemble: true
+    ensemble_models:
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.50
+      - model_name: "cahya/bert-base-indonesian-522M"
+        weight: 0.30
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.20
+    ensemble_configs:
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.50
+      - model_name: "cahya/bert-base-indonesian-522M"
+        weight: 0.30
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.20
 
   MovieOpini:
     name: "MovieOpini"
@@ -130,16 +145,17 @@ datasets:
     patience: 5
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: false
+    use_class_weights: true
     use_logit_adjustment: true
     logit_adj_tau: 0.8
     eval_logit_adj_tau: 0.35
     target_oversample:
       neg: 8
+      pos: 2
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 1.0
-    aspect_prompt_prefix: "[Aspek: Umum / Keseluruhan Hotel] "
+    aspect_prompt_prefix: "[Aspek: Umum / Fasilitas Hotel] "
     minority_classes: ["neg", "pos"]
     best_aug_metric: "COS"
     description: "HoASA: Hotel Aspect Sentiment (3 extreme imbalanced classes: neg 1.3%, pos 10.1%, neut 88.6%)"
@@ -219,14 +235,15 @@ datasets:
     patience: 4
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: false
-    use_logit_adjustment: false
-    logit_adj_tau: 0.0
-    eval_logit_adj_tau: 0.0
-    target_oversample: null
+    use_class_weights: true
+    use_logit_adjustment: true
+    logit_adj_tau: 0.5
+    eval_logit_adj_tau: 0.2
+    target_oversample:
+      neutral: 2
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 0.5
-    minority_classes: []
-    best_aug_metric: "BLEU"
+    minority_classes: ["neutral"]
+    best_aug_metric: "COS"
     description: "NusaX-Indonesian: Curated Sentiment Analysis (Winata et al., 2023, 1000 samples)"

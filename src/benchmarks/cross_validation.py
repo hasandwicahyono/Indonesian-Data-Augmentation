@@ -105,6 +105,7 @@ def run_real_5fold_cv_for_dataset(
         logit_adj_tau=tau,
         use_fgm=False,
         device=device_str,
+        prompt_prefix=cfg.get("aspect_prompt_prefix", None),
     )
 
     for fold_idx, (train_idx, test_idx) in enumerate(skf.split(full_df["text"], full_df["label"])):

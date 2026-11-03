@@ -857,6 +857,7 @@ def run_benchmark_pipeline(
                 eval_logit_adj_tau=cfg.get("eval_logit_adj_tau", 0.0),
                 target_oversample=cfg.get("target_oversample", None),
                 ensemble_configs=cfg.get("ensemble_models", None) if (run_ensemble and cfg.get("run_ensemble", False)) else None,
+                prompt_prefix=cfg.get("aspect_prompt_prefix", None),
             )
 
             results_df = evaluator.evaluate_all_variants(

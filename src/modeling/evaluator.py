@@ -16,6 +16,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.parallel.scatter_gather")
 warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension 0.*")
+import random
 import copy
 import json
 import torch
@@ -67,6 +68,7 @@ class IndoBERTClassifierEvaluator:
         eval_logit_adj_tau: float = 0.0,
         target_oversample: Optional[Dict[str, int]] = None,
         ensemble_configs: Optional[List[Dict[str, Any]]] = None,
+        prompt_prefix: Optional[str] = None,
     ):
         self.model_name = model_name
         self.max_len = max_len
@@ -88,6 +90,7 @@ class IndoBERTClassifierEvaluator:
         self.eval_logit_adj_tau = eval_logit_adj_tau
         self.target_oversample = target_oversample
         self.ensemble_configs = ensemble_configs
+        self.prompt_prefix = prompt_prefix
 
         self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         if device is not None:
@@ -107,14 +110,19 @@ class IndoBERTClassifierEvaluator:
             extra_desc += f", Oversample: {self.target_oversample}"
         if self.ensemble_configs:
             extra_desc += f", Heterogeneous Ensemble: {len(self.ensemble_configs)} models"
+        if self.prompt_prefix:
+            extra_desc += f", Context-Conditioning: '{self.prompt_prefix.strip()}'"
         print(f"  Enhancements Active -> Preprocessing: {self.use_preprocessing}, Class-Weights: {self.use_class_weights}, Label-Smoothing: {self.label_smoothing}, FGM-Adversarial: {self.use_fgm}{extra_desc}")
 
     def _set_seed(self, seed: Optional[int] = None):
         target_seed = self.seed if seed is None else seed
-        torch.manual_seed(target_seed)
+        random.seed(target_seed)
         np.random.seed(target_seed)
+        torch.manual_seed(target_seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(target_seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
 
     def train_epoch(
         self,
@@ -266,14 +274,14 @@ class IndoBERTClassifierEvaluator:
             log_priors = None
 
         prep = self.preprocessor if self.use_preprocessing else None
-        train_ds = ClassificationDataset(train_df["text"].tolist(), train_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep)
-        test_ds = ClassificationDataset(test_df["text"].tolist(), test_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep)
+        train_ds = ClassificationDataset(train_df["text"].tolist(), train_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
+        test_ds = ClassificationDataset(test_df["text"].tolist(), test_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
 
         train_loader = DataLoader(train_ds, batch_size=self.batch_size, shuffle=True)
         test_loader = DataLoader(test_ds, batch_size=self.batch_size, shuffle=False)
 
         if val_df is not None:
-            val_ds = ClassificationDataset(val_df["text"].tolist(), val_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep)
+            val_ds = ClassificationDataset(val_df["text"].tolist(), val_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
             val_loader = DataLoader(val_ds, batch_size=self.batch_size, shuffle=False)
         else:
             val_loader = None
@@ -522,6 +530,7 @@ class IndoBERTClassifierEvaluator:
                 logit_adj_tau=self.logit_adj_tau,
                 eval_logit_adj_tau=self.eval_logit_adj_tau,
                 target_oversample=self.target_oversample,
+                prompt_prefix=self.prompt_prefix,
             )
 
             train_res = sub_evaluator.evaluate_dataset(
@@ -627,6 +636,7 @@ class IndoBERTClassifierEvaluator:
                 logit_adj_tau=0.0,
                 eval_logit_adj_tau=0.0,
                 target_oversample=None,
+                prompt_prefix=self.prompt_prefix,
             )
             raw_erm_res = raw_evaluator.evaluate_dataset(
                 base_train_df,

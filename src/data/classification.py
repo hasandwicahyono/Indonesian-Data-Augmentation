@@ -18,6 +18,7 @@ class ClassificationDataset(Dataset):
         max_len: int,
         label_map: Dict[str, int],
         preprocessor: Optional[Any] = None,
+        prompt_prefix: Optional[str] = None,
     ):
         super().__init__()
         self.text = [str(t) for t in text]
@@ -27,6 +28,7 @@ class ClassificationDataset(Dataset):
         self.max_len = max_len
         self.label_map = label_map
         self.preprocessor = preprocessor
+        self.prompt_prefix = prompt_prefix
 
     def __len__(self) -> int:
         return len(self.text)
@@ -37,6 +39,9 @@ class ClassificationDataset(Dataset):
             text_str = self.preprocessor.preprocess(raw_text)
         else:
             text_str = " ".join(raw_text.split())
+
+        if self.prompt_prefix and not text_str.startswith(self.prompt_prefix.strip()):
+            text_str = f"{self.prompt_prefix.strip()} {text_str}"
 
         inputs = self.tokenizer(
             text_str,
