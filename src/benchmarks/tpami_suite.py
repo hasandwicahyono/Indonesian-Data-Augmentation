@@ -180,7 +180,7 @@ def generate_tpami_margin_and_svd_plots(
     test_texts = ds.test["text"].tolist()
     test_labels = np.array(ds.test["label"].tolist())
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.2))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
 
     # Panel A: Real empirical margins from prediction outcomes
     npz_path = _resolve_path("data/results/HoASA_evaluation_results_predictions.npz")
@@ -216,7 +216,7 @@ def generate_tpami_margin_and_svd_plots(
     ax1.set_xlabel("Classification Margin $\\gamma$")
     ax1.set_ylabel("Cumulative Empirical Density $P(\\Gamma \\leq \\gamma)$")
     ax1.set_xlim(-3.0, 4.0)
-    ax1.legend(loc="upper left", frameon=True)
+    ax1.legend(loc="upper center", bbox_to_anchor=(0.5, -0.20), frameon=True)
     ax1.grid(True, linestyle=":", alpha=0.6)
 
     # Panel B: Real Singular Value Spectrum from actual corpus covariance
@@ -252,7 +252,7 @@ def generate_tpami_margin_and_svd_plots(
     ax2.set_ylabel("Normalized Singular Value ($\\sigma_k / \\sigma_1$)")
     ax2.set_xticks(np.arange(1, min(21, len(sv_maj) + 1), 2))
     ax2.set_yscale("log")
-    ax2.legend(loc="center right", frameon=True)
+    ax2.legend(loc="upper center", bbox_to_anchor=(0.5, -0.20), frameon=True)
     ax2.grid(True, linestyle=":", alpha=0.6)
 
     plt.suptitle("Empirical Diagnostic Analysis: Margin CDF Shift and Singular Spectrum (Real Test Data)", fontsize=13, fontweight="bold", y=1.02)
@@ -260,6 +260,15 @@ def generate_tpami_margin_and_svd_plots(
     plt.savefig(output_png, dpi=300, bbox_inches="tight")
     plt.savefig(output_pdf, bbox_inches="tight")
     plt.close()
+
+    # Synchronize to paper directory if it exists
+    paper_png = _resolve_path("paper/tpami_margin_cdf_and_singular_spectrum.png")
+    paper_pdf = _resolve_path("paper/tpami_margin_cdf_and_singular_spectrum.pdf")
+    if os.path.exists(os.path.dirname(paper_png)):
+        import shutil
+        shutil.copyfile(output_png, paper_png)
+        shutil.copyfile(output_pdf, paper_pdf)
+
     print(f"Empirical Margin CDF and SVD spectrum figures saved to:\n  - {output_png}\n  - {output_pdf}")
 
 
