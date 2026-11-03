@@ -247,3 +247,18 @@ datasets:
     minority_classes: ["neutral"]
     best_aug_metric: "COS"
     description: "NusaX-Indonesian: Curated Sentiment Analysis (Winata et al., 2023, 1000 samples)"
+    run_ensemble: true
+    ensemble_models:
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.50
+      - model_name: "cahya/bert-base-indonesian-522M"
+        weight: 0.30
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.20
+    ensemble_configs:
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.50
+      - model_name: "cahya/bert-base-indonesian-522M"
+        weight: 0.30
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.20
