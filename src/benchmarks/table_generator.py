@@ -663,7 +663,7 @@ def generate_tpami_comparisons_table(
     df = pd.DataFrame(records)
     df.to_csv(os.path.join(out_results_dir, "tpami_longtailed_sota_comparison.csv"), index=False)
 
-    tex_content = """\\begin{tabularx}{\\textwidth}{l X c c c c c c c}
+    tex_content = """\\begin{tabularx}{\\textwidth}{l >{\\raggedright\\arraybackslash}X c c c c c c c}
 \\toprule
 \\textbf{Dataset} & \\textbf{Method / Objective Formulation} & \\textbf{Accuracy} & \\textbf{Macro-Prec} & \\textbf{Macro-Rec} & \\textbf{Macro-F1} & \\textbf{BAcc} & \\textbf{MCC ($R_K$)} & \\textbf{$p$-value ($t$-test)} \\\\
 \\midrule
@@ -832,8 +832,8 @@ def inject_dynamic_tables_into_manuscripts(paper_dir: str = "paper"):
 
         import re
         content = re.sub(
-            r"\\begin\{table\*\}\[!t\]\s*\\caption\{Comprehensive Performance and Statistical Comparison.*?Against State-of-the-Art Imbalance Loss Formulations\}\s*\\label\{tab:tpami_comparisons\}\s*\\centering\s*\\small\s*\\setlength\{\\tabcolsep\}\{4pt\}\s*\\begin\{tabularx\}\{\\textwidth\}\{l X c c c c c c c\}.*?\\end\{tabularx\}",
-            r"\\begin{table*}[!t]\n\\caption{Comprehensive Performance and Statistical Comparison Across All Four Benchmarks (SmSA, HoASA, EmoT, and NusaX-Indonesian) Against State-of-the-Art Imbalance Loss Formulations}\n\\label{tab:tpami_comparisons}\n\\centering\n\\small\n\\setlength{\\tabcolsep}{4pt}\n\\input{table_tpami_comparisons.tex}",
+            r"\\begin\{table\*\}\[!t\]\s*\\caption\{Comprehensive Performance and Statistical Comparison.*?Against State-of-the-Art Imbalance Loss Formulations\}\s*\\label\{tab:tpami_comparisons\}\s*\\centering\s*\\(?:small|footnotesize)\s*\\setlength\{\\tabcolsep\}\{[^}]+\}\s*(?:\\begin\{tabularx\}\{\\textwidth\}\{l [^}]+\}.*?\\end\{tabularx\}|\\input\{table_tpami_comparisons\.tex\})",
+            r"\\begin{table*}[!t]\n\\caption{Comprehensive Performance and Statistical Comparison Across All Four Benchmarks (SmSA, HoASA, EmoT, and NusaX-Indonesian) Against State-of-the-Art Imbalance Loss Formulations}\n\\label{tab:tpami_comparisons}\n\\centering\n\\footnotesize\n\\setlength{\\tabcolsep}{2.8pt}\n\\input{table_tpami_comparisons.tex}",
             content,
             flags=re.DOTALL
         )

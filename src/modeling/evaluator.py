@@ -13,6 +13,9 @@ Computes Accuracy, Precision, Recall, Macro-F1, per-class F1, and Paired statist
 
 import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+import gc
+import math
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.parallel.scatter_gather")
 warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension 0.*")
@@ -20,6 +23,7 @@ import random
 import copy
 import json
 import torch
+import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Any, Optional
@@ -133,42 +137,63 @@ class IndoBERTClassifierEvaluator:
         criterion: Optional[torch.nn.Module] = None,
         fgm: Optional[FGM] = None,
         log_priors: Optional[torch.Tensor] = None,
+        gradient_accumulation_steps: int = 1,
     ) -> float:
         model.train()
         total_loss = 0.0
+        optimizer.zero_grad()
 
-        for batch in dataloader:
-            optimizer.zero_grad()
-            input_ids = batch["input_ids"].to(self.device)
-            attention_mask = batch["attention_mask"].to(self.device)
-            labels = batch["label"].to(self.device)
+        for step, batch in enumerate(dataloader):
+            input_ids = batch["input_ids"].to(self.device, non_blocking=True)
+            attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
+            labels = batch["label"].to(self.device, non_blocking=True)
 
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+            # Avoid passing labels directly to model forward to prevent redundant internal HF loss computation graph
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             logits = outputs.logits
             if log_priors is not None:
                 logits = logits + self.logit_adj_tau * log_priors
-            loss = criterion(logits, labels) if criterion is not None else outputs.loss
+
+            if criterion is not None:
+                loss = criterion(logits, labels)
+            else:
+                loss = F.cross_entropy(logits, labels)
+
             if loss is not None and loss.dim() > 0:
                 loss = loss.mean()
-            loss.backward()
+
+            loss_scaled = loss / max(1, gradient_accumulation_steps)
+            loss_scaled.backward()
 
             if fgm is not None:
                 fgm.attack()
-                outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask)
                 logits_adv = outputs_adv.logits
                 if log_priors is not None:
                     logits_adv = logits_adv + self.logit_adj_tau * log_priors
-                loss_adv = criterion(logits_adv, labels) if criterion is not None else outputs_adv.loss
+
+                if criterion is not None:
+                    loss_adv = criterion(logits_adv, labels)
+                else:
+                    loss_adv = F.cross_entropy(logits_adv, labels)
+
                 if loss_adv is not None and loss_adv.dim() > 0:
                     loss_adv = loss_adv.mean()
-                loss_adv.backward()
-                fgm.restore()
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            scheduler.step()
+                loss_adv_scaled = loss_adv / max(1, gradient_accumulation_steps)
+                loss_adv_scaled.backward()
+                fgm.restore()
+                del outputs_adv, logits_adv, loss_adv, loss_adv_scaled
 
             total_loss += loss.item()
+
+            if (step + 1) % gradient_accumulation_steps == 0 or (step + 1) == len(dataloader):
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optimizer.step()
+                scheduler.step()
+                optimizer.zero_grad()
+
+            del outputs, logits, loss, loss_scaled, input_ids, attention_mask, labels
 
         return total_loss / len(dataloader)
 
@@ -185,9 +210,9 @@ class IndoBERTClassifierEvaluator:
 
         with torch.no_grad():
             for batch in dataloader:
-                input_ids = batch["input_ids"].to(self.device)
-                attention_mask = batch["attention_mask"].to(self.device)
-                labels = batch["label"].to(self.device)
+                input_ids = batch["input_ids"].to(self.device, non_blocking=True)
+                attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
+                labels = batch["label"].to(self.device, non_blocking=True)
 
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 logits = outputs.logits
@@ -195,8 +220,12 @@ class IndoBERTClassifierEvaluator:
                     logits = logits - self.eval_logit_adj_tau * log_priors
                 preds = torch.argmax(logits, dim=1)
 
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
+                all_preds.extend(preds.detach().cpu().numpy())
+                all_labels.extend(labels.detach().cpu().numpy())
+                del outputs, logits, preds, input_ids, attention_mask, labels
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         if num_labels is None:
             if hasattr(model, "config") and hasattr(model.config, "num_labels"):
@@ -277,12 +306,23 @@ class IndoBERTClassifierEvaluator:
         train_ds = ClassificationDataset(train_df["text"].tolist(), train_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
         test_ds = ClassificationDataset(test_df["text"].tolist(), test_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
 
-        train_loader = DataLoader(train_ds, batch_size=self.batch_size, shuffle=True)
-        test_loader = DataLoader(test_ds, batch_size=self.batch_size, shuffle=False)
+        # Multi-GPU / Single-GPU micro-batching configuration:
+        # If batch_size > 32 and device is CUDA, use micro-batching with gradient accumulation
+        # to prevent DataParallel replica 0 aggregation bottlenecks and VRAM OOM.
+        effective_batch_size = self.batch_size
+        micro_batch_size = effective_batch_size
+        grad_accum_steps = 1
+        if self.device.type == "cuda" and effective_batch_size > 32:
+            micro_batch_size = 32
+            grad_accum_steps = max(1, effective_batch_size // micro_batch_size)
+            print(f"  [Memory Optimization] Effective batch size {effective_batch_size} -> Micro-batch size: {micro_batch_size}, Gradient accumulation steps: {grad_accum_steps}")
+
+        train_loader = DataLoader(train_ds, batch_size=micro_batch_size, shuffle=True)
+        test_loader = DataLoader(test_ds, batch_size=micro_batch_size, shuffle=False)
 
         if val_df is not None:
             val_ds = ClassificationDataset(val_df["text"].tolist(), val_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
-            val_loader = DataLoader(val_ds, batch_size=self.batch_size, shuffle=False)
+            val_loader = DataLoader(val_ds, batch_size=micro_batch_size, shuffle=False)
         else:
             val_loader = None
 
@@ -334,7 +374,7 @@ class IndoBERTClassifierEvaluator:
 
         fgm = FGM(model, epsilon=self.fgm_epsilon) if self.use_fgm else None
 
-        total_steps = len(train_loader) * num_epochs
+        total_steps = math.ceil(len(train_loader) / grad_accum_steps) * num_epochs
         optimizer = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
 
@@ -353,7 +393,16 @@ class IndoBERTClassifierEvaluator:
 
         for epoch in range(num_epochs):
             actual_epochs_trained = epoch + 1
-            loss = self.train_epoch(model, train_loader, optimizer, scheduler, criterion=criterion, fgm=fgm, log_priors=log_priors)
+            loss = self.train_epoch(
+                model,
+                train_loader,
+                optimizer,
+                scheduler,
+                criterion=criterion,
+                fgm=fgm,
+                log_priors=log_priors,
+                gradient_accumulation_steps=grad_accum_steps,
+            )
             history["epoch"].append(epoch + 1)
             history["train_loss"].append(float(loss))
             if val_loader is not None:
@@ -365,7 +414,8 @@ class IndoBERTClassifierEvaluator:
                     best_val_f1 = v_f1
                     best_epoch = epoch + 1
                     target_model = model.module if hasattr(model, "module") else model
-                    best_model_weights = copy.deepcopy(target_model.state_dict())
+                    # Store optimal checkpoint on CPU to prevent GPU VRAM exhaustion
+                    best_model_weights = {k: v.detach().cpu().clone() for k, v in target_model.state_dict().items()}
                     patience_counter = 0
                 else:
                     patience_counter += 1
@@ -377,6 +427,8 @@ class IndoBERTClassifierEvaluator:
                 if best_train_loss - loss > self.min_delta:
                     best_train_loss = loss
                     best_epoch = epoch + 1
+                    target_model = model.module if hasattr(model, "module") else model
+                    best_model_weights = {k: v.detach().cpu().clone() for k, v in target_model.state_dict().items()}
                     patience_counter = 0
                 else:
                     patience_counter += 1
@@ -384,13 +436,26 @@ class IndoBERTClassifierEvaluator:
                         print(f"  [Early Stopping Triggered] Training loss did not improve for {pat} consecutive epochs. Halting at epoch {epoch+1}/{num_epochs}.")
                         break
 
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
         if best_model_weights is not None:
             target_model = model.module if hasattr(model, "module") else model
             target_model.load_state_dict(best_model_weights)
+            del best_model_weights
             print(f"  [Optimal Checkpoint Restored] Best Val Macro-F1: {best_val_f1:.4f} (from epoch {best_epoch})")
 
         acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(model, test_loader, num_labels=num_labels, log_priors=log_priors)
         test_probs, _ = self.predict_proba(model, test_loader, log_priors=log_priors)
+
+        # Explicit cleanup of model, optimizer, dataloaders from GPU VRAM
+        del model, optimizer, scheduler, criterion, fgm
+        del train_loader, test_loader
+        if val_loader is not None:
+            del val_loader
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         res: Dict[str, Any] = {
             "dataset_name": name,
@@ -429,9 +494,9 @@ class IndoBERTClassifierEvaluator:
 
         with torch.no_grad():
             for batch in dataloader:
-                input_ids = batch["input_ids"].to(self.device)
-                attention_mask = batch["attention_mask"].to(self.device)
-                labels = batch["label"].to(self.device)
+                input_ids = batch["input_ids"].to(self.device, non_blocking=True)
+                attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
+                labels = batch["label"].to(self.device, non_blocking=True)
 
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 logits = outputs.logits
@@ -439,8 +504,12 @@ class IndoBERTClassifierEvaluator:
                     logits = logits - self.eval_logit_adj_tau * log_priors
                 probs = torch.softmax(logits, dim=1)
 
-                all_probs.append(probs.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
+                all_probs.append(probs.detach().cpu().numpy())
+                all_labels.extend(labels.detach().cpu().numpy())
+                del outputs, logits, probs, input_ids, attention_mask, labels
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         return np.vstack(all_probs), np.array(all_labels)
 
@@ -544,6 +613,10 @@ class IndoBERTClassifierEvaluator:
                 early_stopping=early_stopping,
                 patience=patience,
             )
+            del sub_evaluator
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
             y_t = train_res.get("y_true")
             if ground_truth is None and y_t is not None:
@@ -650,6 +723,10 @@ class IndoBERTClassifierEvaluator:
                 patience=patience,
             )
             results.append(raw_erm_res)
+            del raw_evaluator
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         print(f"\n>>> [DISENTANGLED BASELINE 2/2] Evaluating Calibrated Baseline (With AIC: Logit Adj + Oversampler + FGM)...")
         base_res = self.evaluate_dataset(
@@ -669,6 +746,9 @@ class IndoBERTClassifierEvaluator:
             base_res["f1_improvement"] = aic_gain
             base_res["f1_improvement_pct"] = aic_pct
         results.append(base_res)
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         ref_base_res = base_res
 
@@ -689,6 +769,9 @@ class IndoBERTClassifierEvaluator:
             res["f1_improvement"] = f1_gain
             res["f1_improvement_pct"] = pct_gain
             results.append(res)
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         if self.ensemble_configs:
             aug_results = [r for r in results if "Augmented" in r["dataset_name"] and not r["dataset_name"].endswith("Ensemble")]

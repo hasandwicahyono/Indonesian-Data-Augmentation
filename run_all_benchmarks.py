@@ -31,6 +31,7 @@ warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension
 
 # Ensure KMP duplicate lib is allowed on macOS
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 # Ensure local modules are found
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -39,6 +40,7 @@ if CURRENT_DIR not in sys.path:
 
 import argparse
 import copy
+import gc
 import json
 import shutil
 import torch
@@ -831,6 +833,11 @@ def run_benchmark_pipeline(
                     output_dir=base_aug_dir,
                 )
                 aug_dfs = all_text_dfs
+                if "augmenter" in locals():
+                    del augmenter
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
             print(f"\n  >>> STEP 3: Fine-Tuning IndoBERT Across All Variants for {ds_name}...")
             epochs = epochs_override if epochs_override is not None else cfg["epochs"]
@@ -871,6 +878,10 @@ def run_benchmark_pipeline(
                 seed=seed,
             )
             all_results[ds_name] = results_df
+            del evaluator
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         # -------------------------------------------------------------
         # 1. Generate 4-Metric Performance Comparison Bar Chart
