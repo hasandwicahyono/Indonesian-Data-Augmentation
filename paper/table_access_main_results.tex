@@ -3,34 +3,34 @@
 \textbf{Dataset} & \textbf{Variant} & \textbf{Aug. Size} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{$\Delta$ F1 (Abs)} & \textbf{$\Delta$ F1 (Rel)} \\
 \midrule
 \multirow{6}{*}{\textbf{SmSA}}
-& Baseline (Not-Augmented) & 11,000 & 0.9220 & 0.9252 & 0.8719 & 0.8900 & --- & --- \\
-& ECU-Augmented & 12,744 & 0.9180 & 0.9220 & 0.8818 & 0.8966 & +0.0067 & +0.75\% \\
-& COS-Augmented & 12,272 & 0.9160 & 0.9234 & 0.8737 & 0.8909 & +0.0010 & +0.11\% \\
-& JAC-Augmented & 12,230 & 0.9260 & 0.9273 & 0.8861 & 0.9012 & +0.0112 & +1.26\% \\
-& BLEU-Augmented & 12,284 & 0.9200 & 0.9179 & 0.8856 & 0.8979 & +0.0080 & +0.89\% \\
-& \textbf{Ensemble-Augmented} & 11,298 & \textbf{0.9300} & \textbf{0.9373} & \textbf{0.8936} & \textbf{0.9098} & \textbf{+0.0198} & \textbf{+2.23\%} \\
+& Baseline (Not-Augmented) & 11,000 & 0.9260 & 0.9263 & 0.8882 & 0.9029 & --- & --- \\
+& ECU-Augmented & 12,746 & 0.9120 & 0.8917 & 0.8944 & 0.8922 & -0.0107 & -1.18\% \\
+& COS-Augmented & 12,282 & 0.9360 & 0.9353 & 0.9028 & 0.9156 & +0.0128 & +1.42\% \\
+& JAC-Augmented & 12,224 & 0.9300 & 0.9278 & 0.9024 & 0.9122 & +0.0093 & +1.03\% \\
+& BLEU-Augmented & 12,268 & 0.9200 & 0.9299 & 0.8791 & 0.8968 & -0.0060 & -0.67\% \\
+& \textbf{Ensemble-Augmented} & 11,067 & \textbf{0.9400} & \textbf{0.9426} & \textbf{0.9126} & \textbf{0.9246} & \textbf{+0.0217} & \textbf{+2.40\%} \\
 \midrule
 \multirow{5}{*}{\textbf{HoASA}}
-& Baseline (Not-Augmented) & 2,283 & 0.9476 & 0.6107 & 0.6159 & 0.6133 & --- & --- \\
-& ECU-Augmented & 2,568 & 0.9441 & 0.7641 & 0.6799 & 0.7004 & +0.0871 & +14.20\% \\
-& COS-Augmented & 2,549 & 0.9441 & 0.6015 & 0.6294 & 0.6147 & +0.0014 & +0.23\% \\
-& JAC-Augmented & 2,548 & 0.9406 & 0.6877 & 0.6785 & 0.6821 & +0.0689 & +11.23\% \\
-& \textbf{BLEU-Augmented} & 2,548 & \textbf{0.9510} & \textbf{0.7255} & \textbf{0.6900} & \textbf{0.7021} & \textbf{+0.0889} & \textbf{+14.49\%} \\
+& Baseline (Not-Augmented) & 2,283 & 0.9301 & 0.5785 & 0.6017 & 0.5897 & --- & --- \\
+& ECU-Augmented & 2,582 & 0.9371 & 0.7017 & 0.6771 & 0.6835 & +0.0937 & +15.90\% \\
+& \textbf{COS-Augmented} & 2,549 & \textbf{0.9441} & \textbf{0.7074} & \textbf{0.6947} & \textbf{0.6944} & \textbf{+0.1047} & \textbf{+17.75\%} \\
+& JAC-Augmented & 2,558 & 0.9371 & 0.6768 & 0.6845 & 0.6790 & +0.0893 & +15.14\% \\
+& BLEU-Augmented & 2,553 & 0.9406 & 0.6737 & 0.6859 & 0.6796 & +0.0899 & +15.24\% \\
 \midrule
 \multirow{6}{*}{\textbf{EmoT}}
 & Baseline (Not-Augmented) & 3,520 & 0.7682 & 0.7842 & 0.7701 & 0.7729 & --- & --- \\
-& ECU-Augmented & 3,687 & 0.7909 & 0.7934 & 0.7888 & 0.7904 & +0.0175 & +2.26\% \\
-& \textbf{COS-Augmented} & 3,653 & \textbf{0.7932} & \textbf{0.7925} & \textbf{0.7959} & \textbf{0.7936} & \textbf{+0.0207} & \textbf{+2.68\%} \\
-& JAC-Augmented & 3,650 & 0.7795 & 0.7841 & 0.7799 & 0.7802 & +0.0073 & +0.94\% \\
-& BLEU-Augmented & 3,650 & 0.7795 & 0.7841 & 0.7799 & 0.7802 & +0.0073 & +0.94\% \\
-& Ensemble-Augmented & 3,654 & 0.7614 & 0.7697 & 0.7613 & 0.7635 & -0.0094 & -1.22\% \\
+& ECU-Augmented & 3,695 & 0.7818 & 0.7822 & 0.7851 & 0.7834 & +0.0105 & +1.36\% \\
+& \textbf{COS-Augmented} & 3,636 & \textbf{0.7864} & \textbf{0.7915} & \textbf{0.7892} & \textbf{0.7883} & \textbf{+0.0154} & \textbf{+1.99\%} \\
+& JAC-Augmented & 3,635 & 0.7818 & 0.7877 & 0.7808 & 0.7832 & +0.0103 & +1.33\% \\
+& BLEU-Augmented & 3,638 & 0.7591 & 0.7542 & 0.7681 & 0.7576 & -0.0152 & -1.97\% \\
+& Ensemble-Augmented & 3,637 & 0.7727 & 0.7828 & 0.7733 & 0.7754 & +0.0025 & +0.32\% \\
 \midrule
 \multirow{6}{*}{\textbf{NusaX-Indonesian}}
 & Baseline (Not-Augmented) & 500 & 0.9050 & 0.9004 & 0.8962 & 0.8981 & --- & --- \\
-& ECU-Augmented & 526 & 0.9025 & 0.9003 & 0.8913 & 0.8948 & -0.0034 & -0.37\% \\
-& COS-Augmented & 506 & 0.8950 & 0.8886 & 0.8836 & 0.8858 & -0.0123 & -1.37\% \\
-& JAC-Augmented & 505 & 0.8975 & 0.8956 & 0.8870 & 0.8903 & -0.0078 & -0.87\% \\
-& BLEU-Augmented & 508 & 0.9000 & 0.8949 & 0.8943 & 0.8939 & -0.0042 & -0.46\% \\
-& Ensemble-Augmented & 526 & 0.9025 & 0.8962 & 0.8953 & 0.8955 & -0.0026 & -0.29\% \\
+& ECU-Augmented & 523 & 0.9050 & 0.8982 & 0.8962 & 0.8971 & -0.0010 & -0.11\% \\
+& COS-Augmented & 505 & 0.8850 & 0.8884 & 0.8696 & 0.8760 & -0.0221 & -2.46\% \\
+& JAC-Augmented & 504 & 0.9075 & 0.9126 & 0.8919 & 0.8991 & +0.0010 & +0.11\% \\
+& BLEU-Augmented & 505 & 0.8800 & 0.8755 & 0.8678 & 0.8710 & -0.0271 & -3.02\% \\
+& \textbf{Ensemble-Augmented} & 504 & \textbf{0.9100} & \textbf{0.9047} & \textbf{0.8993} & \textbf{0.9017} & \textbf{+0.0036} & \textbf{+0.40\%} \\
 \bottomrule
 \end{tabularx}
