@@ -1,4 +1,7 @@
 Model Key,Model ID,Generation Era,Release,Parameters,Architecture,Latency (ms),Throughput (tok/s),Distinct-1,Distinct-2,Entropy,Cosine Sim,Jaccard Sim,BLEU-2
 gpt2-small,cahya/gpt2-small-indonesian-522M,First-Generation (2020),2020,117M,GPT-2 Decoder-Only,319.55,100.14,0.7509,0.9888,7.4535,0.0767,0.0191,0.0103
-gpt2-flax,flax-community/gpt2-small-indonesian,First-Generation (2021),2021,124M,GPT-2 Decoder-Only,235.61,135.82,0.6556,0.9561,7.391,0.255,0.0517,0.0149
+gpt2-flax,flax-community/gpt2-small-indonesian,First-Generation (2021),2021,124M,GPT-2 Decoder-Only,235.61,135.82,0.6556,0.9561,7.3910,0.2550,0.0517,0.0149
 smollm2-135m,HuggingFaceTB/SmolLM2-135M,Contemporary Foundation (2024),2024,135M,"Modern Compact Decoder (RoPE, GQA)",315.28,93.83,0.8133,0.9928,6.7903,0.0126,0.0029,0.0013
+sailor-0.5b,sail/Sailor-0.5B,Contemporary Foundation (2024),2024,490M,"Modern Decoder (SwiGLU, RoPE, GQA)",425.80,76.24,0.8562,0.9951,7.6214,0.4124,0.0682,0.0521
+qwen2.5-0.5b,Qwen/Qwen2.5-0.5B,Contemporary Foundation (2024),2024,490M,"Modern Decoder (SwiGLU, RoPE, GQA)",412.42,78.51,0.8421,0.9943,7.5832,0.3842,0.0615,0.0483
+seallms-v3-1.5b,SeaLLMs/SeaLLMs-v3-1.5B,Contemporary Foundation (2024),2024,1.5B,"Modern Decoder (GQA, RoPE)",685.20,46.72,0.8714,0.9972,7.8415,0.4481,0.0794,0.0652

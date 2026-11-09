@@ -127,3 +127,21 @@ models:
       do_sample: true
     description: "Leading Southeast Asian foundation model with high naturalness in colloquial and formal Indonesian."
 
+  seallms-v3-1.5b:
+    model_id: "SeaLLMs/SeaLLMs-v3-1.5B"
+    generation: "Contemporary Foundation (2024)"
+    release_year: 2024
+    author: "Alibaba DAMO Academy"
+    parameters: "1.5B"
+    architecture: "Modern Decoder (GQA, RoPE)"
+    corpus: "Dedicated Southeast Asian instruction & pretraining corpora"
+    default_params:
+      num_beams: 1
+      top_p: 0.90
+      repetition_penalty: 1.15
+      no_repeat_ngram_size: 3
+      temperature: 0.7
+      do_sample: true
+    description: "Leading Southeast Asian foundation model with high naturalness in colloquial and formal Indonesian."
+
+

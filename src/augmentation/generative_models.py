@@ -119,14 +119,14 @@ def benchmark_candidate_generative_models(
         return df
 
     if models is None:
-        models = ["gpt2-small", "gpt2-flax", "smollm2-135m"]
-        try:
-            import glob
-            hf_hub = os.path.expanduser("~/.cache/huggingface/hub")
-            if any("Qwen2.5-0.5B" in p for p in glob.glob(os.path.join(hf_hub, "*"))):
-                models.append("qwen2.5-0.5b")
-        except Exception:
-            pass
+        models = [
+            "gpt2-small",
+            "gpt2-flax",
+            "smollm2-135m",
+            "sailor-0.5b",
+            "qwen2.5-0.5b",
+            "seallms-v3-1.5b",
+        ]
 
     if prompts is None:
         prompts = BENCHMARK_PROMPTS

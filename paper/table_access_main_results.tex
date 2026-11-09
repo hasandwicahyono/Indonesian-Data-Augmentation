@@ -1,4 +1,4 @@
-\begin{tabularx}{\textwidth}{l l c c c c c c c}
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X c c c c c c c}
 \toprule
 \textbf{Dataset} & \textbf{Variant} & \textbf{Aug. Size} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{$\Delta$ F1 (Abs)} & \textbf{$\Delta$ F1 (Rel)} \\
 \midrule
@@ -8,19 +8,19 @@
 & COS-Augmented & 12,282 & 0.9360 & 0.9353 & 0.9028 & 0.9156 & +0.0128 & +1.42\% \\
 & JAC-Augmented & 12,224 & 0.9300 & 0.9278 & 0.9024 & 0.9122 & +0.0093 & +1.03\% \\
 & BLEU-Augmented & 12,268 & 0.9200 & 0.9299 & 0.8791 & 0.8968 & -0.0060 & -0.67\% \\
-& \textbf{Ensemble-Augmented} & 11,067 & \textbf{0.9400} & \textbf{0.9426} & \textbf{0.9126} & \textbf{0.9246} & \textbf{+0.0217} & \textbf{+2.40\%} \\
+& \textbf{Proposed (Ensemble-Augmented + AIC)} & 11,067 & \textbf{0.9400} & \textbf{0.9426} & \textbf{0.9126} & \textbf{0.9246} & \textbf{+0.0217} & \textbf{+2.40\%} \\
 \midrule
 \multirow{5}{*}{\textbf{HoASA}}
 & Baseline (Not-Augmented) & 2,283 & 0.9301 & 0.5785 & 0.6017 & 0.5897 & --- & --- \\
 & ECU-Augmented & 2,582 & 0.9371 & 0.7017 & 0.6771 & 0.6835 & +0.0937 & +15.90\% \\
-& \textbf{COS-Augmented} & 2,549 & \textbf{0.9441} & \textbf{0.7074} & \textbf{0.6947} & \textbf{0.6944} & \textbf{+0.1047} & \textbf{+17.75\%} \\
+& \textbf{Proposed (COS-Augmented + AIC)} & 2,549 & \textbf{0.9441} & \textbf{0.7074} & \textbf{0.6947} & \textbf{0.6944} & \textbf{+0.1047} & \textbf{+17.75\%} \\
 & JAC-Augmented & 2,558 & 0.9371 & 0.6768 & 0.6845 & 0.6790 & +0.0893 & +15.14\% \\
 & BLEU-Augmented & 2,553 & 0.9406 & 0.6737 & 0.6859 & 0.6796 & +0.0899 & +15.24\% \\
 \midrule
 \multirow{6}{*}{\textbf{EmoT}}
 & Baseline (Not-Augmented) & 3,520 & 0.7682 & 0.7842 & 0.7701 & 0.7729 & --- & --- \\
 & ECU-Augmented & 3,695 & 0.7818 & 0.7822 & 0.7851 & 0.7834 & +0.0105 & +1.36\% \\
-& \textbf{COS-Augmented} & 3,636 & \textbf{0.7864} & \textbf{0.7915} & \textbf{0.7892} & \textbf{0.7883} & \textbf{+0.0154} & \textbf{+1.99\%} \\
+& \textbf{Proposed (COS-Augmented + AIC)} & 3,636 & \textbf{0.7864} & \textbf{0.7915} & \textbf{0.7892} & \textbf{0.7883} & \textbf{+0.0154} & \textbf{+1.99\%} \\
 & JAC-Augmented & 3,635 & 0.7818 & 0.7877 & 0.7808 & 0.7832 & +0.0103 & +1.33\% \\
 & BLEU-Augmented & 3,638 & 0.7591 & 0.7542 & 0.7681 & 0.7576 & -0.0152 & -1.97\% \\
 & Ensemble-Augmented & 3,637 & 0.7727 & 0.7828 & 0.7733 & 0.7754 & +0.0025 & +0.32\% \\
@@ -31,6 +31,6 @@
 & COS-Augmented & 505 & 0.8850 & 0.8884 & 0.8696 & 0.8760 & -0.0221 & -2.46\% \\
 & JAC-Augmented & 504 & 0.9075 & 0.9126 & 0.8919 & 0.8991 & +0.0010 & +0.11\% \\
 & BLEU-Augmented & 505 & 0.8800 & 0.8755 & 0.8678 & 0.8710 & -0.0271 & -3.02\% \\
-& \textbf{Ensemble-Augmented} & 504 & \textbf{0.9100} & \textbf{0.9047} & \textbf{0.8993} & \textbf{0.9017} & \textbf{+0.0036} & \textbf{+0.40\%} \\
+& \textbf{Proposed (Ensemble-Augmented + AIC)} & 504 & \textbf{0.9100} & \textbf{0.9047} & \textbf{0.8993} & \textbf{0.9017} & \textbf{+0.0036} & \textbf{+0.40\%} \\
 \bottomrule
 \end{tabularx}

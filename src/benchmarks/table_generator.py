@@ -148,7 +148,7 @@ def generate_access_dataset_stats_table(
     os.makedirs(results_dir, exist_ok=True)
     df.to_csv(os.path.join(results_dir, "access_table_dataset_stats.csv"), index=False)
 
-    tex_content = """\\begin{tabularx}{\\textwidth}{l l c c c c X c}
+    tex_content = """\\begin{tabularx}{\\textwidth}{l l c c c c >{\\raggedright\\arraybackslash}X c}
 \\toprule
 \\textbf{Dataset} & \\textbf{Domain / Task} & \\textbf{Classes ($K$)} & \\textbf{Train Size} & \\textbf{Val Size} & \\textbf{Test Size} & \\textbf{Label Distribution (Train)} & \\textbf{Imbalance Ratio ($IR$)} \\\\
 \\midrule
@@ -267,7 +267,7 @@ def generate_access_main_results_table(
         # Augmented rows
         for r in ds_aug_records:
             is_best = (r["Variant"] == best_var_name) and (r["Macro-F1"] > base_f1)
-            var_label = f"\\textbf{{{r['Variant']}}}" if is_best else r["Variant"]
+            var_label = f"\\textbf{{Proposed ({r['Variant']} + AIC)}}" if is_best else r["Variant"]
             acc_str = f"\\textbf{{{r['Accuracy']:.4f}}}" if (is_best and r["Accuracy"] >= base_acc) else f"{r['Accuracy']:.4f}"
             prec_str = f"\\textbf{{{r['Macro-Prec']:.4f}}}" if is_best else f"{r['Macro-Prec']:.4f}"
             rec_str = f"\\textbf{{{r['Macro-Rec']:.4f}}}" if is_best else f"{r['Macro-Rec']:.4f}"
@@ -285,7 +285,7 @@ def generate_access_main_results_table(
     os.makedirs(out_results_dir, exist_ok=True)
     df.to_csv(os.path.join(out_results_dir, "access_table_main_results.csv"), index=False)
 
-    tex_content = """\\begin{tabularx}{\\textwidth}{l l c c c c c c c}
+    tex_content = """\\begin{tabularx}{\\textwidth}{l >{\\raggedright\\arraybackslash}X c c c c c c c}
 \\toprule
 \\textbf{Dataset} & \\textbf{Variant} & \\textbf{Aug. Size} & \\textbf{Accuracy} & \\textbf{Macro-Prec} & \\textbf{Macro-Rec} & \\textbf{Macro-F1} & \\textbf{$\\Delta$ F1 (Abs)} & \\textbf{$\\Delta$ F1 (Rel)} \\\\
 \\midrule
@@ -315,7 +315,7 @@ def generate_access_per_class_f1_table(
     results_dir = _resolve_path(results_dir)
     paper_dir = _resolve_path(paper_dir)
     out_results_dir = _resolve_path(out_results_dir)
-    datasets = get_investigated_datasets()
+    datasets = ["SmSA", "HoASA"]
     records = []
     latex_blocks = []
 
@@ -506,15 +506,17 @@ def generate_access_ablation_table(
     df = pd.DataFrame(records)
     df.to_csv(ablation_csv, index=False)
 
+    max_h = max(r["HoASA F1"] for r in records)
+    max_s = max(r["SmSA F1"] for r in records)
+
     latex_rows = []
     for r in records:
         cfg = r["Configuration"]
-        is_full = "Full Proposed" in cfg
-        h_f1_str = f"\\textbf{{{r['HoASA F1']:.4f}}}" if is_full else f"{r['HoASA F1']:.4f}"
-        s_f1_str = f"\\textbf{{{r['SmSA F1']:.4f}}}" if is_full else f"{r['SmSA F1']:.4f}"
+        h_f1_str = f"\\textbf{{{r['HoASA F1']:.4f}}}" if r["HoASA F1"] == max_h else f"{r['HoASA F1']:.4f}"
+        s_f1_str = f"\\textbf{{{r['SmSA F1']:.4f}}}" if r["SmSA F1"] == max_s else f"{r['SmSA F1']:.4f}"
         latex_rows.append(f"{cfg} & {h_f1_str} & {s_f1_str} \\\\")
 
-    tex_content = """\\begin{tabularx}{\\columnwidth}{X c c}
+    tex_content = """\\begin{tabularx}{\\columnwidth}{>{\\raggedright\\arraybackslash}X c c}
 \\toprule
 \\textbf{Configuration} & \\textbf{HoASA F1} & \\textbf{SmSA F1} \\\\
 \\midrule
