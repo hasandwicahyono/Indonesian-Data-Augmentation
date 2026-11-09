@@ -24,6 +24,23 @@ def _resolve_path(p: str) -> str:
     return resolve_path(p)
 
 
+def _compute_multiclass_mcc(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """Computes multi-class Matthews Correlation Coefficient (R_K) from predictions."""
+    classes = np.unique(np.concatenate([y_true, y_pred]))
+    K = len(classes)
+    class_to_idx = {c: i for i, c in enumerate(classes)}
+    C = np.zeros((K, K), dtype=np.int64)
+    for t, p in zip(y_true, y_pred):
+        C[class_to_idx[t], class_to_idx[p]] += 1
+    c = np.trace(C)
+    s = np.sum(C)
+    p_k = np.sum(C, axis=0)
+    t_k = np.sum(C, axis=1)
+    num = c * s - np.sum(p_k * t_k)
+    den = np.sqrt((s**2 - np.sum(p_k**2)) * (s**2 - np.sum(t_k**2)))
+    return float(num / den) if den > 0 else 0.0
+
+
 # =====================================================================
 # 1. IEEE Access Table 1: Benchmark Dataset Statistics (tab:dataset_stats)
 # =====================================================================
@@ -191,6 +208,16 @@ def generate_access_main_results_table(
             )
 
         df_eval = pd.read_excel(eval_path)
+        pred_path = os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz")
+        pred_data = np.load(pred_path) if os.path.exists(pred_path) else None
+
+        def get_mcc(key_name: str, fallback_val: float = 0.0) -> float:
+            if pred_data is not None:
+                t_k = f"{key_name}__true"
+                p_k = f"{key_name}__pred"
+                if t_k in pred_data and p_k in pred_data:
+                    return _compute_multiclass_mcc(pred_data[t_k], pred_data[p_k])
+            return fallback_val
         
         # Determine baseline
         raw_erm_df = df_eval[df_eval["dataset_name"].str.contains("RawERM", case=False, na=False)]
@@ -205,6 +232,7 @@ def generate_access_main_results_table(
         base_prec = float(ref_row.get("macro_precision", 0.0))
         base_rec = float(ref_row.get("macro_recall", 0.0))
         base_size = int(ref_row.get("train_size", 0))
+        base_mcc = get_mcc(str(ref_row.get("dataset_name", "")), float(ref_row.get("mcc", 0.0)))
 
         # Baseline record
         records.append({
@@ -215,8 +243,8 @@ def generate_access_main_results_table(
             "Macro-Prec": round(base_prec, 4),
             "Macro-Rec": round(base_rec, 4),
             "Macro-F1": round(base_f1, 4),
-            "Delta F1 (Abs)": 0.0,
-            "Delta F1 (Rel)": "---",
+            "R_K (MCC)": round(base_mcc, 4),
+            "Delta F1 (Gain)": "---",
         })
 
         # Augmented rows
@@ -238,8 +266,10 @@ def generate_access_main_results_table(
             prec_val = float(r.get("macro_precision", 0.0))
             rec_val = float(r.get("macro_recall", 0.0))
             aug_size = int(r.get("train_size", 0))
+            aug_mcc = get_mcc(dname, float(r.get("mcc", 0.0)))
             delta_abs = round(f1_val - base_f1, 4)
             delta_rel = ((f1_val - base_f1) / base_f1) * 100.0 if base_f1 > 0 else 0.0
+            gain_display = f"{delta_abs:+.4f} ({delta_rel:+.2f}%)"
 
             rec = {
                 "Dataset": ds_name,
@@ -249,8 +279,8 @@ def generate_access_main_results_table(
                 "Macro-Prec": round(prec_val, 4),
                 "Macro-Rec": round(rec_val, 4),
                 "Macro-F1": round(f1_val, 4),
-                "Delta F1 (Abs)": delta_abs,
-                "Delta F1 (Rel)": f"{delta_rel:+.2f}%",
+                "R_K (MCC)": round(aug_mcc, 4),
+                "Delta F1 (Gain)": gain_display,
             }
             records.append(rec)
             ds_aug_records.append(rec)
@@ -262,7 +292,7 @@ def generate_access_main_results_table(
         num_rows = 1 + len(ds_aug_records)
         block = [f"\\multirow{{{num_rows}}}{{*}}{{\\textbf{{{ds_name}}}}}"]
         # Baseline row
-        block.append(f"& Baseline (Not-Augmented) & {base_size:,} & {base_acc:.4f} & {base_prec:.4f} & {base_rec:.4f} & {base_f1:.4f} & --- & --- \\\\")
+        block.append(f"& Baseline (Not-Augmented) & {base_size:,} & {base_acc:.4f} & {base_prec:.4f} & {base_rec:.4f} & {base_f1:.4f} & {base_mcc:.4f} & --- \\\\")
 
         # Augmented rows
         for r in ds_aug_records:
@@ -272,12 +302,12 @@ def generate_access_main_results_table(
             prec_str = f"\\textbf{{{r['Macro-Prec']:.4f}}}" if is_best else f"{r['Macro-Prec']:.4f}"
             rec_str = f"\\textbf{{{r['Macro-Rec']:.4f}}}" if is_best else f"{r['Macro-Rec']:.4f}"
             f1_str = f"\\textbf{{{r['Macro-F1']:.4f}}}" if is_best else f"{r['Macro-F1']:.4f}"
-            d_abs = float(r["Delta F1 (Abs)"])
-            d_abs_str = f"\\textbf{{{d_abs:+.4f}}}" if is_best else f"{d_abs:+.4f}"
-            tex_rel = str(r["Delta F1 (Rel)"]).replace("%", "\\%")
-            d_rel_str = f"\\textbf{{{tex_rel}}}" if is_best else tex_rel
+            mcc_val = float(r["R_K (MCC)"])
+            mcc_str = f"\\textbf{{{mcc_val:.4f}}}" if is_best else f"{mcc_val:.4f}"
+            gain_tex = str(r["Delta F1 (Gain)"]).replace("%", "\\%")
+            gain_str = f"\\textbf{{{gain_tex}}}" if is_best else gain_tex
 
-            block.append(f"& {var_label} & {r['Aug. Size']:,} & {acc_str} & {prec_str} & {rec_str} & {f1_str} & {d_abs_str} & {d_rel_str} \\\\")
+            block.append(f"& {var_label} & {r['Aug. Size']:,} & {acc_str} & {prec_str} & {rec_str} & {f1_str} & {mcc_str} & {gain_str} \\\\")
 
         latex_blocks.append("\n".join(block))
 
@@ -287,7 +317,7 @@ def generate_access_main_results_table(
 
     tex_content = """\\begin{tabularx}{\\textwidth}{l >{\\raggedright\\arraybackslash}X c c c c c c c}
 \\toprule
-\\textbf{Dataset} & \\textbf{Variant} & \\textbf{Aug. Size} & \\textbf{Accuracy} & \\textbf{Macro-Prec} & \\textbf{Macro-Rec} & \\textbf{Macro-F1} & \\textbf{$\\Delta$ F1 (Abs)} & \\textbf{$\\Delta$ F1 (Rel)} \\\\
+\\textbf{Dataset} & \\textbf{Variant} & \\textbf{Aug. Size} & \\textbf{Accuracy} & \\textbf{Macro-Prec} & \\textbf{Macro-Rec} & \\textbf{Macro-F1} & \\textbf{$R_K$ (MCC)} & \\textbf{$\\Delta$ F1 (Gain)} \\\\
 \\midrule
 """ + "\n\\midrule\n".join(latex_blocks) + """
 \\bottomrule
