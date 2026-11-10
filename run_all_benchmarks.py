@@ -31,9 +31,8 @@ warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension
 
 # Ensure KMP duplicate lib is allowed on macOS
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-# Configure CUDA caching allocator to minimize fragmentation and prevent virtual address space exhaustion
-if "PYTORCH_CUDA_ALLOC_CONF" not in os.environ or "expandable_segments:True" in os.environ.get("PYTORCH_CUDA_ALLOC_CONF", ""):
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "garbage_collection_threshold:0.8,max_split_size_mb:128"
+# Configure CUDA caching allocator to minimize fragmentation and prevent OOM
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 # Ensure local modules are found
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -765,6 +764,9 @@ def run_benchmark_pipeline(
     print(f"Figures Directory: {figures_dir}")
     print("=" * 80)
 
+    from src.utils.hardware import inspect_gpu_processes
+    inspect_gpu_processes()
+
     all_results: Dict[str, pd.DataFrame] = {}
 
     for ds_name in target_datasets:
@@ -849,8 +851,9 @@ def run_benchmark_pipeline(
 
             print(f"\n  >>> STEP 3: Fine-Tuning IndoBERT Across All Variants for {ds_name}...")
             # Thorough memory purge before training begins
-            from src.utils.hardware import deep_cuda_purge
+            from src.utils.hardware import deep_cuda_purge, inspect_gpu_processes
             deep_cuda_purge()
+            inspect_gpu_processes()
             if torch.cuda.is_available():
                 low_mem_warning = False
                 for dev_i in range(torch.cuda.device_count()):

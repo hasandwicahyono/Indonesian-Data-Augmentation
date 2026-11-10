@@ -11,7 +11,7 @@ from src.utils.metrics import (
     compute_calibration_metrics,
     extract_f1_anchors,
 )
-from src.utils.hardware import resolve_device, get_process_memory_gb, release_model_vram, deep_cuda_purge
+from src.utils.hardware import resolve_device, get_process_memory_gb, release_model_vram, deep_cuda_purge, inspect_gpu_processes
 from src.utils.latex import compile_latex_manuscripts
 from src.utils.config import (
     load_config,
@@ -34,6 +34,7 @@ __all__ = [
     "get_process_memory_gb",
     "release_model_vram",
     "deep_cuda_purge",
+    "inspect_gpu_processes",
     "compile_latex_manuscripts",
     "load_config",
     "load_dataset_config",

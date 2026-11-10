@@ -118,3 +118,42 @@ def deep_cuda_purge():
                     pass
 
 
+def inspect_gpu_processes():
+    """
+    Inspects running compute processes on all GPUs using nvidia-smi.
+    Prints other PIDs occupying VRAM and alerts if zombie processes are detected.
+    """
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        if not out:
+            return
+        current_pid = os.getpid()
+        lines = [line.strip() for line in out.splitlines() if line.strip()]
+        other_processes = []
+        for line in lines:
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 3:
+                try:
+                    pid = int(parts[0])
+                    pname = parts[1]
+                    pmem = parts[2]
+                    if pid != current_pid:
+                        other_processes.append((pid, pname, pmem))
+                except ValueError:
+                    pass
+        if other_processes:
+            print("\n  [GPU Resource Alert] Other processes detected occupying GPU VRAM:")
+            for pid, pname, pmem in other_processes:
+                print(f"    - PID {pid} ({pname}): {pmem}")
+            print("  If these are lingering zombie processes from previous interrupted runs,")
+            print("  you can reclaim full VRAM by terminating them with: kill -9 <PID>\n")
+    except Exception:
+        pass
+
+
+

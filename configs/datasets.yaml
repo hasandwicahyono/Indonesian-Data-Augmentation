@@ -54,7 +54,7 @@ datasets:
     classes: ["negative", "neutral", "positive"]
     model_name: "indobenchmark/indobert-base-p1"
     max_len: 128
-    batch_size: 64
+    batch_size: 16
     epochs: 50
     lr: 2.0e-5
     weight_decay: 0.01
@@ -76,10 +76,10 @@ datasets:
     training_dynamics:
       loss:
         base: { amplitude: 0.65, decay_tau: 3.2, floor: 0.18, noise_std: 0.005 }
-        aug:  { amplitude: 0.58, decay_tau: 2.8, floor: 0.12, noise_std: 0.004 }
+        aug: { amplitude: 0.58, decay_tau: 2.8, floor: 0.12, noise_std: 0.004 }
       f1:
         base: { gap: 0.28, saturation_tau: 2.5, noise_std: 0.003 }
-        aug:  { gap: 0.32, saturation_tau: 2.2, noise_std: 0.003 }
+        aug: { gap: 0.32, saturation_tau: 2.2, noise_std: 0.003 }
     run_ensemble: true
     ensemble_models:
       - model_name: "indobenchmark/indobert-base-p1"
@@ -125,10 +125,10 @@ datasets:
     training_dynamics:
       loss:
         base: { amplitude: 0.55, decay_tau: 2.2, floor: 0.15, noise_std: 0.012 }
-        aug:  { amplitude: 0.48, decay_tau: 1.8, floor: 0.10, noise_std: 0.009 }
+        aug: { amplitude: 0.48, decay_tau: 1.8, floor: 0.10, noise_std: 0.009 }
       f1:
         base: { gap: 0.25, saturation_tau: 2.0, noise_std: 0.010 }
-        aug:  { gap: 0.28, saturation_tau: 1.7, noise_std: 0.008 }
+        aug: { gap: 0.28, saturation_tau: 1.7, noise_std: 0.008 }
 
   HoASA:
     name: "HoASA"
@@ -138,7 +138,7 @@ datasets:
     classes: ["neg", "neut", "pos"]
     model_name: "indobenchmark/indobert-base-p1"
     max_len: 128
-    batch_size: 64
+    batch_size: 16
     epochs: 50
     lr: 2.0e-5
     weight_decay: 0.01
@@ -162,10 +162,10 @@ datasets:
     training_dynamics:
       loss:
         base: { amplitude: 0.85, decay_tau: 4.0, floor: 0.25, noise_std: 0.006 }
-        aug:  { amplitude: 0.72, decay_tau: 3.1, floor: 0.16, noise_std: 0.005 }
+        aug: { amplitude: 0.72, decay_tau: 3.1, floor: 0.16, noise_std: 0.005 }
       f1:
         base: { gap: 0.38, saturation_tau: 3.0, noise_std: 0.005 }
-        aug:  { gap: 0.45, saturation_tau: 2.6, noise_std: 0.004 }
+        aug: { gap: 0.45, saturation_tau: 2.6, noise_std: 0.004 }
 
   EmoT:
     name: "EmoT"
@@ -200,10 +200,10 @@ datasets:
     training_dynamics:
       loss:
         base: { amplitude: 1.10, decay_tau: 4.2, floor: 0.38, noise_std: 0.008 }
-        aug:  { amplitude: 0.95, decay_tau: 3.4, floor: 0.28, noise_std: 0.006 }
+        aug: { amplitude: 0.95, decay_tau: 3.4, floor: 0.28, noise_std: 0.006 }
       f1:
         base: { gap: 0.35, saturation_tau: 3.2, noise_std: 0.006 }
-        aug:  { gap: 0.40, saturation_tau: 2.7, noise_std: 0.005 }
+        aug: { gap: 0.40, saturation_tau: 2.7, noise_std: 0.005 }
     run_ensemble: true
     ensemble_models:
       - model_name: "indolem/indobertweet-base-uncased"

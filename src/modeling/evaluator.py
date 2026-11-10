@@ -108,7 +108,7 @@ class IndoBERTClassifierEvaluator:
             self.device = torch.device("cpu")
 
         self.preprocessor = IndonesianPreprocessor(map_emojis=True, map_emoticons=True)
-        device_desc = f"{self.device} ({self.num_gpus} GPUs via DataParallel)" if (self.device.type == "cuda" and self.num_gpus > 1) else str(self.device)
+        device_desc = f"Multi-GPU ({self.num_gpus} GPUs via Model Sharding / Accelerate)" if (self.device.type == "cuda" and self.num_gpus > 1) else str(self.device)
         print(f"IndoBERT Evaluator initialized on device: {device_desc} | Model: {self.model_name}")
         extra_desc = f", Logit-Adj: {self.use_logit_adjustment} (tau={self.logit_adj_tau})" if self.use_logit_adjustment else ""
         if self.target_oversample:
@@ -139,59 +139,86 @@ class IndoBERTClassifierEvaluator:
         fgm: Optional[FGM] = None,
         log_priors: Optional[torch.Tensor] = None,
         gradient_accumulation_steps: int = 1,
+        scaler: Optional[Any] = None,
     ) -> float:
         model.train()
         total_loss = 0.0
         optimizer.zero_grad()
+        use_amp = (self.device.type == "cuda")
+        input_device = next(model.parameters()).device
 
         for step, batch in enumerate(dataloader):
-            input_ids = batch["input_ids"].to(self.device, non_blocking=True)
-            attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
-            labels = batch["label"].to(self.device, non_blocking=True)
+            input_ids = batch["input_ids"].to(input_device, non_blocking=True)
+            attention_mask = batch["attention_mask"].to(input_device, non_blocking=True)
+            labels = batch["label"].to(input_device, non_blocking=True)
 
             try:
                 # Avoid passing labels directly to model forward to prevent redundant internal HF loss computation graph
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                logits = outputs.logits
-                if log_priors is not None:
-                    logits = logits + self.logit_adj_tau * log_priors
+                with torch.cuda.amp.autocast(enabled=use_amp):
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    logits = outputs.logits
+                    loss_device = logits.device
+                    if log_priors is not None:
+                        logits = logits + self.logit_adj_tau * log_priors.to(loss_device)
 
-                if criterion is not None:
-                    loss = criterion(logits, labels)
+                    labels_loss = labels.to(loss_device)
+                    if criterion is not None:
+                        if getattr(criterion, "weight", None) is not None and criterion.weight.device != loss_device:
+                            criterion.weight = criterion.weight.to(loss_device)
+                        loss = criterion(logits, labels_loss)
+                    else:
+                        loss = F.cross_entropy(logits, labels_loss)
+
+                    if loss is not None and loss.dim() > 0:
+                        loss = loss.mean()
+
+                    loss_scaled = loss / max(1, gradient_accumulation_steps)
+
+                if scaler is not None and use_amp:
+                    scaler.scale(loss_scaled).backward()
                 else:
-                    loss = F.cross_entropy(logits, labels)
-
-                if loss is not None and loss.dim() > 0:
-                    loss = loss.mean()
-
-                loss_scaled = loss / max(1, gradient_accumulation_steps)
-                loss_scaled.backward()
+                    loss_scaled.backward()
 
                 if fgm is not None:
                     fgm.attack()
-                    outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask)
-                    logits_adv = outputs_adv.logits
-                    if log_priors is not None:
-                        logits_adv = logits_adv + self.logit_adj_tau * log_priors
+                    with torch.cuda.amp.autocast(enabled=use_amp):
+                        outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask)
+                        logits_adv = outputs_adv.logits
+                        loss_device_adv = logits_adv.device
+                        if log_priors is not None:
+                            logits_adv = logits_adv + self.logit_adj_tau * log_priors.to(loss_device_adv)
 
-                    if criterion is not None:
-                        loss_adv = criterion(logits_adv, labels)
+                        labels_loss_adv = labels.to(loss_device_adv)
+                        if criterion is not None:
+                            if getattr(criterion, "weight", None) is not None and criterion.weight.device != loss_device_adv:
+                                criterion.weight = criterion.weight.to(loss_device_adv)
+                            loss_adv = criterion(logits_adv, labels_loss_adv)
+                        else:
+                            loss_adv = F.cross_entropy(logits_adv, labels_loss_adv)
+
+                        if loss_adv is not None and loss_adv.dim() > 0:
+                            loss_adv = loss_adv.mean()
+
+                        loss_adv_scaled = loss_adv / max(1, gradient_accumulation_steps)
+
+                    if scaler is not None and use_amp:
+                        scaler.scale(loss_adv_scaled).backward()
                     else:
-                        loss_adv = F.cross_entropy(logits_adv, labels)
-
-                    if loss_adv is not None and loss_adv.dim() > 0:
-                        loss_adv = loss_adv.mean()
-
-                    loss_adv_scaled = loss_adv / max(1, gradient_accumulation_steps)
-                    loss_adv_scaled.backward()
+                        loss_adv_scaled.backward()
                     fgm.restore()
                     del outputs_adv, logits_adv, loss_adv, loss_adv_scaled
 
                 total_loss += loss.item()
 
                 if (step + 1) % gradient_accumulation_steps == 0 or (step + 1) == len(dataloader):
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                    optimizer.step()
+                    if scaler is not None and use_amp:
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()
 
@@ -228,22 +255,26 @@ class IndoBERTClassifierEvaluator:
         model.eval()
         all_preds = []
         all_labels = []
+        input_device = next(model.parameters()).device
+        use_amp = (self.device.type == "cuda")
 
         with torch.no_grad():
-            for batch in dataloader:
-                input_ids = batch["input_ids"].to(self.device, non_blocking=True)
-                attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
-                labels = batch["label"].to(self.device, non_blocking=True)
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                for batch in dataloader:
+                    input_ids = batch["input_ids"].to(input_device, non_blocking=True)
+                    attention_mask = batch["attention_mask"].to(input_device, non_blocking=True)
+                    labels = batch["label"].to(input_device, non_blocking=True)
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                logits = outputs.logits
-                if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                    logits = logits - self.eval_logit_adj_tau * log_priors
-                preds = torch.argmax(logits, dim=1)
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    logits = outputs.logits
+                    loss_device = logits.device
+                    if log_priors is not None and self.eval_logit_adj_tau > 0.0:
+                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
+                    preds = torch.argmax(logits, dim=1)
 
-                all_preds.extend(preds.detach().cpu().numpy())
-                all_labels.extend(labels.detach().cpu().numpy())
-                del outputs, logits, preds, input_ids, attention_mask, labels
+                    all_preds.extend(preds.detach().cpu().numpy())
+                    all_labels.extend(labels.detach().cpu().numpy())
+                    del outputs, logits, preds, input_ids, attention_mask, labels
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -372,19 +403,42 @@ class IndoBERTClassifierEvaluator:
         config.num_labels = num_labels
         config.id2label = id2label
         config.label2id = label_map
-        model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_name,
-            config=config,
-            ignore_mismatched_sizes=True,
-        )
-        model.to(self.device)
 
+        is_sharded = False
         if self.device.type == "cuda" and self.num_gpus > 1:
-            if free_mem_gib < 3.0 or micro_batch_size < self.num_gpus:
-                print(f"  [GPU Selection] Low VRAM ({free_mem_gib:.2f} GiB) or micro-batch ({micro_batch_size}) < GPU count ({self.num_gpus}). Training on primary GPU {self.device} to prevent DataParallel replica 0 bottleneck.")
-            else:
-                print(f"  [Multi-GPU] Wrapping model with torch.nn.DataParallel across {self.num_gpus} GPUs")
-                model = torch.nn.DataParallel(model)
+            try:
+                import accelerate
+                print(f"  [Multi-GPU Sharding] Sharding model layers across {self.num_gpus} GPUs via device_map='auto' to ensure both GPUs share memory and eliminate single-GPU OOM.")
+                model = AutoModelForSequenceClassification.from_pretrained(
+                    self.model_name,
+                    config=config,
+                    device_map="auto",
+                    ignore_mismatched_sizes=True,
+                )
+                is_sharded = True
+            except Exception as e:
+                print(f"  [Multi-GPU Notice] device_map='auto' fallback ({e}). Loading on device {self.device}...")
+                model = AutoModelForSequenceClassification.from_pretrained(
+                    self.model_name,
+                    config=config,
+                    ignore_mismatched_sizes=True,
+                )
+                model.to(self.device)
+        else:
+            model = AutoModelForSequenceClassification.from_pretrained(
+                self.model_name,
+                config=config,
+                ignore_mismatched_sizes=True,
+            )
+            model.to(self.device)
+
+        loss_device = next(model.parameters()).device
+        if hasattr(model, "classifier") and hasattr(model.classifier, "weight"):
+            loss_device = model.classifier.weight.device
+        elif hasattr(model, "logits_head") and hasattr(model.logits_head, "weight"):
+            loss_device = model.logits_head.weight.device
+        elif hasattr(model, "score") and hasattr(model.score, "weight"):
+            loss_device = model.score.weight.device
 
         if self.use_class_weights:
             from sklearn.utils.class_weight import compute_class_weight
@@ -410,7 +464,7 @@ class IndoBERTClassifierEvaluator:
                 for lbl, idx in label_map.items():
                     print(f"    - {lbl}: adjusted weight = {weight_arr[idx]:.3f}")
 
-            class_weights_tensor = torch.tensor(weight_arr, dtype=torch.float, device=self.device)
+            class_weights_tensor = torch.tensor(weight_arr, dtype=torch.float, device=loss_device)
             criterion = torch.nn.CrossEntropyLoss(weight=class_weights_tensor, label_smoothing=self.label_smoothing)
         elif self.label_smoothing > 0.0:
             criterion = torch.nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
@@ -418,6 +472,9 @@ class IndoBERTClassifierEvaluator:
             criterion = None
 
         fgm = FGM(model, epsilon=self.fgm_epsilon) if self.use_fgm else None
+
+        use_amp = (self.device.type == "cuda")
+        scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
 
         total_steps = math.ceil(len(train_loader) / grad_accum_steps) * num_epochs
         optimizer = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
@@ -452,6 +509,7 @@ class IndoBERTClassifierEvaluator:
                     fgm=fgm,
                     log_priors=log_priors,
                     gradient_accumulation_steps=grad_accum_steps,
+                    scaler=scaler,
                 )
             except torch.OutOfMemoryError as oom_err:
                 retry_count += 1
@@ -464,19 +522,15 @@ class IndoBERTClassifierEvaluator:
                 print(f"  [OOM RECOVERY] Halving micro-batch size {micro_batch_size} -> {new_micro_batch} (grad_accum={grad_accum_steps}) and restarting training from epoch 1...")
                 micro_batch_size = new_micro_batch
 
-                # If wrapped in DataParallel and micro-batch size is smaller than num_gpus, unwrap to single GPU
-                if hasattr(model, "module") and micro_batch_size < self.num_gpus:
-                    print(f"  [OOM RECOVERY] Micro-batch size ({micro_batch_size}) < GPU count ({self.num_gpus}); unwrapping DataParallel to single-GPU execution.")
-                    model = model.module
-
                 # Recreate dataloaders with reduced micro_batch_size
                 train_loader = DataLoader(train_ds, batch_size=micro_batch_size, shuffle=True)
                 if val_loader is not None:
                     val_loader = DataLoader(val_ds, batch_size=micro_batch_size, shuffle=False)
                 test_loader = DataLoader(test_ds, batch_size=micro_batch_size, shuffle=False)
 
-                # Rebuild optimizer and scheduler
+                # Rebuild optimizer, scheduler, and scaler
                 optimizer.zero_grad()
+                scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
                 total_steps = math.ceil(len(train_loader) / grad_accum_steps) * num_epochs
                 optimizer = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
                 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
@@ -583,22 +637,26 @@ class IndoBERTClassifierEvaluator:
         model.eval()
         all_probs = []
         all_labels = []
+        input_device = next(model.parameters()).device
+        use_amp = (self.device.type == "cuda")
 
         with torch.no_grad():
-            for batch in dataloader:
-                input_ids = batch["input_ids"].to(self.device, non_blocking=True)
-                attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
-                labels = batch["label"].to(self.device, non_blocking=True)
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                for batch in dataloader:
+                    input_ids = batch["input_ids"].to(input_device, non_blocking=True)
+                    attention_mask = batch["attention_mask"].to(input_device, non_blocking=True)
+                    labels = batch["label"].to(input_device, non_blocking=True)
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                logits = outputs.logits
-                if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                    logits = logits - self.eval_logit_adj_tau * log_priors
-                probs = torch.softmax(logits, dim=1)
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    logits = outputs.logits
+                    loss_device = logits.device
+                    if log_priors is not None and self.eval_logit_adj_tau > 0.0:
+                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
+                    probs = torch.softmax(logits, dim=1)
 
-                all_probs.append(probs.detach().cpu().numpy())
-                all_labels.extend(labels.detach().cpu().numpy())
-                del outputs, logits, probs, input_ids, attention_mask, labels
+                    all_probs.append(probs.detach().cpu().numpy())
+                    all_labels.extend(labels.detach().cpu().numpy())
+                    del outputs, logits, probs, input_ids, attention_mask, labels
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
