@@ -196,17 +196,23 @@ class IndoBERTClassifierEvaluator:
                     optimizer.zero_grad()
 
                 del outputs, logits, loss, loss_scaled
-            except torch.OutOfMemoryError as oom_err:
-                print(f"  [CUDA OOM GUARD] OutOfMemoryError caught during step {step}. Purging cache and continuing...")
-                optimizer.zero_grad()
-                if fgm is not None:
-                    try:
-                        fgm.restore()
-                    except Exception:
-                        pass
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                gc.collect()
+            except (torch.OutOfMemoryError, RuntimeError) as err:
+                err_str = str(err).lower()
+                is_oom = isinstance(err, torch.OutOfMemoryError) or ("out of memory" in err_str) or ("cublas" in err_str)
+                if is_oom:
+                    print(f"  [CUDA OOM GUARD] Memory allocation error caught during step {step}/{len(dataloader)}: {err}")
+                    optimizer.zero_grad()
+                    if fgm is not None:
+                        try:
+                            fgm.restore()
+                        except Exception:
+                            pass
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    gc.collect()
+                    raise torch.OutOfMemoryError(f"CUDA memory allocation failed at step {step}: {err}") from err
+                else:
+                    raise err
             finally:
                 del input_ids, attention_mask, labels
 
@@ -327,15 +333,23 @@ class IndoBERTClassifierEvaluator:
         effective_batch_size = self.batch_size
         micro_batch_size = effective_batch_size
         grad_accum_steps = 1
+        free_mem_gib = 8.0
         if self.device.type == "cuda":
-            free_mem_gib = 8.0
             try:
                 free_mem, _ = torch.cuda.mem_get_info(self.device.index or 0)
                 free_mem_gib = free_mem / (1024 ** 3)
             except Exception:
                 pass
 
-            target_micro_batch = 16 if free_mem_gib >= 4.0 else 8
+            if free_mem_gib >= 8.0:
+                target_micro_batch = 16
+            elif free_mem_gib >= 4.0:
+                target_micro_batch = 8
+            elif free_mem_gib >= 2.0:
+                target_micro_batch = 4
+            else:
+                target_micro_batch = 2
+
             if effective_batch_size > target_micro_batch:
                 micro_batch_size = target_micro_batch
                 grad_accum_steps = max(1, math.ceil(effective_batch_size / micro_batch_size))
@@ -351,11 +365,8 @@ class IndoBERTClassifierEvaluator:
             val_loader = None
 
         # Pre-allocation VRAM purge
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            if hasattr(torch.cuda, "ipc_collect"):
-                torch.cuda.ipc_collect()
+        from src.utils.hardware import release_model_vram, deep_cuda_purge
+        deep_cuda_purge()
 
         config = AutoConfig.from_pretrained(self.model_name)
         config.num_labels = num_labels
@@ -369,8 +380,11 @@ class IndoBERTClassifierEvaluator:
         model.to(self.device)
 
         if self.device.type == "cuda" and self.num_gpus > 1:
-            print(f"  [Multi-GPU] Wrapping model with torch.nn.DataParallel across {self.num_gpus} GPUs")
-            model = torch.nn.DataParallel(model)
+            if free_mem_gib < 3.0 or micro_batch_size < self.num_gpus:
+                print(f"  [GPU Selection] Low VRAM ({free_mem_gib:.2f} GiB) or micro-batch ({micro_batch_size}) < GPU count ({self.num_gpus}). Training on primary GPU {self.device} to prevent DataParallel replica 0 bottleneck.")
+            else:
+                print(f"  [Multi-GPU] Wrapping model with torch.nn.DataParallel across {self.num_gpus} GPUs")
+                model = torch.nn.DataParallel(model)
 
         if self.use_class_weights:
             from sklearn.utils.class_weight import compute_class_weight
@@ -422,18 +436,65 @@ class IndoBERTClassifierEvaluator:
             "val_macro_f1": [],
         }
 
-        for epoch in range(num_epochs):
+        epoch = 0
+        retry_count = 0
+        max_retries = 3
+
+        while epoch < num_epochs:
             actual_epochs_trained = epoch + 1
-            loss = self.train_epoch(
-                model,
-                train_loader,
-                optimizer,
-                scheduler,
-                criterion=criterion,
-                fgm=fgm,
-                log_priors=log_priors,
-                gradient_accumulation_steps=grad_accum_steps,
-            )
+            try:
+                loss = self.train_epoch(
+                    model,
+                    train_loader,
+                    optimizer,
+                    scheduler,
+                    criterion=criterion,
+                    fgm=fgm,
+                    log_priors=log_priors,
+                    gradient_accumulation_steps=grad_accum_steps,
+                )
+            except torch.OutOfMemoryError as oom_err:
+                retry_count += 1
+                if retry_count > max_retries or micro_batch_size <= 1:
+                    print(f"  [FATAL OOM] Cannot recover from OutOfMemoryError after {retry_count} retries (micro-batch={micro_batch_size}).")
+                    raise oom_err
+
+                new_micro_batch = max(1, micro_batch_size // 2)
+                grad_accum_steps = max(1, math.ceil(effective_batch_size / new_micro_batch))
+                print(f"  [OOM RECOVERY] Halving micro-batch size {micro_batch_size} -> {new_micro_batch} (grad_accum={grad_accum_steps}) and restarting training from epoch 1...")
+                micro_batch_size = new_micro_batch
+
+                # If wrapped in DataParallel and micro-batch size is smaller than num_gpus, unwrap to single GPU
+                if hasattr(model, "module") and micro_batch_size < self.num_gpus:
+                    print(f"  [OOM RECOVERY] Micro-batch size ({micro_batch_size}) < GPU count ({self.num_gpus}); unwrapping DataParallel to single-GPU execution.")
+                    model = model.module
+
+                # Recreate dataloaders with reduced micro_batch_size
+                train_loader = DataLoader(train_ds, batch_size=micro_batch_size, shuffle=True)
+                if val_loader is not None:
+                    val_loader = DataLoader(val_ds, batch_size=micro_batch_size, shuffle=False)
+                test_loader = DataLoader(test_ds, batch_size=micro_batch_size, shuffle=False)
+
+                # Rebuild optimizer and scheduler
+                optimizer.zero_grad()
+                total_steps = math.ceil(len(train_loader) / grad_accum_steps) * num_epochs
+                optimizer = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
+                scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
+
+                # Reset training history to restart cleanly
+                epoch = 0
+                history["epoch"].clear()
+                history["train_loss"].clear()
+                history["val_accuracy"].clear()
+                history["val_macro_f1"].clear()
+                best_val_f1 = -1.0
+                best_train_loss = float("inf")
+                best_model_weights = None
+                patience_counter = 0
+
+                deep_cuda_purge()
+                continue
+
             history["epoch"].append(epoch + 1)
             history["train_loss"].append(float(loss))
             if val_loader is not None:
@@ -469,6 +530,7 @@ class IndoBERTClassifierEvaluator:
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+            epoch += 1
 
         if best_model_weights is not None:
             target_model = model.module if hasattr(model, "module") else model
@@ -480,21 +542,12 @@ class IndoBERTClassifierEvaluator:
         test_probs, _ = self.predict_proba(model, test_loader, log_priors=log_priors)
 
         # Explicit cleanup of model, optimizer, dataloaders from GPU VRAM
-        try:
-            if hasattr(model, "module"):
-                model.module.to("cpu")
-            model.to("cpu")
-        except Exception:
-            pass
+        release_model_vram(model)
         del model, optimizer, scheduler, criterion, fgm
         del train_loader, test_loader
         if val_loader is not None:
             del val_loader
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            if hasattr(torch.cuda, "ipc_collect"):
-                torch.cuda.ipc_collect()
+        deep_cuda_purge()
 
         res: Dict[str, Any] = {
             "dataset_name": name,

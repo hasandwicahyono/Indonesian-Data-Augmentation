@@ -310,21 +310,32 @@ class IndonesianAugmenter:
 
     def cleanup(self):
         """Explicitly releases generative and embedding models from GPU memory."""
+        from src.utils.hardware import release_model_vram, deep_cuda_purge
+
         if hasattr(self, "gen_pipeline") and self.gen_pipeline is not None:
-            if hasattr(self.gen_pipeline, "model") and self.gen_pipeline.model is not None:
+            model = getattr(self.gen_pipeline, "model", None)
+            if model is not None:
+                release_model_vram(model)
                 try:
-                    self.gen_pipeline.model.to("cpu")
+                    del self.gen_pipeline.model
                 except Exception:
                     pass
-                del self.gen_pipeline.model
+            try:
+                tokenizer = getattr(self.gen_pipeline, "tokenizer", None)
+                if tokenizer is not None:
+                    del self.gen_pipeline.tokenizer
+            except Exception:
+                pass
             del self.gen_pipeline
             self.gen_pipeline = None
 
         if hasattr(self, "embed_model") and self.embed_model is not None:
-            try:
-                self.embed_model.to("cpu")
-            except Exception:
-                pass
+            release_model_vram(self.embed_model)
+            if hasattr(self.embed_model, "_first_module"):
+                try:
+                    release_model_vram(self.embed_model._first_module())
+                except Exception:
+                    pass
             del self.embed_model
             self.embed_model = None
 
@@ -332,11 +343,7 @@ class IndonesianAugmenter:
             del self.tokenizer
             self.tokenizer = None
 
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            if hasattr(torch.cuda, "ipc_collect"):
-                torch.cuda.ipc_collect()
+        deep_cuda_purge()
 
     def __del__(self):
         try:

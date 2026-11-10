@@ -5,7 +5,7 @@ Hardware and Compute Environment Utilities for Device Resolution and Profiling.
 import os
 import platform
 import psutil
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 import torch
 
 
@@ -39,4 +39,82 @@ def get_process_memory_gb() -> float:
     """Returns current process RAM utilization in gigabytes."""
     proc = psutil.Process(os.getpid())
     return float(proc.memory_info().rss / (1024**3))
+
+
+def release_model_vram(model: Any):
+    """
+    Safely releases CUDA VRAM allocated by a PyTorch model or Accelerate-dispatched pipeline.
+    Strips Accelerate execution hooks, zeros out parameter and buffer CUDA storage,
+    and returns memory blocks to the CUDA caching allocator.
+    """
+    if model is None:
+        return
+
+    # 1. Handle Hugging Face pipeline wrapping
+    if hasattr(model, "model") and getattr(model, "model", None) is not None:
+        release_model_vram(getattr(model, "model"))
+
+    # 2. Detach Accelerate hooks recursively
+    try:
+        from accelerate.hooks import remove_hook_from_module
+        remove_hook_from_module(model, recurse=True)
+    except Exception:
+        pass
+
+    # 3. Recursively strip Accelerate hooks and CUDA storage from submodules
+    if hasattr(model, "modules"):
+        try:
+            for submod in model.modules():
+                if hasattr(submod, "_hf_hook"):
+                    try:
+                        delattr(submod, "_hf_hook")
+                    except Exception:
+                        pass
+                for p_name, p in list(getattr(submod, "_parameters", {}).items()):
+                    if p is not None and isinstance(p, torch.Tensor) and p.is_cuda:
+                        p.grad = None
+                        p.data = torch.empty(0, device="cpu")
+                for b_name, b in list(getattr(submod, "_buffers", {}).items()):
+                    if b is not None and isinstance(b, torch.Tensor) and b.is_cuda:
+                        b.data = torch.empty(0, device="cpu")
+        except Exception:
+            pass
+
+    # 4. Fallback for root module parameters and buffers
+    try:
+        if hasattr(model, "parameters"):
+            for p in model.parameters():
+                if p is not None and isinstance(p, torch.Tensor) and p.is_cuda:
+                    p.grad = None
+                    p.data = torch.empty(0, device="cpu")
+        if hasattr(model, "buffers"):
+            for b in model.buffers():
+                if b is not None and isinstance(b, torch.Tensor) and b.is_cuda:
+                    b.data = torch.empty(0, device="cpu")
+    except Exception:
+        pass
+
+    # 5. Move module to CPU if possible (only after hooks are stripped)
+    try:
+        if hasattr(model, "to"):
+            model.to("cpu")
+    except Exception:
+        pass
+
+
+def deep_cuda_purge():
+    """
+    Performs multi-cycle garbage collection and empties CUDA cache and IPC allocations across all devices.
+    """
+    import gc
+    for _ in range(3):
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                try:
+                    torch.cuda.ipc_collect()
+                except Exception:
+                    pass
+
 

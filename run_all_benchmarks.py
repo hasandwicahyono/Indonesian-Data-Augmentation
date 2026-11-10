@@ -844,25 +844,28 @@ def run_benchmark_pipeline(
                     except Exception:
                         pass
                     del augmenter
-                gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                    if hasattr(torch.cuda, "ipc_collect"):
-                        torch.cuda.ipc_collect()
+                from src.utils.hardware import deep_cuda_purge
+                deep_cuda_purge()
 
             print(f"\n  >>> STEP 3: Fine-Tuning IndoBERT Across All Variants for {ds_name}...")
             # Thorough memory purge before training begins
-            gc.collect()
+            from src.utils.hardware import deep_cuda_purge
+            deep_cuda_purge()
             if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-                if hasattr(torch.cuda, "ipc_collect"):
-                    torch.cuda.ipc_collect()
+                low_mem_warning = False
                 for dev_i in range(torch.cuda.device_count()):
                     try:
                         free_mem, total_mem = torch.cuda.mem_get_info(dev_i)
-                        print(f"  [GPU {dev_i} Status] Free: {free_mem / (1024**3):.2f} GiB / Total: {total_mem / (1024**3):.2f} GiB")
+                        free_gib = free_mem / (1024**3)
+                        total_gib = total_mem / (1024**3)
+                        print(f"  [GPU {dev_i} Status] Free: {free_gib:.2f} GiB / Total: {total_gib:.2f} GiB")
+                        if free_gib < 4.0:
+                            low_mem_warning = True
                     except Exception:
                         pass
+                if low_mem_warning:
+                    print("  [Notice] One or more GPUs report < 4.0 GiB free VRAM. "
+                          "Dynamic micro-batching will adaptively scale batch sizes to prevent OOM.")
             epochs = epochs_override if epochs_override is not None else cfg["epochs"]
             batch_size = batch_size_override if batch_size_override is not None else cfg["batch_size"]
 
