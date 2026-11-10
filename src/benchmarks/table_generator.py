@@ -580,10 +580,20 @@ def generate_tpami_comparisons_table(
     latex_blocks = []
 
     # Persistent benchmark reference file
-    bench_json = os.path.join(out_results_dir, "sota_longtailed_benchmark_results.json")
-    if not os.path.exists(bench_json):
+    bench_candidates = [
+        os.path.join(out_results_dir, "sota_longtailed_benchmark_results.json"),
+        _resolve_path("data/results/extended/sota_longtailed_benchmark_results.json"),
+        _resolve_path("data/results/sota_longtailed_benchmark_results.json"),
+    ]
+    bench_json = None
+    for c in bench_candidates:
+        if os.path.exists(c):
+            bench_json = c
+            break
+
+    if not bench_json:
         raise FileNotFoundError(
-            f"Missing SOTA long-tailed benchmark file: '{bench_json}'. "
+            f"Missing SOTA long-tailed benchmark file in candidate paths. "
             "Please rerun generate_tpami_comparisons_table() via 'python run_all_benchmarks.py' to produce this file."
         )
 
@@ -591,17 +601,28 @@ def generate_tpami_comparisons_table(
         benchmarks_data = json.load(f)
 
     for ds_name in get_investigated_datasets():
-        eval_path = os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx")
-        pred_path = os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz")
+        eval_candidates = [
+            os.path.join(results_dir, f"{ds_name}_evaluation_results.xlsx"),
+            _resolve_path(f"data/results/{ds_name}_evaluation_results.xlsx"),
+            _resolve_path(f"data/results/extended/{ds_name}_evaluation_results.xlsx"),
+        ]
+        eval_path = next((c for c in eval_candidates if os.path.exists(c)), None)
 
-        if not os.path.exists(eval_path):
+        pred_candidates = [
+            os.path.join(results_dir, f"{ds_name}_evaluation_results_predictions.npz"),
+            _resolve_path(f"data/results/{ds_name}_evaluation_results_predictions.npz"),
+            _resolve_path(f"data/results/extended/{ds_name}_evaluation_results_predictions.npz"),
+        ]
+        pred_path = next((c for c in pred_candidates if os.path.exists(c)), None)
+
+        if not eval_path:
             raise FileNotFoundError(
-                f"Missing evaluation file: '{eval_path}'. "
+                f"Missing evaluation file for '{ds_name}' in '{results_dir}'. "
                 f"Please run 'python run_all_benchmarks.py' to produce experimental results for dataset {ds_name}."
             )
-        if not os.path.exists(pred_path):
+        if not pred_path:
             raise FileNotFoundError(
-                f"Missing predictions file: '{pred_path}'. "
+                f"Missing predictions file for '{ds_name}' in '{results_dir}'. "
                 f"Please run 'python run_all_benchmarks.py' to produce model test predictions for dataset {ds_name}."
             )
 
@@ -732,13 +753,82 @@ def generate_tpami_5fold_table(
     records = []
     latex_blocks = []
 
+    # Check if all JSON files exist across candidate search locations
+    missing_any = False
+    resolved_json_paths = {}
     for ds_code, (ds_label, json_name) in datasets_map.items():
-        json_path = os.path.join(results_dir, json_name)
-        if not os.path.exists(json_path):
+        candidates = [
+            os.path.join(results_dir, json_name),
+            _resolve_path(f"data/results/extended/{json_name}"),
+            _resolve_path(f"data/results/{json_name}"),
+            os.path.join(os.path.dirname(results_dir.rstrip("/")), "extended", json_name),
+        ]
+        found = None
+        for c in candidates:
+            if os.path.exists(c):
+                found = c
+                break
+        if found:
+            resolved_json_paths[ds_code] = found
+        else:
+            missing_any = True
+
+    if missing_any:
+        # Fallback: check if precomputed CV table CSV exists
+        csv_candidates = [
+            os.path.join(results_dir, "tpami_stratified_5fold_cv_paired_ttest.csv"),
+            _resolve_path("data/results/extended/tpami_stratified_5fold_cv_paired_ttest.csv"),
+            _resolve_path("data/results/extended/stratified_5fold_cv_paired_ttest.csv"),
+            _resolve_path("data/results/tpami_stratified_5fold_cv_paired_ttest.csv"),
+        ]
+        csv_found = None
+        for c in csv_candidates:
+            if os.path.exists(c):
+                csv_found = c
+                break
+
+        if csv_found:
+            print(f"  [Notice] Individual 5-fold JSON files not found. Loading cached results from '{csv_found}'.")
+            df = pd.read_csv(csv_found)
+            # Reconstruct LaTeX blocks from CSV
+            latex_blocks = []
+            for ds_label in df["Dataset"].unique():
+                ds_sub = df[df["Dataset"] == ds_label]
+                num_rows = len(ds_sub)
+                block = [f"\\multirow{{{num_rows}}}{{*}}{{\\textbf{{{ds_label}}}}}"]
+                for _, row in ds_sub.iterrows():
+                    v_name = str(row["Variant"])
+                    f_str = str(row["Folds (1..5)"])
+                    m_f1 = str(row["Mean F1"]).replace("+-", "$\\pm$")
+                    t_s = str(row["t-stat"])
+                    p_v = str(row["p-value"])
+                    s_g = str(row["Significance"])
+                    block.append(f"& {v_name} & {f_str} & {m_f1} & {t_s} & {p_v} & {s_g} \\\\")
+                latex_blocks.append("\n".join(block))
+
+            tex_content = """\\begin{tabularx}{\\textwidth}{l l X c c c c}
+\\toprule
+\\textbf{Dataset} & \\textbf{Variant} & \\textbf{Folds (1..5)} & \\textbf{Mean F1} & \\textbf{$t$-stat} & \\textbf{$p$-value} & \\textbf{Signif.} \\\\
+\\midrule
+""" + "\n\\midrule\n".join(latex_blocks) + """
+\\bottomrule
+\\end{tabularx}"""
+            tex_path = os.path.join(paper_dir, "table_tpami_5fold.tex")
+            os.makedirs(paper_dir, exist_ok=True)
+            with open(tex_path, "w") as f:
+                f.write(tex_content)
+            df.to_csv(os.path.join(results_dir, "tpami_stratified_5fold_cv_paired_ttest.csv"), index=False)
+            print("\n[TPAMI Table 2: 5-Fold Cross Validation Paired t-Test (From Cached CSV)]")
+            print(df.to_string(index=False))
+            return df, tex_content
+        else:
             raise FileNotFoundError(
-                f"Missing 5-fold cross validation file: '{json_path}'. "
-                "Please run 'python run_all_benchmarks.py --run_cv' or 'python -m src.benchmarks.cross_validation' to produce this file."
+                f"Missing 5-fold cross validation records in '{results_dir}'. "
+                "Please run 'python run_all_benchmarks.py --run_cv' or 'python -m src.benchmarks.cross_validation' to produce these files."
             )
+
+    for ds_code, (ds_label, json_name) in datasets_map.items():
+        json_path = resolved_json_paths[ds_code]
 
         with open(json_path, "r") as f:
             data = json.load(f)
