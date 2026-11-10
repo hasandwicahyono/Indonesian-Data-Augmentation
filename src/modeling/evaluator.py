@@ -274,7 +274,7 @@ class IndoBERTClassifierEvaluator:
                     logits = outputs.logits
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
+                        logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
                     preds = torch.argmax(logits, dim=1)
 
                     all_preds.extend(preds.detach().cpu().numpy())
@@ -704,7 +704,7 @@ class IndoBERTClassifierEvaluator:
                     logits = outputs.logits
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
+                        logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
                     probs = torch.softmax(logits, dim=1)
 
                     all_probs.append(probs.detach().cpu().numpy())
