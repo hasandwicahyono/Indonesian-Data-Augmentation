@@ -6,6 +6,7 @@ Computes Euclidean, Cosine, Jaccard, and BLEU similarities for each sample.
 
 import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+import gc
 import torch
 import pandas as pd
 import numpy as np
@@ -306,4 +307,41 @@ class IndonesianAugmenter:
             })
 
         return pd.DataFrame(records)
+
+    def cleanup(self):
+        """Explicitly releases generative and embedding models from GPU memory."""
+        if hasattr(self, "gen_pipeline") and self.gen_pipeline is not None:
+            if hasattr(self.gen_pipeline, "model") and self.gen_pipeline.model is not None:
+                try:
+                    self.gen_pipeline.model.to("cpu")
+                except Exception:
+                    pass
+                del self.gen_pipeline.model
+            del self.gen_pipeline
+            self.gen_pipeline = None
+
+        if hasattr(self, "embed_model") and self.embed_model is not None:
+            try:
+                self.embed_model.to("cpu")
+            except Exception:
+                pass
+            del self.embed_model
+            self.embed_model = None
+
+        if hasattr(self, "tokenizer") and self.tokenizer is not None:
+            del self.tokenizer
+            self.tokenizer = None
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
+
+    def __del__(self):
+        try:
+            self.cleanup()
+        except Exception:
+            pass
+
 

@@ -13,7 +13,8 @@ Computes Accuracy, Precision, Recall, Macro-F1, per-class F1, and Paired statist
 
 import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+if "PYTORCH_CUDA_ALLOC_CONF" not in os.environ or "expandable_segments:True" in os.environ.get("PYTORCH_CUDA_ALLOC_CONF", ""):
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "garbage_collection_threshold:0.8,max_split_size_mb:128"
 import gc
 import math
 import warnings
@@ -148,52 +149,66 @@ class IndoBERTClassifierEvaluator:
             attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
             labels = batch["label"].to(self.device, non_blocking=True)
 
-            # Avoid passing labels directly to model forward to prevent redundant internal HF loss computation graph
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-            if log_priors is not None:
-                logits = logits + self.logit_adj_tau * log_priors
-
-            if criterion is not None:
-                loss = criterion(logits, labels)
-            else:
-                loss = F.cross_entropy(logits, labels)
-
-            if loss is not None and loss.dim() > 0:
-                loss = loss.mean()
-
-            loss_scaled = loss / max(1, gradient_accumulation_steps)
-            loss_scaled.backward()
-
-            if fgm is not None:
-                fgm.attack()
-                outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask)
-                logits_adv = outputs_adv.logits
+            try:
+                # Avoid passing labels directly to model forward to prevent redundant internal HF loss computation graph
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                logits = outputs.logits
                 if log_priors is not None:
-                    logits_adv = logits_adv + self.logit_adj_tau * log_priors
+                    logits = logits + self.logit_adj_tau * log_priors
 
                 if criterion is not None:
-                    loss_adv = criterion(logits_adv, labels)
+                    loss = criterion(logits, labels)
                 else:
-                    loss_adv = F.cross_entropy(logits_adv, labels)
+                    loss = F.cross_entropy(logits, labels)
 
-                if loss_adv is not None and loss_adv.dim() > 0:
-                    loss_adv = loss_adv.mean()
+                if loss is not None and loss.dim() > 0:
+                    loss = loss.mean()
 
-                loss_adv_scaled = loss_adv / max(1, gradient_accumulation_steps)
-                loss_adv_scaled.backward()
-                fgm.restore()
-                del outputs_adv, logits_adv, loss_adv, loss_adv_scaled
+                loss_scaled = loss / max(1, gradient_accumulation_steps)
+                loss_scaled.backward()
 
-            total_loss += loss.item()
+                if fgm is not None:
+                    fgm.attack()
+                    outputs_adv = model(input_ids=input_ids, attention_mask=attention_mask)
+                    logits_adv = outputs_adv.logits
+                    if log_priors is not None:
+                        logits_adv = logits_adv + self.logit_adj_tau * log_priors
 
-            if (step + 1) % gradient_accumulation_steps == 0 or (step + 1) == len(dataloader):
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                optimizer.step()
-                scheduler.step()
+                    if criterion is not None:
+                        loss_adv = criterion(logits_adv, labels)
+                    else:
+                        loss_adv = F.cross_entropy(logits_adv, labels)
+
+                    if loss_adv is not None and loss_adv.dim() > 0:
+                        loss_adv = loss_adv.mean()
+
+                    loss_adv_scaled = loss_adv / max(1, gradient_accumulation_steps)
+                    loss_adv_scaled.backward()
+                    fgm.restore()
+                    del outputs_adv, logits_adv, loss_adv, loss_adv_scaled
+
+                total_loss += loss.item()
+
+                if (step + 1) % gradient_accumulation_steps == 0 or (step + 1) == len(dataloader):
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
+
+                del outputs, logits, loss, loss_scaled
+            except torch.OutOfMemoryError as oom_err:
+                print(f"  [CUDA OOM GUARD] OutOfMemoryError caught during step {step}. Purging cache and continuing...")
                 optimizer.zero_grad()
-
-            del outputs, logits, loss, loss_scaled, input_ids, attention_mask, labels
+                if fgm is not None:
+                    try:
+                        fgm.restore()
+                    except Exception:
+                        pass
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+            finally:
+                del input_ids, attention_mask, labels
 
         return total_loss / len(dataloader)
 
@@ -307,15 +322,24 @@ class IndoBERTClassifierEvaluator:
         test_ds = ClassificationDataset(test_df["text"].tolist(), test_df["label"].tolist(), self.model_name, self.max_len, label_map, preprocessor=prep, prompt_prefix=self.prompt_prefix)
 
         # Multi-GPU / Single-GPU micro-batching configuration:
-        # If batch_size > 32 and device is CUDA, use micro-batching with gradient accumulation
-        # to prevent DataParallel replica 0 aggregation bottlenecks and VRAM OOM.
+        # Use micro-batching with gradient accumulation to prevent DataParallel
+        # replica 0 memory aggregation bottlenecks and VRAM OOM on 12GB GPUs.
         effective_batch_size = self.batch_size
         micro_batch_size = effective_batch_size
         grad_accum_steps = 1
-        if self.device.type == "cuda" and effective_batch_size > 32:
-            micro_batch_size = 32
-            grad_accum_steps = max(1, effective_batch_size // micro_batch_size)
-            print(f"  [Memory Optimization] Effective batch size {effective_batch_size} -> Micro-batch size: {micro_batch_size}, Gradient accumulation steps: {grad_accum_steps}")
+        if self.device.type == "cuda":
+            free_mem_gib = 8.0
+            try:
+                free_mem, _ = torch.cuda.mem_get_info(self.device.index or 0)
+                free_mem_gib = free_mem / (1024 ** 3)
+            except Exception:
+                pass
+
+            target_micro_batch = 16 if free_mem_gib >= 4.0 else 8
+            if effective_batch_size > target_micro_batch:
+                micro_batch_size = target_micro_batch
+                grad_accum_steps = max(1, math.ceil(effective_batch_size / micro_batch_size))
+                print(f"  [Memory Optimization] Available VRAM: {free_mem_gib:.2f} GiB | Effective batch size {effective_batch_size} -> Micro-batch size: {micro_batch_size}, Gradient accumulation steps: {grad_accum_steps}")
 
         train_loader = DataLoader(train_ds, batch_size=micro_batch_size, shuffle=True)
         test_loader = DataLoader(test_ds, batch_size=micro_batch_size, shuffle=False)
@@ -325,6 +349,13 @@ class IndoBERTClassifierEvaluator:
             val_loader = DataLoader(val_ds, batch_size=micro_batch_size, shuffle=False)
         else:
             val_loader = None
+
+        # Pre-allocation VRAM purge
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
 
         config = AutoConfig.from_pretrained(self.model_name)
         config.num_labels = num_labels
@@ -449,6 +480,12 @@ class IndoBERTClassifierEvaluator:
         test_probs, _ = self.predict_proba(model, test_loader, log_priors=log_priors)
 
         # Explicit cleanup of model, optimizer, dataloaders from GPU VRAM
+        try:
+            if hasattr(model, "module"):
+                model.module.to("cpu")
+            model.to("cpu")
+        except Exception:
+            pass
         del model, optimizer, scheduler, criterion, fgm
         del train_loader, test_loader
         if val_loader is not None:
@@ -456,6 +493,8 @@ class IndoBERTClassifierEvaluator:
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
 
         res: Dict[str, Any] = {
             "dataset_name": name,

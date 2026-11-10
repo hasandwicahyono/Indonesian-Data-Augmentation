@@ -31,7 +31,9 @@ warnings.filterwarnings("ignore", message=".*Was asked to gather along dimension
 
 # Ensure KMP duplicate lib is allowed on macOS
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+# Configure CUDA caching allocator to minimize fragmentation and prevent virtual address space exhaustion
+if "PYTORCH_CUDA_ALLOC_CONF" not in os.environ or "expandable_segments:True" in os.environ.get("PYTORCH_CUDA_ALLOC_CONF", ""):
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "garbage_collection_threshold:0.8,max_split_size_mb:128"
 
 # Ensure local modules are found
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -836,13 +838,31 @@ def run_benchmark_pipeline(
                     output_dir=base_aug_dir,
                 )
                 aug_dfs = all_text_dfs
-                if "augmenter" in locals():
+                if "augmenter" in locals() and augmenter is not None:
+                    try:
+                        augmenter.cleanup()
+                    except Exception:
+                        pass
                     del augmenter
                 gc.collect()
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
+                    if hasattr(torch.cuda, "ipc_collect"):
+                        torch.cuda.ipc_collect()
 
             print(f"\n  >>> STEP 3: Fine-Tuning IndoBERT Across All Variants for {ds_name}...")
+            # Thorough memory purge before training begins
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+                for dev_i in range(torch.cuda.device_count()):
+                    try:
+                        free_mem, total_mem = torch.cuda.mem_get_info(dev_i)
+                        print(f"  [GPU {dev_i} Status] Free: {free_mem / (1024**3):.2f} GiB / Total: {total_mem / (1024**3):.2f} GiB")
+                    except Exception:
+                        pass
             epochs = epochs_override if epochs_override is not None else cfg["epochs"]
             batch_size = batch_size_override if batch_size_override is not None else cfg["batch_size"]
 
