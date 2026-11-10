@@ -300,15 +300,16 @@ def plot_dataset_metric_comparison(
 
     # Calculate and annotate best improvement on Macro-F1
     if "Macro-F1" in df_plot.columns and len(df_plot) > 1:
-        base_f1 = df_plot.loc[df_plot["variant"] == "Baseline", "Macro-F1"].values
-        if len(base_f1) > 0 and base_f1[0] > 0:
-            aug_rows = df_plot[df_plot["variant"] != "Baseline"]
-            if not aug_rows.empty:
+        base_rows = df_plot[df_plot["variant"].isin(["Baseline", "Raw-ERM"])]
+        aug_rows = df_plot[df_plot["variant"].isin(["ECU", "COS", "JAC", "BLEU", "Ensemble"])]
+        if not base_rows.empty and not aug_rows.empty:
+            base_f1_val = base_rows.iloc[0]["Macro-F1"]
+            if base_f1_val > 0:
                 best_aug_idx = aug_rows["Macro-F1"].idxmax()
                 best_var = df_plot.loc[best_aug_idx, "variant"]
                 best_f1 = df_plot.loc[best_aug_idx, "Macro-F1"]
-                gain = best_f1 - base_f1[0]
-                pct_gain = (gain / base_f1[0]) * 100.0
+                gain = best_f1 - base_f1_val
+                pct_gain = (gain / base_f1_val) * 100.0
                 sign = "+" if gain >= 0 else ""
                 ax.text(
                     0.02,
@@ -495,24 +496,26 @@ def plot_cross_dataset_summary(
 
         # Baseline vs Best F1 text box
         if "Macro-F1" in df_plot.columns:
-            base_f1 = df_plot.loc[df_plot["variant"] == "Baseline", "Macro-F1"].values
-            aug_rows = df_plot[df_plot["variant"] != "Baseline"]
-            if len(base_f1) > 0 and not aug_rows.empty:
+            base_rows = df_plot[df_plot["variant"].isin(["Baseline", "Raw-ERM"])]
+            aug_rows = df_plot[df_plot["variant"].isin(["ECU", "COS", "JAC", "BLEU", "Ensemble"])]
+            if not base_rows.empty and not aug_rows.empty:
+                base_f1_val = base_rows.iloc[0]["Macro-F1"]
                 best_idx = aug_rows["Macro-F1"].idxmax()
                 best_v = df_plot.loc[best_idx, "variant"]
                 best_f = df_plot.loc[best_idx, "Macro-F1"]
-                gain_pct = ((best_f - base_f1[0]) / base_f1[0]) * 100.0
-                sign = "+" if gain_pct >= 0 else ""
-                ax.text(
-                    0.03,
-                    0.94,
-                    f"Best ({best_v}): F1 {best_f:.3f} ({sign}{gain_pct:.1f}%)",
-                    transform=ax.transAxes,
-                    fontsize=9,
-                    fontweight="bold",
-                    color="#154360",
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#ebf5fb", edgecolor="#aed6f1", alpha=0.9),
-                )
+                if base_f1_val > 0:
+                    gain_pct = ((best_f - base_f1_val) / base_f1_val) * 100.0
+                    sign = "+" if gain_pct >= 0 else ""
+                    ax.text(
+                        0.03,
+                        0.94,
+                        f"Best ({best_v}): F1 {best_f:.3f} ({sign}{gain_pct:.1f}%)",
+                        transform=ax.transAxes,
+                        fontsize=9,
+                        fontweight="bold",
+                        color="#154360",
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#ebf5fb", edgecolor="#aed6f1", alpha=0.9),
+                    )
 
         ax.set_title(f"({chr(65+i)}) {ds_name} Dataset", fontsize=12, fontweight="bold")
         ax.set_xticks(x)
@@ -912,16 +915,30 @@ def run_benchmark_pipeline(
         if npz_cand and os.path.exists(npz_cand):
             try:
                 npz_data = np.load(npz_cand)
-                base_key_true = f"{ds_name}-Baseline-NotAugmented__true"
-                base_key_pred = f"{ds_name}-Baseline-NotAugmented__pred"
+                # Prefer RawERM baseline if present (unaugmented ERM), otherwise NotAugmented
+                base_cand_prefixes = [
+                    f"{ds_name}-Baseline-RawERM",
+                    f"{ds_name}-Baseline-NotAugmented",
+                    f"{ds_name}-Baseline",
+                ]
+                base_key_true = None
+                base_key_pred = None
+                for bp in base_cand_prefixes:
+                    if f"{bp}__true" in npz_data and f"{bp}__pred" in npz_data:
+                        base_key_true = f"{bp}__true"
+                        base_key_pred = f"{bp}__pred"
+                        break
 
-                # Find best augmented key
+                # Find best augmented key (strictly excluding Baseline and Raw-ERM)
                 best_var_name = "Best Augmented"
                 best_key_true = None
                 best_key_pred = None
                 best_f1 = -1.0
 
-                df_aug = results_df[~results_df["dataset_name"].str.contains("Baseline")].copy()
+                df_aug = results_df[
+                    ~results_df["dataset_name"].str.contains("Baseline") &
+                    ~results_df["dataset_name"].str.contains("Raw")
+                ].copy()
                 if not df_aug.empty and "macro_f1" in df_aug.columns:
                     best_row = df_aug.loc[df_aug["macro_f1"].idxmax()]
                     target_name = best_row["dataset_name"]
