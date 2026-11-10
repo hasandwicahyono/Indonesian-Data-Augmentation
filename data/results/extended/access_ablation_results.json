@@ -1,8 +1,8 @@
 [
   {
     "Configuration": "Full Proposed Pipeline",
-    "HoASA F1": 0.6944,
-    "SmSA F1": 0.9246
+    "HoASA F1": 0.7103,
+    "SmSA F1": 0.9177
   },
   {
     "Configuration": "\\quad $-$ w/o Logit Adjustment ($\\tau=0$)",
@@ -16,7 +16,7 @@
   },
   {
     "Configuration": "\\quad $-$ w/o Semantic Filtering (Raw GPT-2)",
-    "HoASA F1": 0.6720,
+    "HoASA F1": 0.672,
     "SmSA F1": 0.9092
   },
   {
@@ -26,7 +26,7 @@
   },
   {
     "Configuration": "\\quad $-$ w/o FGM Adversarial Regularization",
-    "HoASA F1": 0.6580,
+    "HoASA F1": 0.658,
     "SmSA F1": 0.8924
   },
   {

@@ -8,7 +8,7 @@
 & Focal Loss ($\gamma = 2.0$) & 0.9120 & 0.9080 & 0.8712 & 0.8885 & 0.8712 & 0.8580 & $p = 0.082$ \\
 & LDAM-DRW & 0.9180 & 0.9150 & 0.8810 & 0.8972 & 0.8810 & 0.8690 & $p < 0.01$ \\
 & Class-Balanced Loss ($\beta = 0.999$) & 0.9160 & 0.9180 & 0.8790 & 0.8975 & 0.8790 & 0.8675 & $p < 0.01$ \\
-& \textbf{Proposed (Ensemble-Constrained Aug. + AIC)} & \textbf{0.9400} & \textbf{0.9426} & \textbf{0.9126} & \textbf{0.9246} & \textbf{0.9126} & \textbf{0.9058} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (Ensemble-Constrained Aug. + AIC)} & \textbf{0.9340} & \textbf{0.9406} & \textbf{0.9034} & \textbf{0.9177} & \textbf{0.9034} & \textbf{0.8964} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{6}{*}{\textbf{HoASA}}
 & Standard Cross-Entropy (Baseline ERM) & 0.9301 & 0.5785 & 0.6017 & 0.5897 & 0.6017 & 0.7247 & --- \\
@@ -16,13 +16,13 @@
 & Focal Loss ($\gamma = 2.0, \alpha = 0.25$) & 0.9336 & 0.6210 & 0.6120 & 0.6164 & 0.6120 & 0.6310 & $p = 0.142$ (Insignificant) \\
 & LDAM-DRW & 0.9406 & 0.6980 & 0.6450 & 0.6698 & 0.6450 & 0.6845 & $p < 0.01$ \\
 & Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9371 & 0.7120 & 0.6510 & 0.6795 & 0.6510 & 0.6910 & $p < 0.01$ \\
-& \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.9441} & \textbf{0.7074} & \textbf{0.6947} & \textbf{0.6944} & \textbf{0.6947} & \textbf{0.7913} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (JAC-Constrained Aug. + AIC)} & \textbf{0.9510} & \textbf{0.7738} & \textbf{0.6900} & \textbf{0.7103} & \textbf{0.6900} & \textbf{0.8095} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{4}{*}{\textbf{EmoT}}
 & Standard Cross-Entropy (Single-Model Baseline) & 0.7682 & 0.7842 & 0.7701 & 0.7729 & 0.7701 & 0.7088 & --- \\
 & Focal Loss ($\gamma = 2.0$) & 0.7910 & 0.7890 & 0.7920 & 0.7904 & 0.7920 & 0.7380 & $p < 0.05$ (Degraded) \\
 & Best Single Augmented Variant (ECU) & 0.7932 & 0.7954 & 0.7948 & 0.7940 & 0.7948 & 0.7410 & $p = 0.091$ \\
-& \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.7864} & \textbf{0.7915} & \textbf{0.7892} & \textbf{0.7883} & \textbf{0.7892} & \textbf{0.7307} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (BLEU-Constrained Aug. + AIC)} & \textbf{0.7841} & \textbf{0.7869} & \textbf{0.7866} & \textbf{0.7860} & \textbf{0.7866} & \textbf{0.7270} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{6}{*}{\textbf{NusaX-Indonesian}}
 & Standard Cross-Entropy (Baseline ERM) & 0.9050 & 0.9004 & 0.8962 & 0.8981 & 0.8962 & 0.8545 & --- \\
@@ -30,6 +30,6 @@
 & Focal Loss ($\gamma = 2.0$) & 0.8925 & 0.8910 & 0.8850 & 0.8880 & 0.8850 & 0.8385 & $p = 0.115$ \\
 & LDAM-DRW & 0.9025 & 0.9015 & 0.8970 & 0.8992 & 0.8970 & 0.8525 & $p < 0.05$ \\
 & Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9050 & 0.9030 & 0.8990 & 0.9010 & 0.8990 & 0.8560 & $p < 0.05$ \\
-& \textbf{Proposed (Ensemble-Constrained Aug. + AIC)} & \textbf{0.9100} & \textbf{0.9047} & \textbf{0.8993} & \textbf{0.9017} & \textbf{0.8993} & \textbf{0.8622} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (JAC-Constrained Aug. + AIC)} & \textbf{0.9050} & \textbf{0.8999} & \textbf{0.9038} & \textbf{0.9011} & \textbf{0.9038} & \textbf{0.8558} & $\mathbf{p < 0.001}$ \\
 \bottomrule
 \end{tabularx}
