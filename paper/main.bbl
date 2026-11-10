@@ -170,6 +170,12 @@ G.~Peyr{'{e}} and M.~Cuturi, ``Computational optimal transport: With application
 \bibitem{papineni2002bleu}
 K.~Papineni, S.~Roukos, T.~Ward, and W.-J. Zhu, ``{BLEU}: A method for automatic evaluation of machine translation,'' in \emph{Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics (ACL)}, 2002, pp. 311--318.
 
+\bibitem{buda2018systematic}
+M.~Buda, A.~Maki, and M.~A. Mazurowski, ``A systematic study of the class imbalance problem in convolutional neural networks,'' \emph{Neural Networks}, vol. 106, pp. 249--259, 2018.
+
+\bibitem{huber1981robust}
+P.~J. Huber, \emph{Robust Statistics}.\hskip 1em plus 0.5em minus 0.4em\relax New York: John Wiley \& Sons, 1981.
+
 \bibitem{miyato2018virtual}
 T.~Miyato, S.~ichi Maeda, M.~Koyama, and S.~Ishii, ``Virtual adversarial training: A regularization method for supervised and semi-supervised learning,'' \emph{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol.~41, no.~8, pp. 1979--1993, 2019.
 

@@ -173,15 +173,15 @@ Rather than imposing static heuristics, thresholds $\theta = \mu \pm \sigma$ are
 When training deep classifiers on imbalanced augmented datasets, standard cross-entropy remains biased toward majority categories. In the absence of margin adjustments, the network minimizes global empirical risk by sacrificing minority class boundaries. To overcome this limitation, we formulate an Automated Imbalance Calibrator (AIC) executing adaptive parameter derivation directly from the empirical training label counts $\{N_k\}_{k=1}^{K}$. Below, we detail the automated minority detection mechanism, dynamic logit-adjusted loss formulation, gradient-starvation oversampling multiplier, and adaptive label smoothing regularization.
 
 \subsubsection{Automated Minority Detection}
-To eliminate manual heuristic thresholding across disparate corpora, AIC implements an automated detection protocol based on empirical class frequencies. The imbalance ratio $IR$ quantifies the disparity between the most and least frequent categories:
+To eliminate manual heuristic thresholding across disparate corpora, AIC implements an automated detection protocol based on empirical class frequencies. The imbalance ratio ($IR$) quantifies the disparity between the most and least frequent categories:
 \begin{equation}
     IR = \frac{\max_k N_k}{\min_k N_k}
 \end{equation}
-A class $k$ is designated as a minority category if its empirical prior $\pi_k = \frac{N_k}{N}$ falls below $80\%$ of the uniform prior or its sample count is less than $75\%$ of the median class size:
+Following long-tailed learning theory \cite{he2009learning, menon2021longtail} and robust non-parametric estimation \cite{buda2018systematic, huber1981robust}, a class $k$ is designated as a minority category if its empirical prior $\pi_k = \frac{N_k}{N}$ falls below $80\%$ of the equiprobable uniform prior or its sample count is less than $75\%$ of the breakdown-robust median class size:
 \begin{equation}
     k \in \mathcal{Y}_{\text{min}} \iff \pi_k < \frac{0.80}{K} \;\lor\; N_k < 0.75 \cdot \mathrm{med}(\{N_j\}_{j=1}^K)
 \end{equation}
-This dual condition robustly identifies tail classes across both multi-class and binary configurations without hyperparameter tuning. By evaluating both uniform deviation and median proximity, the rule reliably flags minority classes in both skewed long tails and isolated minority classes. Once identified, minority categories are routed to targeted oversampling and logit margin calibration.
+This dual condition robustly identifies tail classes across both multi-class and binary configurations without manual hyperparameter tuning. By evaluating both uniform deviation and median proximity, the rule reliably flags minority classes in both skewed long tails and isolated step-imbalances while preventing minor sampling fluctuations from triggering unnecessary synthetic intervention on adequately populated classes. Once identified, minority categories are routed to targeted oversampling and logit margin calibration.
 
 \subsubsection{Dynamic Logit-Adjusted Loss}
 To enforce statistically consistent separation margins without deforming feature representations, we incorporate Fisher-consistent Logit Adjustment \cite{menon2021longtail}. The network outputs unnormalized logits $\mathbf{z} \in \mathbb{R}^K$. During training, the logits are shifted by the empirical class log-priors $\log \boldsymbol{\pi}$:
