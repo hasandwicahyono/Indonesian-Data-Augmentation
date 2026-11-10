@@ -151,9 +151,85 @@ def inspect_gpu_processes():
             for pid, pname, pmem in other_processes:
                 print(f"    - PID {pid} ({pname}): {pmem}")
             print("  If these are lingering zombie processes from previous interrupted runs,")
-            print("  you can reclaim full VRAM by terminating them with: kill -9 <PID>\n")
+            print("  you can reclaim full VRAM by terminating them with: kill -9 <PID>")
+            print("  Or run with '--clean_gpu' to automatically terminate stale benchmark processes.\n")
     except Exception:
         pass
+
+
+def clean_stale_gpu_processes(auto_kill: bool = False) -> int:
+    """
+    Detects and optionally terminates stale or orphaned Python GPU processes occupying VRAM.
+    Returns the count of terminated processes.
+    """
+    import subprocess
+    import time
+    import signal
+
+    killed_count = 0
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        if not out:
+            return 0
+
+        current_pid = os.getpid()
+        my_parents = set()
+        try:
+            curr_proc = psutil.Process(current_pid)
+            for p in curr_proc.parents():
+                my_parents.add(p.pid)
+        except Exception:
+            pass
+
+        lines = [line.strip() for line in out.splitlines() if line.strip()]
+        for line in lines:
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 3:
+                try:
+                    pid = int(parts[0])
+                    pname = parts[1]
+                    pmem = parts[2]
+                    if pid == current_pid or pid in my_parents:
+                        continue
+
+                    # Check process cmdline if accessible
+                    is_candidate = False
+                    cmd_str = ""
+                    try:
+                        p = psutil.Process(pid)
+                        cmd_str = " ".join(p.cmdline()).lower()
+                        if "python" in pname.lower() or "python" in cmd_str:
+                            if any(k in cmd_str for k in ["run_all_benchmarks", "benchmark", "indobert", "torch", "accelerate", "train"]):
+                                is_candidate = True
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+
+                    if auto_kill and is_candidate:
+                        print(f"  [GPU Process Cleanup] Terminating orphaned process PID {pid} ({pname}, occupying {pmem})...")
+                        try:
+                            os.kill(pid, signal.SIGTERM)
+                            time.sleep(0.5)
+                            if psutil.pid_exists(pid):
+                                os.kill(pid, signal.SIGKILL)
+                            killed_count += 1
+                        except Exception as kill_err:
+                            print(f"  [GPU Process Cleanup] Failed to kill PID {pid}: {kill_err}")
+                except ValueError:
+                    pass
+
+        if killed_count > 0:
+            print(f"  [GPU Process Cleanup] Reclaimed VRAM by terminating {killed_count} stale process(es). Waiting 2s for GPU driver release...")
+            time.sleep(2.0)
+            deep_cuda_purge()
+    except Exception:
+        pass
+
+    return killed_count
+
 
 
 

@@ -715,6 +715,9 @@ def run_benchmark_pipeline(
     target_datasets: List[str],
     plot_only: bool = False,
     run_generation: bool = False,
+    force_generation: bool = False,
+    clean_gpu: bool = False,
+    use_adafactor: bool = False,
     gen_model: str = "cahya/gpt2-small-indonesian-522M",
     generation_sample_limit: Optional[int] = None,
     results_dir: str = "data/results",
@@ -764,8 +767,13 @@ def run_benchmark_pipeline(
     print(f"Figures Directory: {figures_dir}")
     print("=" * 80)
 
-    from src.utils.hardware import inspect_gpu_processes
+    from src.utils.hardware import inspect_gpu_processes, clean_stale_gpu_processes
+    if clean_gpu:
+        clean_stale_gpu_processes(auto_kill=True)
     inspect_gpu_processes()
+
+    if use_adafactor:
+        os.environ["USE_ADAFACTOR"] = "1"
 
     all_results: Dict[str, pd.DataFrame] = {}
 
@@ -809,9 +817,13 @@ def run_benchmark_pipeline(
                 )
         else:
             # Check if Step 1 (Generation) and Step 2 (Filtering) are requested or needed
-            aug_dfs = {} if run_generation else load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
-            
-            if run_generation or not aug_dfs:
+            existing_aug = load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
+            if existing_aug and len(existing_aug) == 4 and not force_generation:
+                print(f"\n  [Cache Hit] Complete augmented datasets already exist for {ds_name} ({list(existing_aug.keys())}).")
+                print("  Reusing existing augmented data to preserve GPU VRAM and skip redundant generation.")
+                print("  (Pass '--force_generation' to override and force fresh generation).")
+                aug_dfs = existing_aug
+            elif run_generation or not existing_aug:
                 print(f"\n  >>> STEP 1: Running Text Generation & Similarity Scoring for {ds_name}...")
                 minority_classes = cfg.get("minority_classes", ds.label_list)
                 augmenter = IndonesianAugmenter(
@@ -848,10 +860,14 @@ def run_benchmark_pipeline(
                     del augmenter
                 from src.utils.hardware import deep_cuda_purge
                 deep_cuda_purge()
+            else:
+                aug_dfs = existing_aug
 
             print(f"\n  >>> STEP 3: Fine-Tuning IndoBERT Across All Variants for {ds_name}...")
             # Thorough memory purge before training begins
-            from src.utils.hardware import deep_cuda_purge, inspect_gpu_processes
+            from src.utils.hardware import deep_cuda_purge, inspect_gpu_processes, clean_stale_gpu_processes
+            if clean_gpu:
+                clean_stale_gpu_processes(auto_kill=True)
             deep_cuda_purge()
             inspect_gpu_processes()
             if torch.cuda.is_available():
@@ -1225,6 +1241,30 @@ if __name__ == "__main__":
         default=False,
         help="Plot probability density histograms and cutoff thresholds for ECU, COS, JAC, and BLEU",
     )
+    parser.add_argument(
+        "--force_generation",
+        action="store_true",
+        default=False,
+        help="Force re-running Phase 1 text generation even if augmented datasets already exist",
+    )
+    parser.add_argument(
+        "--clean_gpu",
+        action="store_true",
+        default=True,
+        help="Automatically terminate stale or orphaned GPU benchmark processes before execution (default: True)",
+    )
+    parser.add_argument(
+        "--no_clean_gpu",
+        action="store_false",
+        dest="clean_gpu",
+        help="Disable automatic termination of stale GPU processes",
+    )
+    parser.add_argument(
+        "--use_adafactor",
+        action="store_true",
+        default=False,
+        help="Force using Adafactor optimizer (~12 MB VRAM vs 880 MB for AdamW) to guarantee zero OOM",
+    )
 
     args = parser.parse_args()
 
@@ -1241,6 +1281,9 @@ if __name__ == "__main__":
         target_datasets=selected,
         plot_only=args.plot_only,
         run_generation=args.run_generation,
+        force_generation=args.force_generation,
+        clean_gpu=args.clean_gpu,
+        use_adafactor=args.use_adafactor,
         gen_model=args.gen_model,
         generation_sample_limit=args.generation_sample_limit,
         results_dir=args.results_dir,

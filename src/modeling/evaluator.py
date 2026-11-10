@@ -37,6 +37,11 @@ from transformers import (
     get_linear_schedule_with_warmup,
     logging as hf_logging,
 )
+try:
+    from transformers.optimization import Adafactor
+    HAS_ADAFACTOR = True
+except ImportError:
+    HAS_ADAFACTOR = False
 
 hf_logging.set_verbosity_error()
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
@@ -179,6 +184,10 @@ class IndoBERTClassifierEvaluator:
                 else:
                     loss_scaled.backward()
 
+                loss_val = loss.item()
+                total_loss += loss_val
+                del outputs, logits, loss, loss_scaled
+
                 if fgm is not None:
                     fgm.attack()
                     with torch.cuda.amp.autocast(enabled=use_amp):
@@ -208,8 +217,6 @@ class IndoBERTClassifierEvaluator:
                     fgm.restore()
                     del outputs_adv, logits_adv, loss_adv, loss_adv_scaled
 
-                total_loss += loss.item()
-
                 if (step + 1) % gradient_accumulation_steps == 0 or (step + 1) == len(dataloader):
                     if scaler is not None and use_amp:
                         scaler.unscale_(optimizer)
@@ -221,8 +228,6 @@ class IndoBERTClassifierEvaluator:
                         optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()
-
-                del outputs, logits, loss, loss_scaled
             except (torch.OutOfMemoryError, RuntimeError) as err:
                 err_str = str(err).lower()
                 is_oom = isinstance(err, torch.OutOfMemoryError) or ("out of memory" in err_str) or ("cublas" in err_str)
@@ -408,11 +413,22 @@ class IndoBERTClassifierEvaluator:
         if self.device.type == "cuda" and self.num_gpus > 1:
             try:
                 import accelerate
-                print(f"  [Multi-GPU Sharding] Sharding model layers across {self.num_gpus} GPUs via device_map='auto' to ensure both GPUs share memory and eliminate single-GPU OOM.")
+                # Calculate balanced memory allocation across all available GPUs to prevent
+                # Accelerate's greedy heuristic from overpacking GPU 0 and leaving zero headroom.
+                max_memory = {}
+                for dev_i in range(self.num_gpus):
+                    free_b, total_b = torch.cuda.mem_get_info(dev_i)
+                    # Limit model weights on each GPU to at most 40% of currently free VRAM
+                    # IndoBERT-base is ~440MB total, so 2 GPUs will take ~220MB each.
+                    alloc_mb = min(400, max(180, int((free_b * 0.40) / (1024**2))))
+                    max_memory[dev_i] = f"{alloc_mb}MiB"
+                max_memory["cpu"] = "16GiB"
+                print(f"  [Multi-GPU Sharding] Sharding model across {self.num_gpus} GPUs with balanced max_memory={max_memory}...")
                 model = AutoModelForSequenceClassification.from_pretrained(
                     self.model_name,
                     config=config,
                     device_map="auto",
+                    max_memory=max_memory,
                     ignore_mismatched_sizes=True,
                 )
                 is_sharded = True
@@ -431,6 +447,13 @@ class IndoBERTClassifierEvaluator:
                 ignore_mismatched_sizes=True,
             )
             model.to(self.device)
+
+        if hasattr(model, "gradient_checkpointing_enable") and (free_mem_gib < 4.0 or self.device.type == "cuda"):
+            try:
+                model.gradient_checkpointing_enable()
+                print("  [Memory Optimization] Gradient checkpointing active (slashes intermediate activation VRAM by ~70%).")
+            except Exception:
+                pass
 
         loss_device = next(model.parameters()).device
         if hasattr(model, "classifier") and hasattr(model.classifier, "weight"):
@@ -476,9 +499,30 @@ class IndoBERTClassifierEvaluator:
         use_amp = (self.device.type == "cuda")
         scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
 
-        total_steps = math.ceil(len(train_loader) / grad_accum_steps) * num_epochs
-        optimizer = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
-        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
+        def _build_optimizer_and_scheduler(current_micro_batch, current_grad_accum, force_adafactor=False):
+            total_steps = math.ceil(len(train_ds) / (current_micro_batch * current_grad_accum)) * num_epochs
+            # Prefer Adafactor if VRAM is constrained (< 4.0 GiB) or explicitly forced during OOM recovery
+            use_adafactor = (HAS_ADAFACTOR and (free_mem_gib < 4.0 or force_adafactor or os.environ.get("USE_ADAFACTOR", "0") == "1"))
+            if use_adafactor:
+                print(f"  [Optimizer Optimization] Using Adafactor (factored 2nd moments, ~12 MB VRAM vs 880 MB for AdamW).")
+                opt = Adafactor(
+                    model.parameters(),
+                    lr=self.lr,
+                    eps=(1e-30, 1e-3),
+                    clip_threshold=1.0,
+                    decay_rate=-0.8,
+                    beta1=None,
+                    weight_decay=self.weight_decay,
+                    scale_parameter=False,
+                    relative_step=False,
+                    warmup_init=False,
+                )
+            else:
+                opt = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
+            sched = get_linear_schedule_with_warmup(opt, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
+            return opt, sched
+
+        optimizer, scheduler = _build_optimizer_and_scheduler(micro_batch_size, grad_accum_steps)
 
         best_val_f1 = -1.0
         best_train_loss = float("inf")
@@ -513,14 +557,26 @@ class IndoBERTClassifierEvaluator:
                 )
             except torch.OutOfMemoryError as oom_err:
                 retry_count += 1
-                if retry_count > max_retries or micro_batch_size <= 1:
+                if retry_count > max_retries:
                     print(f"  [FATAL OOM] Cannot recover from OutOfMemoryError after {retry_count} retries (micro-batch={micro_batch_size}).")
                     raise oom_err
 
                 new_micro_batch = max(1, micro_batch_size // 2)
                 grad_accum_steps = max(1, math.ceil(effective_batch_size / new_micro_batch))
-                print(f"  [OOM RECOVERY] Halving micro-batch size {micro_batch_size} -> {new_micro_batch} (grad_accum={grad_accum_steps}) and restarting training from epoch 1...")
+                print(f"  [OOM RECOVERY attempt {retry_count}/{max_retries}] Halving micro-batch size {micro_batch_size} -> {new_micro_batch} (grad_accum={grad_accum_steps}), activating Adafactor and gradient checkpointing...")
                 micro_batch_size = new_micro_batch
+
+                # Ensure gradient checkpointing is active
+                if hasattr(model, "gradient_checkpointing_enable"):
+                    try:
+                        model.gradient_checkpointing_enable()
+                    except Exception:
+                        pass
+
+                # Free old optimizer and dataloaders
+                optimizer.zero_grad()
+                del optimizer, scheduler
+                deep_cuda_purge()
 
                 # Recreate dataloaders with reduced micro_batch_size
                 train_loader = DataLoader(train_ds, batch_size=micro_batch_size, shuffle=True)
@@ -528,12 +584,9 @@ class IndoBERTClassifierEvaluator:
                     val_loader = DataLoader(val_ds, batch_size=micro_batch_size, shuffle=False)
                 test_loader = DataLoader(test_ds, batch_size=micro_batch_size, shuffle=False)
 
-                # Rebuild optimizer, scheduler, and scaler
-                optimizer.zero_grad()
+                # Rebuild with force_adafactor=True
+                optimizer, scheduler = _build_optimizer_and_scheduler(micro_batch_size, grad_accum_steps, force_adafactor=True)
                 scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
-                total_steps = math.ceil(len(train_loader) / grad_accum_steps) * num_epochs
-                optimizer = AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay, eps=1e-8)
-                scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
 
                 # Reset training history to restart cleanly
                 epoch = 0
