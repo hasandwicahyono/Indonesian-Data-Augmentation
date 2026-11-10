@@ -1,8 +1,8 @@
 Configuration,HoASA F1,SmSA F1
-Full Proposed Pipeline,0.7103,0.9177
+Full Proposed Pipeline,0.6944,0.9246
 \quad $-$ w/o Logit Adjustment ($\tau=0$),0.6174,0.9122
 \quad $-$ w/o Minority Oversampling,0.6435,0.9168
-\quad $-$ w/o Semantic Filtering (Raw GPT-2),0.672,0.9092
+\quad $-$ w/o Semantic Filtering (Raw GPT-2),0.6720,0.9092
 \quad $-$ w/o Emoji Semantic Mapping,0.6654,0.8986
-\quad $-$ w/o FGM Adversarial Regularization,0.658,0.8924
+\quad $-$ w/o FGM Adversarial Regularization,0.6580,0.8924
 Baseline (Unaugmented ERM),0.5897,0.9029

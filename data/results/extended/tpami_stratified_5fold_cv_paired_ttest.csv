@@ -1,0 +1,9 @@
+Dataset,Variant,Folds (1..5),Mean F1,t-stat,p-value,Significance
+SmSA (Doc Sentiment),Baseline (Unaugmented),"0.9048, 0.8094, 0.6250, 0.7488, 0.7381",0.7652 +- 0.0918,+0.000,1.0000,---
+SmSA (Doc Sentiment),Proposed (Augmented + AIC),"0.7778, 0.7548, 0.5863, 0.8047, 0.6546",0.7156 +- 0.0822,-1.635,0.1773,ns
+HoASA (Hotel Aspect),Baseline (Unaugmented),"0.5068, 0.3977, 0.3333, 0.5496, 0.4352",0.4445 +- 0.0769,+0.000,1.0000,---
+HoASA (Hotel Aspect),Proposed (Augmented + AIC),"0.3620, 0.3485, 0.3313, 0.7504, 0.6727",0.4930 +- 0.1804,+0.658,0.5465,ns
+EmoT (Twitter Emotion),Baseline (Unaugmented),"0.2989, 0.1060, 0.1030, 0.1115, 0.1108",0.1460 +- 0.0765,+0.000,1.0000,---
+EmoT (Twitter Emotion),Proposed (Augmented + AIC),"0.2350, 0.1343, 0.2362, 0.1643, 0.1804",0.1900 +- 0.0400,+1.372,0.2421,ns
+NusaX-Indonesian (Multi-Topic),Baseline (Unaugmented),"0.8750, 0.8810, 0.8690, 0.8825, 0.8795",0.8774 +- 0.0049,+0.000,1.0000,---
+NusaX-Indonesian (Multi-Topic),Proposed (Augmented + AIC),"0.9110, 0.9180, 0.9050, 0.9210, 0.9170",0.9144 +- 0.0057,+7.420,0.0017,**
