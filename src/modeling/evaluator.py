@@ -27,6 +27,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import pandas as pd
+from tqdm.auto import tqdm
 from typing import Dict, List, Tuple, Any, Optional
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -152,7 +153,8 @@ class IndoBERTClassifierEvaluator:
         use_amp = (self.device.type == "cuda")
         input_device = next(model.parameters()).device
 
-        for step, batch in enumerate(dataloader):
+        pbar = tqdm(dataloader, desc="  Training Steps", leave=False, dynamic_ncols=True)
+        for step, batch in enumerate(pbar):
             input_ids = batch["input_ids"].to(input_device, non_blocking=True)
             attention_mask = batch["attention_mask"].to(input_device, non_blocking=True)
             labels = batch["label"].to(input_device, non_blocking=True)
