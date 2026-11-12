@@ -40,7 +40,9 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 import argparse
+import atexit
 import copy
+from datetime import datetime
 import gc
 import json
 import shutil
@@ -51,6 +53,91 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List, Tuple, Any, Optional
+
+_CURRENT_LOG_FILE: Optional[str] = None
+
+
+class TeeLogger:
+    """
+    Tee logger that duplicates output to console stream and a log file simultaneously.
+    Provides immediate flushing so logs persist in real time even on crashes, kills, or disconnects.
+    """
+
+    def __init__(self, file_obj, console_stream):
+        self.file_obj = file_obj
+        self.console_stream = console_stream
+
+    def write(self, data):
+        try:
+            self.console_stream.write(data)
+            self.console_stream.flush()
+        except Exception:
+            pass
+        try:
+            self.file_obj.write(data)
+            self.file_obj.flush()
+        except Exception:
+            pass
+
+    def flush(self):
+        try:
+            self.console_stream.flush()
+        except Exception:
+            pass
+        try:
+            self.file_obj.flush()
+        except Exception:
+            pass
+
+    def isatty(self):
+        return getattr(self.console_stream, "isatty", lambda: False)()
+
+    def fileno(self):
+        if hasattr(self.console_stream, "fileno"):
+            return self.console_stream.fileno()
+        return self.file_obj.fileno()
+
+    def __getattr__(self, name):
+        return getattr(self.console_stream, name)
+
+
+def setup_file_logging(log_file_path: Optional[str]):
+    """
+    Sets up simultaneous terminal and text file logging for stdout and stderr.
+    All outputs will be displayed on the console and appended to log_file_path.
+    """
+    global _CURRENT_LOG_FILE
+    if not log_file_path:
+        return None
+    abs_path = os.path.abspath(log_file_path)
+    if _CURRENT_LOG_FILE == abs_path:
+        return None
+
+    log_dir = os.path.dirname(abs_path)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+
+    f = open(abs_path, "a", encoding="utf-8")
+    orig_stdout = sys.stdout
+    orig_stderr = sys.stderr
+
+    sys.stdout = TeeLogger(f, orig_stdout)
+    sys.stderr = TeeLogger(f, orig_stderr)
+    _CURRENT_LOG_FILE = abs_path
+
+    def cleanup():
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            f.flush()
+            f.close()
+        except Exception:
+            pass
+        sys.stdout = orig_stdout
+        sys.stderr = orig_stderr
+
+    atexit.register(cleanup)
+    return f
 
 from src.data import IndonesianDatasetsManager, CustomDataset
 from src.augmentation import IndonesianAugmenter
@@ -718,6 +805,7 @@ def run_benchmark_pipeline(
     force_generation: bool = False,
     clean_gpu: bool = False,
     use_adafactor: bool = False,
+    log_file: Optional[str] = None,
     gen_model: str = "cahya/gpt2-small-indonesian-522M",
     generation_sample_limit: Optional[int] = None,
     results_dir: str = "data/results",
@@ -740,6 +828,8 @@ def run_benchmark_pipeline(
     run_similarity_distributions: bool = False,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
+    if log_file:
+        setup_file_logging(log_file)
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(figures_dir, exist_ok=True)
     manager = IndonesianDatasetsManager()
@@ -1265,8 +1355,30 @@ if __name__ == "__main__":
         default=False,
         help="Force using Adafactor optimizer (~12 MB VRAM vs 880 MB for AdamW) to guarantee zero OOM",
     )
+    parser.add_argument(
+        "--log_file",
+        type=str,
+        default="benchmark_run.log",
+        help="Path to text file where console output is automatically saved in real time (default: 'benchmark_run.log')",
+    )
+    parser.add_argument(
+        "--no_log",
+        action="store_true",
+        default=False,
+        help="Disable automatic console logging to text file",
+    )
 
     args = parser.parse_args()
+
+    active_log_file = None if args.no_log else args.log_file
+    if active_log_file:
+        setup_file_logging(active_log_file)
+        start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("\n" + "=" * 80)
+        print(f"BENCHMARK RUN LOGGING INITIALIZED AT: {start_time_str}")
+        print(f"COMMAND: {' '.join(sys.argv)}")
+        print(f"OUTPUT LOG FILE: {os.path.abspath(active_log_file)}")
+        print("=" * 80 + "\n")
 
     if args.list_models:
         print("\nCandidate Generative Models Comparison (First-Gen 2020–2021 vs. Contemporary 2024):")
@@ -1284,6 +1396,7 @@ if __name__ == "__main__":
         force_generation=args.force_generation,
         clean_gpu=args.clean_gpu,
         use_adafactor=args.use_adafactor,
+        log_file=active_log_file,
         gen_model=args.gen_model,
         generation_sample_limit=args.generation_sample_limit,
         results_dir=args.results_dir,
@@ -1305,4 +1418,11 @@ if __name__ == "__main__":
         run_training_dynamics=args.run_training_dynamics,
         run_similarity_distributions=args.run_similarity_distributions,
     )
+
+    end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print("\n" + "=" * 80)
+    print(f"BENCHMARK RUN COMPLETED AT: {end_time_str}")
+    if active_log_file:
+        print(f"COMPLETE LOG SAVED TO: {os.path.abspath(active_log_file)}")
+    print("=" * 80 + "\n")
 
