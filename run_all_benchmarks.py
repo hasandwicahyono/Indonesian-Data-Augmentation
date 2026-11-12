@@ -806,6 +806,7 @@ def run_benchmark_pipeline(
     clean_gpu: bool = False,
     use_adafactor: bool = False,
     log_file: Optional[str] = None,
+    log_dir: str = "logs",
     gen_model: str = "cahya/gpt2-small-indonesian-522M",
     generation_sample_limit: Optional[int] = None,
     results_dir: str = "data/results",
@@ -828,6 +829,10 @@ def run_benchmark_pipeline(
     run_similarity_distributions: bool = False,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
+    if log_file == "auto":
+        os.makedirs(log_dir, exist_ok=True)
+        ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = os.path.join(log_dir, f"benchmark_run_{ts_str}.log")
     if log_file:
         setup_file_logging(log_file)
     os.makedirs(results_dir, exist_ok=True)
@@ -1360,10 +1365,16 @@ if __name__ == "__main__":
         help="Force using Adafactor optimizer (~12 MB VRAM vs 880 MB for AdamW) to guarantee zero OOM",
     )
     parser.add_argument(
+        "--log_dir",
+        type=str,
+        default="logs",
+        help="Directory to store unique datetime-named benchmark log files (default: 'logs')",
+    )
+    parser.add_argument(
         "--log_file",
         type=str,
-        default="benchmark_run.log",
-        help="Path to text file where console output is automatically saved in real time (default: 'benchmark_run.log')",
+        default=None,
+        help="Custom text file path to override the automatic datetime-named log file in log directory",
     )
     parser.add_argument(
         "--no_log",
@@ -1374,7 +1385,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    active_log_file = None if args.no_log else args.log_file
+    if args.no_log:
+        active_log_file = None
+    elif args.log_file:
+        active_log_file = args.log_file
+    else:
+        log_dir = args.log_dir or "logs"
+        os.makedirs(log_dir, exist_ok=True)
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        active_log_file = os.path.join(log_dir, f"benchmark_run_{timestamp_str}.log")
+
     if active_log_file:
         setup_file_logging(active_log_file)
         start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1401,6 +1421,7 @@ if __name__ == "__main__":
         clean_gpu=args.clean_gpu,
         use_adafactor=args.use_adafactor,
         log_file=active_log_file,
+        log_dir=args.log_dir,
         gen_model=args.gen_model,
         generation_sample_limit=args.generation_sample_limit,
         results_dir=args.results_dir,
