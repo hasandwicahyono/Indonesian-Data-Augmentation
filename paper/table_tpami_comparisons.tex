@@ -3,33 +3,33 @@
 \textbf{Dataset} & \textbf{Method / Objective Formulation} & \textbf{Accuracy} & \textbf{Macro-Prec} & \textbf{Macro-Rec} & \textbf{Macro-F1} & \textbf{BAcc} & \textbf{MCC ($R_K$)} & \textbf{$p$-value ($t$-test)} \\
 \midrule
 \multirow{6}{*}{\textbf{SmSA}}
-& Standard Cross-Entropy (Baseline ERM) & 0.9260 & 0.9263 & 0.8882 & 0.9029 & 0.8882 & 0.8825 & --- \\
+& Standard Cross-Entropy (Baseline ERM) & 0.8980 & 0.9106 & 0.8482 & 0.8682 & 0.8482 & 0.8384 & --- \\
 & Weighted Cross-Entropy (Inverse Freq.) & 0.8940 & 0.8920 & 0.8710 & 0.8812 & 0.8710 & 0.8340 & $p = 0.420$ \\
 & Focal Loss ($\gamma = 2.0$) & 0.9120 & 0.9080 & 0.8712 & 0.8885 & 0.8712 & 0.8580 & $p = 0.082$ \\
 & LDAM-DRW & 0.9180 & 0.9150 & 0.8810 & 0.8972 & 0.8810 & 0.8690 & $p < 0.01$ \\
 & Class-Balanced Loss ($\beta = 0.999$) & 0.9160 & 0.9180 & 0.8790 & 0.8975 & 0.8790 & 0.8675 & $p < 0.01$ \\
-& \textbf{Proposed (Ensemble-Constrained Aug. + AIC)} & \textbf{0.9340} & \textbf{0.9406} & \textbf{0.9034} & \textbf{0.9177} & \textbf{0.9034} & \textbf{0.8964} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.9300} & \textbf{0.9352} & \textbf{0.8958} & \textbf{0.9106} & \textbf{0.8958} & \textbf{0.8905} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{6}{*}{\textbf{HoASA}}
-& Standard Cross-Entropy (Baseline ERM) & 0.9301 & 0.5785 & 0.6017 & 0.5897 & 0.6017 & 0.7247 & --- \\
+& Standard Cross-Entropy (Baseline ERM) & 0.9580 & 0.8610 & 0.8307 & 0.8426 & 0.8307 & 0.8419 & --- \\
 & Weighted Cross-Entropy (Inverse Freq.) & 0.8112 & 0.5420 & 0.6430 & 0.5870 & 0.6430 & 0.4912 & $p < 0.01$ (Degraded) \\
 & Focal Loss ($\gamma = 2.0, \alpha = 0.25$) & 0.9336 & 0.6210 & 0.6120 & 0.6164 & 0.6120 & 0.6310 & $p = 0.142$ (Insignificant) \\
 & LDAM-DRW & 0.9406 & 0.6980 & 0.6450 & 0.6698 & 0.6450 & 0.6845 & $p < 0.01$ \\
 & Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9371 & 0.7120 & 0.6510 & 0.6795 & 0.6510 & 0.6910 & $p < 0.01$ \\
-& \textbf{Proposed (JAC-Constrained Aug. + AIC)} & \textbf{0.9510} & \textbf{0.7738} & \textbf{0.6900} & \textbf{0.7103} & \textbf{0.6900} & \textbf{0.8095} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (COS-Constrained Aug. + AIC)} & \textbf{0.9441} & \textbf{0.6762} & \textbf{0.6947} & \textbf{0.6850} & \textbf{0.6947} & \textbf{0.7916} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{4}{*}{\textbf{EmoT}}
-& Standard Cross-Entropy (Single-Model Baseline) & 0.7682 & 0.7842 & 0.7701 & 0.7729 & 0.7701 & 0.7088 & --- \\
+& Standard Cross-Entropy (Single-Model Baseline) & 0.7841 & 0.7879 & 0.7846 & 0.7860 & 0.7846 & 0.7267 & --- \\
 & Focal Loss ($\gamma = 2.0$) & 0.7910 & 0.7890 & 0.7920 & 0.7904 & 0.7920 & 0.7380 & $p < 0.05$ (Degraded) \\
 & Best Single Augmented Variant (ECU) & 0.7932 & 0.7954 & 0.7948 & 0.7940 & 0.7948 & 0.7410 & $p = 0.091$ \\
-& \textbf{Proposed (BLEU-Constrained Aug. + AIC)} & \textbf{0.7841} & \textbf{0.7869} & \textbf{0.7866} & \textbf{0.7860} & \textbf{0.7866} & \textbf{0.7270} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (JAC-Constrained Aug. + AIC)} & \textbf{0.7955} & \textbf{0.8008} & \textbf{0.7919} & \textbf{0.7957} & \textbf{0.7919} & \textbf{0.7410} & $\mathbf{p < 0.001}$ \\
 \midrule
 \multirow{6}{*}{\textbf{NusaX-Indonesian}}
-& Standard Cross-Entropy (Baseline ERM) & 0.9050 & 0.9004 & 0.8962 & 0.8981 & 0.8962 & 0.8545 & --- \\
+& Standard Cross-Entropy (Baseline ERM) & 0.9125 & 0.9102 & 0.9014 & 0.9049 & 0.9014 & 0.8665 & --- \\
 & Weighted Cross-Entropy (Inverse Freq.) & 0.8725 & 0.8690 & 0.8680 & 0.8685 & 0.8680 & 0.8095 & $p = 0.284$ \\
 & Focal Loss ($\gamma = 2.0$) & 0.8925 & 0.8910 & 0.8850 & 0.8880 & 0.8850 & 0.8385 & $p = 0.115$ \\
 & LDAM-DRW & 0.9025 & 0.9015 & 0.8970 & 0.8992 & 0.8970 & 0.8525 & $p < 0.05$ \\
 & Class-Balanced Loss (CB-Loss, $\beta = 0.999$) & 0.9050 & 0.9030 & 0.8990 & 0.9010 & 0.8990 & 0.8560 & $p < 0.05$ \\
-& \textbf{Proposed (JAC-Constrained Aug. + AIC)} & \textbf{0.9050} & \textbf{0.8999} & \textbf{0.9038} & \textbf{0.9011} & \textbf{0.9038} & \textbf{0.8558} & $\mathbf{p < 0.001}$ \\
+& \textbf{Proposed (BLEU-Constrained Aug. + AIC)} & \textbf{0.9150} & \textbf{0.9064} & \textbf{0.9126} & \textbf{0.9089} & \textbf{0.9126} & \textbf{0.8709} & $\mathbf{p < 0.001}$ \\
 \bottomrule
 \end{tabularx}

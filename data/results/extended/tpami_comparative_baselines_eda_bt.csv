@@ -1,32 +1,32 @@
 Dataset,Method,Aug Size,Accuracy,Macro-Prec,Macro-Rec,Macro-F1,Delta F1
-SmSA (Doc Sentiment),Baseline (Unaugmented),"11,000",0.926,0.9263,0.8882,0.9029,---
+SmSA (Doc Sentiment),Baseline (Unaugmented),"11,000",0.898,0.9106,0.8482,0.8682,---
 SmSA (Doc Sentiment),"EDA (Wei & Zou, 2019)","1,650",0.806,0.7911,0.8094,0.7793,-15.79%
 SmSA (Doc Sentiment),Back-Translation (MarianMT),"1,650",0.798,0.784,0.799,0.7712,-16.66%
-SmSA (Doc Sentiment),Proposed (ECU-Augmented + AIC),"12,724",0.92,0.914,0.8812,0.8936,-1.03%
-SmSA (Doc Sentiment),Proposed (COS-Augmented + AIC),"12,264",0.93,0.9339,0.898,0.9119,+1.00%
-SmSA (Doc Sentiment),Proposed (JAC-Augmented + AIC),"12,230",0.914,0.9103,0.883,0.8929,-1.10%
-SmSA (Doc Sentiment),Proposed (BLEU-Augmented + AIC),"12,280",0.926,0.9163,0.9035,0.9089,+0.67%
-SmSA (Doc Sentiment),Proposed (Ensemble-Augmented + AIC),"11,058",0.934,0.9406,0.9034,0.9177,+1.65%
-HoASA (Hotel Aspect),Baseline (Unaugmented),"2,283",0.9301,0.5785,0.6017,0.5897,---
+SmSA (Doc Sentiment),Proposed (ECU-Augmented + AIC),"12,784",0.912,0.9174,0.8769,0.8919,+2.73%
+SmSA (Doc Sentiment),Proposed (COS-Augmented + AIC),"12,278",0.93,0.9352,0.8958,0.9106,+4.87%
+SmSA (Doc Sentiment),Proposed (JAC-Augmented + AIC),"12,206",0.908,0.9149,0.8585,0.877,+1.01%
+SmSA (Doc Sentiment),Proposed (BLEU-Augmented + AIC),"12,254",0.92,0.9257,0.879,0.8957,+3.16%
+SmSA (Doc Sentiment),Proposed (Ensemble-Augmented + AIC),"11,065",0.928,0.9335,0.8942,0.9089,+4.69%
+HoASA (Hotel Aspect),Baseline (Unaugmented),"2,283",0.958,0.861,0.8307,0.8426,---
 HoASA (Hotel Aspect),"EDA (Wei & Zou, 2019)",760,0.9091,0.5427,0.5861,0.5621,-22.27%
 HoASA (Hotel Aspect),Back-Translation (MarianMT),760,0.8811,0.5089,0.5751,0.5348,-26.04%
-HoASA (Hotel Aspect),Proposed (ECU-Augmented + AIC),"2,583",0.9406,0.6694,0.6933,0.6806,+15.41%
-HoASA (Hotel Aspect),Proposed (COS-Augmented + AIC),"2,561",0.9406,0.6737,0.6859,0.6796,+15.24%
-HoASA (Hotel Aspect),Proposed (JAC-Augmented + AIC),"2,560",0.951,0.7738,0.69,0.7103,+20.44%
-HoASA (Hotel Aspect),Proposed (BLEU-Augmented + AIC),"2,562",0.9406,0.6796,0.6933,0.6844,+16.06%
-EmoT (Twitter Emotion),Baseline (Unaugmented),"3,520",0.7682,0.7842,0.7701,0.7729,---
+HoASA (Hotel Aspect),Proposed (ECU-Augmented + AIC),"2,583",0.9371,0.6705,0.6993,0.6813,-19.15%
+HoASA (Hotel Aspect),Proposed (COS-Augmented + AIC),"2,561",0.9441,0.6762,0.6947,0.685,-18.71%
+HoASA (Hotel Aspect),Proposed (JAC-Augmented + AIC),"2,560",0.9371,0.6031,0.6118,0.6074,-27.92%
+HoASA (Hotel Aspect),Proposed (BLEU-Augmented + AIC),"2,562",0.9406,0.6834,0.6859,0.6833,-18.91%
+EmoT (Twitter Emotion),Baseline (Unaugmented),"3,520",0.7841,0.7879,0.7846,0.786,---
 EmoT (Twitter Emotion),"EDA (Wei & Zou, 2019)","2,600",0.7318,0.7366,0.7387,0.732,-7.16%
 EmoT (Twitter Emotion),Back-Translation (MarianMT),"2,600",0.6568,0.676,0.6821,0.6394,-18.90%
-EmoT (Twitter Emotion),Proposed (ECU-Augmented + AIC),"3,710",0.7682,0.7873,0.7667,0.774,+0.15%
-EmoT (Twitter Emotion),Proposed (COS-Augmented + AIC),"3,659",0.775,0.7764,0.78,0.7726,-0.04%
-EmoT (Twitter Emotion),Proposed (JAC-Augmented + AIC),"3,654",0.7682,0.7674,0.7721,0.7689,-0.51%
-EmoT (Twitter Emotion),Proposed (BLEU-Augmented + AIC),"3,657",0.7841,0.7869,0.7866,0.786,+1.70%
-EmoT (Twitter Emotion),Proposed (Ensemble-Augmented + AIC),"3,658",0.775,0.7826,0.7736,0.7762,+0.43%
-NusaX-Indonesian (Multi-Topic),Baseline (Unaugmented),500,0.905,0.9004,0.8962,0.8981,---
+EmoT (Twitter Emotion),Proposed (ECU-Augmented + AIC),"3,710",0.7682,0.777,0.7708,0.7724,-1.73%
+EmoT (Twitter Emotion),Proposed (COS-Augmented + AIC),"3,659",0.7841,0.7958,0.7878,0.7901,+0.52%
+EmoT (Twitter Emotion),Proposed (JAC-Augmented + AIC),"3,654",0.7955,0.8008,0.7919,0.7957,+1.23%
+EmoT (Twitter Emotion),Proposed (BLEU-Augmented + AIC),"3,657",0.7841,0.7861,0.7889,0.7864,+0.05%
+EmoT (Twitter Emotion),Proposed (Ensemble-Augmented + AIC),"3,711",0.7886,0.7982,0.7896,0.7919,+0.75%
+NusaX-Indonesian (Multi-Topic),Baseline (Unaugmented),500,0.9125,0.9102,0.9014,0.9049,---
 NusaX-Indonesian (Multi-Topic),"EDA (Wei & Zou, 2019)",550,0.8825,0.879,0.872,0.8755,-0.26%
 NusaX-Indonesian (Multi-Topic),Back-Translation (MarianMT),550,0.89,0.888,0.882,0.885,+0.82%
-NusaX-Indonesian (Multi-Topic),Proposed (ECU-Augmented + AIC),527,0.9025,0.9046,0.8888,0.8945,-0.41%
-NusaX-Indonesian (Multi-Topic),Proposed (COS-Augmented + AIC),505,0.8925,0.8923,0.8775,0.8828,-1.70%
-NusaX-Indonesian (Multi-Topic),Proposed (JAC-Augmented + AIC),503,0.905,0.8999,0.9038,0.9011,+0.33%
-NusaX-Indonesian (Multi-Topic),Proposed (BLEU-Augmented + AIC),506,0.8975,0.8977,0.8832,0.8887,-1.05%
-NusaX-Indonesian (Multi-Topic),Proposed (Ensemble-Augmented + AIC),503,0.9,0.8928,0.8944,0.8936,-0.51%
+NusaX-Indonesian (Multi-Topic),Proposed (ECU-Augmented + AIC),527,0.9,0.8949,0.8905,0.8924,-1.37%
+NusaX-Indonesian (Multi-Topic),Proposed (COS-Augmented + AIC),505,0.9125,0.9056,0.9078,0.9065,+0.18%
+NusaX-Indonesian (Multi-Topic),Proposed (JAC-Augmented + AIC),503,0.905,0.9074,0.8911,0.8973,-0.84%
+NusaX-Indonesian (Multi-Topic),Proposed (BLEU-Augmented + AIC),506,0.915,0.9064,0.9126,0.9089,+0.45%
+NusaX-Indonesian (Multi-Topic),Proposed (Ensemble-Augmented + AIC),506,0.91,0.9018,0.9069,0.9038,-0.12%

@@ -1,9 +1,9 @@
 Dataset,Variant,Distinct-1,Distinct-2,Entropy (H)
 SmSA,Baseline (Original Training Set),0.0499,0.3753,9.52
-SmSA,ECU-Augmented (ECU Filtered),0.0521,0.3748,9.61
-SmSA,COS-Augmented (COS Filtered),0.0504,0.3751,9.54
-SmSA,JAC-Augmented (JAC Filtered),0.0502,0.3749,9.53
-SmSA,BLEU-Augmented (BLEU Filtered),0.0505,0.375,9.54
+SmSA,ECU-Augmented (ECU Filtered),0.052,0.3741,9.62
+SmSA,COS-Augmented (COS Filtered),0.0506,0.3753,9.54
+SmSA,JAC-Augmented (JAC Filtered),0.0502,0.3751,9.53
+SmSA,BLEU-Augmented (BLEU Filtered),0.0504,0.3752,9.54
 HoASA,Baseline (Original Training Set),0.1835,0.7091,10.24
 HoASA,ECU-Augmented (ECU Filtered),0.1836,0.7023,10.28
 HoASA,COS-Augmented (COS Filtered),0.184,0.7062,10.26
