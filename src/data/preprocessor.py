@@ -108,19 +108,69 @@ def load_colloquial_lexicon(csv_path: Optional[str] = None) -> Dict[str, str]:
         return cfg.get("slang_dict", {})
 
 
+AFFECTIVE_TWITTER_SLANG: Dict[str, str] = {
+    # Love / Romantic affection
+    "bucin": "sangat cinta",
+    "ayang": "sayang",
+    "ayank": "sayang",
+    "ayg": "sayang",
+    "lop": "cinta",
+    "luvv": "cinta",
+    "luvvv": "cinta",
+    "uwu": "lucu menggemaskan",
+    "gemes": "gemas sayang",
+    "gemess": "gemas sayang",
+    "kgn": "kangen rindu",
+    "rinduu": "rindu",
+    # Sadness / Grief / Heartbreak
+    "ambyar": "hancur sedih",
+    "nyesek": "sedih menyakitkan",
+    "patahhati": "patah hati sedih",
+    "galau": "sedih gelisah",
+    "mewek": "menangis sedih",
+    "nangiss": "menangis sedih",
+    "nangis": "menangis sedih",
+    "sedihh": "sedih",
+    # Anger / Outrage
+    "bgsd": "bangsat marah",
+    "bgst": "bangsat marah",
+    "kesel": "kesal marah",
+    "kzll": "kesal marah",
+    "kzl": "kesal",
+    "emosian": "emosi marah",
+    "murka": "sangat marah",
+    "jancuk": "jancuk marah",
+    "jancok": "jancok marah",
+    "kampret": "kampret marah",
+    # Happy / Celebration
+    "hepi": "gembira",
+    "hppy": "senang gembira",
+    "seneng": "senang gembira",
+    "sneng": "senang",
+    "girang": "gembira senang",
+    "asik": "asyik senang",
+    "seruu": "seru gembira",
+    "hore": "hore gembira",
+}
+
+
 def _get_default_dicts():
     try:
         cfg = load_preprocessor_config()
         slang = cfg.get("slang_dict", {})
         if not slang:
             slang = load_colloquial_lexicon()
+        # Merge affective Twitter colloquial slang to disambiguate fine-grained emotions
+        slang_combined = dict(slang)
+        slang_combined.update(AFFECTIVE_TWITTER_SLANG)
+
         emoji = cfg.get("emoji_sentiment_dict", {})
         if not emoji:
             emoji = load_mle_emoji_lexicon()
         emoticon = cfg.get("emoticon_dict", {})
-        return slang, emoji, emoticon
+        return slang_combined, emoji, emoticon
     except Exception:
-        return {}, {}, {}
+        return dict(AFFECTIVE_TWITTER_SLANG), {}, {}
 
 
 _DEFAULT_SLANG, _DEFAULT_EMOJI, _DEFAULT_EMOTICON = _get_default_dicts()

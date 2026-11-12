@@ -195,6 +195,7 @@ datasets:
     valence_map:
       positive: ["happy", "love"]
       negative: ["anger", "sadness", "fear"]
+    intra_valence_weight: 1.4
     best_aug_metric: "BLEU"
     description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
     training_dynamics:

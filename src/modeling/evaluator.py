@@ -55,6 +55,70 @@ from src.augmentation.filtering import is_hallucinatory_or_corrupt
 from src.utils.path_utils import resolve_path, ensure_dir
 
 
+class HierarchicalValenceLoss(torch.nn.Module):
+    """
+    Hierarchical Valence-Guided Cross-Entropy Loss (Russell's Circumplex Emotion Geometry).
+    Decomposes flat multi-class emotion classification into:
+      L_total = L_base_ce + (beta - 1.0) * L_intra
+    where:
+      - L_base_ce enforces standard balanced classification across all classes
+      - L_intra enforces fine-grained discrimination within the true valence manifold
+        (e.g., distinguishing Anger vs. Sadness, and Love vs. Happy)
+    When intra_valence_weight > 1.0, increases gradient pressure on intra-valence boundary decisions,
+    directly reducing pairwise off-diagonal confusion without extra parameters or inference overhead.
+    """
+
+    def __init__(
+        self,
+        valence_map: Dict[str, List[str]],
+        label_list: List[str],
+        weight: Optional[torch.Tensor] = None,
+        label_smoothing: float = 0.0,
+        intra_valence_weight: float = 1.4,
+    ):
+        super().__init__()
+        self.intra_weight = float(intra_valence_weight)
+        self.label_smoothing = float(label_smoothing)
+        self.base_ce = torch.nn.CrossEntropyLoss(weight=weight, label_smoothing=label_smoothing)
+
+        # Precompute valence mask: mask[c, j] is True if class j shares the valence of class c
+        K = len(label_list)
+        label2idx = {lbl: i for i, lbl in enumerate(label_list)}
+        mask = torch.zeros((K, K), dtype=torch.bool)
+        for _, group_labels in valence_map.items():
+            indices = [label2idx[l] for l in group_labels if l in label2idx]
+            for i in indices:
+                for j in indices:
+                    mask[i, j] = True
+        self.register_buffer("valence_mask", mask)
+
+    @property
+    def weight(self):
+        return self.base_ce.weight
+
+    @weight.setter
+    def weight(self, value):
+        self.base_ce.weight = value
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        ce_loss = self.base_ce(logits, targets)
+        if self.intra_weight <= 1.0 or self.valence_mask is None:
+            return ce_loss
+
+        # Align buffer device with logits
+        if self.valence_mask.device != logits.device:
+            self.valence_mask = self.valence_mask.to(logits.device)
+
+        batch_mask = self.valence_mask[targets]  # (B, K)
+        # Mask out classes outside the target's valence group with large negative value
+        group_logits = torch.where(batch_mask, logits, torch.full_like(logits, -1e4))
+        lse_group = torch.logsumexp(group_logits, dim=-1)  # (B,)
+        target_logits = logits.gather(1, targets.unsqueeze(1)).squeeze(1)  # (B,)
+        l_intra = (lse_group - target_logits).mean()
+
+        return ce_loss + (self.intra_weight - 1.0) * l_intra
+
+
 class IndoBERTClassifierEvaluator:
     def __init__(
         self,
@@ -80,6 +144,8 @@ class IndoBERTClassifierEvaluator:
         target_oversample: Optional[Dict[str, int]] = None,
         ensemble_configs: Optional[List[Dict[str, Any]]] = None,
         prompt_prefix: Optional[str] = None,
+        valence_map: Optional[Dict[str, List[str]]] = None,
+        intra_valence_weight: float = 1.4,
     ):
         self.model_name = model_name
         self.max_len = max_len
@@ -102,6 +168,8 @@ class IndoBERTClassifierEvaluator:
         self.target_oversample = target_oversample
         self.ensemble_configs = ensemble_configs
         self.prompt_prefix = prompt_prefix
+        self.valence_map = valence_map
+        self.intra_valence_weight = intra_valence_weight
 
         self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         if device is not None:
@@ -490,9 +558,29 @@ class IndoBERTClassifierEvaluator:
                     print(f"    - {lbl}: adjusted weight = {weight_arr[idx]:.3f}")
 
             class_weights_tensor = torch.tensor(weight_arr, dtype=torch.float, device=loss_device)
-            criterion = torch.nn.CrossEntropyLoss(weight=class_weights_tensor, label_smoothing=self.label_smoothing)
-        elif self.label_smoothing > 0.0:
-            criterion = torch.nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
+            if self.valence_map:
+                print(f"  [HIERARCHICAL LOSS] Active: Valence-guided loss (intra_valence_weight={self.intra_valence_weight}) for labels: {label_list}")
+                criterion = HierarchicalValenceLoss(
+                    valence_map=self.valence_map,
+                    label_list=label_list,
+                    weight=class_weights_tensor,
+                    label_smoothing=self.label_smoothing,
+                    intra_valence_weight=self.intra_valence_weight,
+                ).to(loss_device)
+            else:
+                criterion = torch.nn.CrossEntropyLoss(weight=class_weights_tensor, label_smoothing=self.label_smoothing)
+        elif self.label_smoothing > 0.0 or self.valence_map:
+            if self.valence_map:
+                print(f"  [HIERARCHICAL LOSS] Active: Valence-guided loss (intra_valence_weight={self.intra_valence_weight}) for labels: {label_list}")
+                criterion = HierarchicalValenceLoss(
+                    valence_map=self.valence_map,
+                    label_list=label_list,
+                    weight=None,
+                    label_smoothing=self.label_smoothing,
+                    intra_valence_weight=self.intra_valence_weight,
+                ).to(loss_device)
+            else:
+                criterion = torch.nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
         else:
             criterion = None
 
@@ -805,6 +893,8 @@ class IndoBERTClassifierEvaluator:
                 eval_logit_adj_tau=self.eval_logit_adj_tau,
                 target_oversample=self.target_oversample,
                 prompt_prefix=self.prompt_prefix,
+                valence_map=self.valence_map,
+                intra_valence_weight=self.intra_valence_weight,
             )
 
             train_res = sub_evaluator.evaluate_dataset(

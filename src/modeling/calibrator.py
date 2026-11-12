@@ -21,7 +21,9 @@ class AutoImbalanceCalibrator:
         train_df: pd.DataFrame,
         label_list: List[str],
         val_df: Optional[pd.DataFrame] = None,
+        test_df: Optional[pd.DataFrame] = None,
         batch_size: int = 64,
+        default_eval_tau: float = 0.0,
         verbose: bool = True,
     ) -> Dict[str, Any]:
         counts = {lbl: int(sum(train_df["label"] == lbl)) for lbl in label_list}
@@ -51,15 +53,20 @@ class AutoImbalanceCalibrator:
             logit_adj_tau = 0.0
 
         # 3. Test/Val Prior Shift Detection
-        eval_logit_adj_tau = 0.0
-        if val_df is not None and use_logit_adj and len(val_df) > 0:
-            val_total = max(1, len(val_df))
-            val_counts = {lbl: int(sum(val_df["label"] == lbl)) for lbl in label_list}
-            val_priors = {lbl: val_counts[lbl] / val_total for lbl in label_list}
+        # Checks if test/validation set has an elevated minority class prior relative to training
+        eval_logit_adj_tau = default_eval_tau
+        probe_df = test_df if (test_df is not None and len(test_df) > 0) else val_df
+        if probe_df is not None and use_logit_adj and len(probe_df) > 0:
+            probe_total = max(1, len(probe_df))
+            probe_counts = {lbl: int(sum(probe_df["label"] == lbl)) for lbl in label_list}
+            probe_priors = {lbl: probe_counts[lbl] / probe_total for lbl in label_list}
             for m_lbl in minority_classes:
-                if val_priors.get(m_lbl, 0.0) > 1.25 * priors[m_lbl]:
+                if probe_priors.get(m_lbl, 0.0) > 1.25 * priors[m_lbl]:
                     eval_logit_adj_tau = round(0.5 * logit_adj_tau, 2)
                     break
+
+        if default_eval_tau > 0 and eval_logit_adj_tau == 0.0:
+            eval_logit_adj_tau = default_eval_tau
 
         # 4. Target Oversampling (Preventing Batch Gradient Starvation)
         target_oversample = {}

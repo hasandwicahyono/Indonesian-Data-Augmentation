@@ -59,12 +59,12 @@ def is_valence_consistent(target_label: str, text: str) -> bool:
     lbl = str(target_label).strip().lower()
 
     # Neutral class protection (NusaX & SmSA):
-    # Neutral statements should remain objective and not contain intense emotional markers
+    # Neutral statements should remain objective and not contain emotional polarity markers
     if lbl in {"neut", "neutral"}:
         pos_hits = sum(1 for kw in POSITIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
         neg_hits = sum(1 for kw in NEGATIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
         hostile_hits = sum(1 for kw in AGGRESSIVE_ANGER_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
-        if hostile_hits >= 1 or pos_hits >= 2 or neg_hits >= 2:
+        if hostile_hits >= 1 or pos_hits >= 1 or neg_hits >= 1:
             return False
 
     # Negative emotions / polarities: should not be predominantly celebratory
@@ -84,7 +84,14 @@ def is_valence_consistent(target_label: str, text: str) -> bool:
     # If target is sadness (grief/sorrow), reject extreme aggressive expletives belonging strictly to anger
     if lbl == "sadness":
         hostile_hits = sum(1 for kw in AGGRESSIVE_ANGER_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
-        if hostile_hits >= 2:
+        if hostile_hits >= 1:
+            return False
+
+    # Fine-grained anger vs sadness protection:
+    # If target is anger (rage/hostility), reject sorrow/crying tokens belonging strictly to sadness
+    if lbl == "anger":
+        crying_hits = sum(1 for kw in {"nangis", "air mata", "meratap", "tersedu", "berduka", "kehilangan"} if re.search(r"\b" + re.escape(kw) + r"\b", s))
+        if crying_hits >= 1:
             return False
 
     return True

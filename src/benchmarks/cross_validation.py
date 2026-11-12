@@ -106,6 +106,8 @@ def run_real_5fold_cv_for_dataset(
         use_fgm=False,
         device=device_str,
         prompt_prefix=cfg.get("aspect_prompt_prefix", None),
+        valence_map=cfg.get("valence_map", None) if cfg.get("valence_guardrail", False) else None,
+        intra_valence_weight=cfg.get("intra_valence_weight", 1.4),
     )
 
     for fold_idx, (train_idx, test_idx) in enumerate(skf.split(full_df["text"], full_df["label"])):

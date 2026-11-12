@@ -879,7 +879,9 @@ def run_benchmark_pipeline(
                 train_df=ds.train,
                 label_list=ds.label_list,
                 val_df=ds.val,
+                test_df=ds.test,
                 batch_size=batch_size_probe,
+                default_eval_tau=cfg.get("eval_logit_adj_tau", 0.0),
             )
             if cal["minority_classes"]:
                 cfg["minority_classes"] = cal["minority_classes"]
@@ -1000,6 +1002,8 @@ def run_benchmark_pipeline(
                 target_oversample=cfg.get("target_oversample", None),
                 ensemble_configs=cfg.get("ensemble_models", None) if (run_ensemble and cfg.get("run_ensemble", False)) else None,
                 prompt_prefix=cfg.get("aspect_prompt_prefix", None),
+                valence_map=cfg.get("valence_map", None) if cfg.get("valence_guardrail", False) else None,
+                intra_valence_weight=cfg.get("intra_valence_weight", 1.4),
             )
 
             results_df = evaluator.evaluate_all_variants(
