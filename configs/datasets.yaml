@@ -65,6 +65,7 @@ datasets:
     use_logit_adjustment: true
     logit_adj_tau: 0.6
     eval_logit_adj_tau: 0.25
+    threshold_calibration: true
     target_oversample:
       neutral: 2
     label_smoothing: 0.05
@@ -150,7 +151,7 @@ datasets:
     logit_adj_tau: 0.8
     eval_logit_adj_tau: 0.35
     target_oversample:
-      neg: 8
+      neg: 3
       pos: 2
     label_smoothing: 0.05
     use_fgm: true
@@ -190,6 +191,8 @@ datasets:
     label_smoothing: 0.08
     use_fgm: true
     fgm_epsilon: 1.0
+    use_focal_loss: true
+    focal_gamma: 1.5
     minority_classes: ["fear", "love", "sadness"]
     valence_guardrail: true
     valence_map:

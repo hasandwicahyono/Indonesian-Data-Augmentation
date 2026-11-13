@@ -1004,11 +1004,14 @@ def run_benchmark_pipeline(
                 use_logit_adjustment=cfg.get("use_logit_adjustment", False),
                 logit_adj_tau=cfg.get("logit_adj_tau", 0.8),
                 eval_logit_adj_tau=cfg.get("eval_logit_adj_tau", 0.0),
+                threshold_calibration=cfg.get("threshold_calibration", False),
                 target_oversample=cfg.get("target_oversample", None),
                 ensemble_configs=cfg.get("ensemble_models", None) if (run_ensemble and cfg.get("run_ensemble", False)) else None,
                 prompt_prefix=cfg.get("aspect_prompt_prefix", None),
                 valence_map=cfg.get("valence_map", None) if cfg.get("valence_guardrail", False) else None,
                 intra_valence_weight=cfg.get("intra_valence_weight", 1.4),
+                use_focal_loss=cfg.get("use_focal_loss", False),
+                focal_gamma=cfg.get("focal_gamma", 1.5),
             )
 
             results_df = evaluator.evaluate_all_variants(

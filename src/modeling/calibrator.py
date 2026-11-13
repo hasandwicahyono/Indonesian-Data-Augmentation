@@ -77,7 +77,9 @@ class AutoImbalanceCalibrator:
             expected_per_batch = batch_size * priors[m_lbl]
             if expected_per_batch < 1.5 or counts[m_lbl] < 100:
                 ratio_to_med = int(round(second_largest / max(1, counts[m_lbl])))
-                multiplier = int(np.clip(ratio_to_med, 2, 8))
+                # Cap multiplier for extremely scarce minority classes (<50 samples or IR > 15) to prevent over-triggering
+                max_mult = 3 if (counts[m_lbl] < 50 or imbalance_ratio > 15.0) else 4
+                multiplier = int(np.clip(ratio_to_med, 2, max_mult))
                 if multiplier > 1:
                     target_oversample[m_lbl] = multiplier
             elif counts[m_lbl] < 0.5 * second_largest:

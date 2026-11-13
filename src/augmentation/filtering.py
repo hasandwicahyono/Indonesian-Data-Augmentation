@@ -64,7 +64,7 @@ def is_valence_consistent(target_label: str, text: str) -> bool:
         pos_hits = sum(1 for kw in POSITIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
         neg_hits = sum(1 for kw in NEGATIVE_VALENCE_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
         hostile_hits = sum(1 for kw in AGGRESSIVE_ANGER_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", s))
-        if hostile_hits >= 1 or pos_hits >= 1 or neg_hits >= 1:
+        if hostile_hits >= 1 or pos_hits >= 2 or neg_hits >= 2:
             return False
 
     # Negative emotions / polarities: should not be predominantly celebratory
@@ -153,13 +153,24 @@ def clean_and_truncate_continuation(text: str) -> str:
     return s
 
 
-def compute_similarity_thresholds(df: pd.DataFrame) -> Dict[str, float]:
-    """Computes mean similarity thresholds across valid dataset rows."""
+def compute_similarity_thresholds(
+    df: pd.DataFrame,
+    target_labels: Optional[List[str]] = None,
+    label_column: str = "label",
+) -> Dict[str, float]:
+    """Computes mean similarity thresholds across valid dataset rows, optionally focused on target labels."""
+    sub_df = df
+    if target_labels is not None and label_column in df.columns:
+        clean_targets = [str(l).strip().lower() for l in target_labels]
+        matching = df[df[label_column].astype(str).str.strip().str.lower().isin(clean_targets)]
+        if len(matching) >= 5:
+            sub_df = matching
+
     thresholds = {
-        "ECU": float(df["ecu_similarity"].mean()) if "ecu_similarity" in df else 0.5,
-        "COS": float(df["cos_similarity"].mean()) if "cos_similarity" in df else 0.5,
-        "JAC": float(df["jacc_similarity"].mean()) if "jacc_similarity" in df else 0.3,
-        "BLEU": float(df["bleu_sim_1"].mean()) if "bleu_sim_1" in df else 0.2,
+        "ECU": float(sub_df["ecu_similarity"].mean()) if "ecu_similarity" in sub_df else 0.5,
+        "COS": float(sub_df["cos_similarity"].mean()) if "cos_similarity" in sub_df else 0.5,
+        "JAC": float(sub_df["jacc_similarity"].mean()) if "jacc_similarity" in sub_df else 0.3,
+        "BLEU": float(sub_df["bleu_sim_1"].mean()) if "bleu_sim_1" in sub_df else 0.2,
     }
     return thresholds
 
@@ -208,7 +219,7 @@ def build_augmented_datasets(
     Constructs augmented datasets for All-Text and New-Text variants across the 4 similarity metrics.
     Applies strict Anti-Hallucination verification and suffix-level semantic grounding.
     """
-    thresholds = compute_similarity_thresholds(df)
+    thresholds = compute_similarity_thresholds(df, target_labels=labels_to_augment, label_column=label_column)
     print(f"Computed Similarity Thresholds: {thresholds}")
 
     test_texts = set(str(t).strip() for t in test_df[text_column].dropna()) if test_df is not None else set()
@@ -228,6 +239,14 @@ def build_augmented_datasets(
         "JAC": 0.10,
         "BLEU": 0.08,
     }
+
+    is_small_corpus = (base_train_df is not None and len(base_train_df) <= 1000)
+    effective_thresholds = thresholds.copy()
+    if is_small_corpus:
+        # Adaptively relax thresholds by 10% toward the floor for small curated corpora (e.g. NusaX)
+        for m in metrics:
+            floor = safety_floors.get(m, 0.1)
+            effective_thresholds[m] = max(floor, thresholds[m] * 0.90)
 
     for _, row in df.iterrows():
         label = row[label_column]
@@ -260,7 +279,7 @@ def build_augmented_datasets(
 
         for m in metrics:
             floor = safety_floors.get(m, 0.1)
-            if check_threshold(metric_values[m], label, m, thresholds, labels_to_augment, min_floor=floor):
+            if check_threshold(metric_values[m], label, m, effective_thresholds, labels_to_augment, min_floor=floor):
                 growth_counts[m] += 1
                 aug_all_samples[m].append({"text": all_text, "label": label})
                 aug_new_samples[m].append({"text": new_text if new_text else all_text, "label": label})

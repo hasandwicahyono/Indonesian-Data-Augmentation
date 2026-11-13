@@ -66,31 +66,43 @@ class HierarchicalValenceLoss(torch.nn.Module):
         (e.g., distinguishing Anger vs. Sadness, and Love vs. Happy)
     When intra_valence_weight > 1.0, increases gradient pressure on intra-valence boundary decisions,
     directly reducing pairwise off-diagonal confusion without extra parameters or inference overhead.
+    Optionally incorporates Lin et al. Focal Loss modulation (gamma > 0) to dynamically weight hard instances.
     """
 
     def __init__(
         self,
-        valence_map: Dict[str, List[str]],
-        label_list: List[str],
+        valence_map: Optional[Dict[str, List[str]]] = None,
+        label_list: Optional[List[str]] = None,
         weight: Optional[torch.Tensor] = None,
         label_smoothing: float = 0.0,
         intra_valence_weight: float = 1.4,
+        use_focal_loss: bool = False,
+        focal_gamma: float = 1.5,
     ):
         super().__init__()
         self.intra_weight = float(intra_valence_weight)
         self.label_smoothing = float(label_smoothing)
-        self.base_ce = torch.nn.CrossEntropyLoss(weight=weight, label_smoothing=label_smoothing)
+        self.use_focal_loss = bool(use_focal_loss)
+        self.focal_gamma = float(focal_gamma)
+        self.base_ce = torch.nn.CrossEntropyLoss(
+            weight=weight,
+            label_smoothing=label_smoothing,
+            reduction="none" if self.use_focal_loss else "mean",
+        )
 
         # Precompute valence mask: mask[c, j] is True if class j shares the valence of class c
-        K = len(label_list)
-        label2idx = {lbl: i for i, lbl in enumerate(label_list)}
-        mask = torch.zeros((K, K), dtype=torch.bool)
-        for _, group_labels in valence_map.items():
-            indices = [label2idx[l] for l in group_labels if l in label2idx]
-            for i in indices:
-                for j in indices:
-                    mask[i, j] = True
-        self.register_buffer("valence_mask", mask)
+        if valence_map and label_list:
+            K = len(label_list)
+            label2idx = {lbl: i for i, lbl in enumerate(label_list)}
+            mask = torch.zeros((K, K), dtype=torch.bool)
+            for _, group_labels in valence_map.items():
+                indices = [label2idx[l] for l in group_labels if l in label2idx]
+                for i in indices:
+                    for j in indices:
+                        mask[i, j] = True
+            self.register_buffer("valence_mask", mask)
+        else:
+            self.valence_mask = None
 
     @property
     def weight(self):
@@ -101,7 +113,16 @@ class HierarchicalValenceLoss(torch.nn.Module):
         self.base_ce.weight = value
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        ce_loss = self.base_ce(logits, targets)
+        if self.use_focal_loss:
+            sample_ce = self.base_ce(logits, targets)  # (B,)
+            with torch.no_grad():
+                probs = F.softmax(logits, dim=-1)
+                p_t = probs.gather(1, targets.unsqueeze(1)).squeeze(1).clamp(min=1e-6, max=1.0)
+                focal_modulator = (1.0 - p_t) ** self.focal_gamma
+            ce_loss = (focal_modulator * sample_ce).mean()
+        else:
+            ce_loss = self.base_ce(logits, targets)
+
         if self.intra_weight <= 1.0 or self.valence_mask is None:
             return ce_loss
 
@@ -114,7 +135,11 @@ class HierarchicalValenceLoss(torch.nn.Module):
         group_logits = torch.where(batch_mask, logits, torch.full_like(logits, -1e4))
         lse_group = torch.logsumexp(group_logits, dim=-1)  # (B,)
         target_logits = logits.gather(1, targets.unsqueeze(1)).squeeze(1)  # (B,)
-        l_intra = (lse_group - target_logits).mean()
+        l_intra = lse_group - target_logits
+        if self.use_focal_loss:
+            l_intra = (focal_modulator * l_intra).mean()
+        else:
+            l_intra = l_intra.mean()
 
         return ce_loss + (self.intra_weight - 1.0) * l_intra
 
@@ -146,6 +171,9 @@ class IndoBERTClassifierEvaluator:
         prompt_prefix: Optional[str] = None,
         valence_map: Optional[Dict[str, List[str]]] = None,
         intra_valence_weight: float = 1.4,
+        use_focal_loss: bool = False,
+        focal_gamma: float = 1.5,
+        threshold_calibration: bool = False,
     ):
         self.model_name = model_name
         self.max_len = max_len
@@ -170,6 +198,9 @@ class IndoBERTClassifierEvaluator:
         self.prompt_prefix = prompt_prefix
         self.valence_map = valence_map
         self.intra_valence_weight = intra_valence_weight
+        self.use_focal_loss = use_focal_loss
+        self.focal_gamma = focal_gamma
+        self.threshold_calibration = threshold_calibration
 
         self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         if device is not None:
@@ -191,6 +222,10 @@ class IndoBERTClassifierEvaluator:
             extra_desc += f", Heterogeneous Ensemble: {len(self.ensemble_configs)} models"
         if self.prompt_prefix:
             extra_desc += f", Context-Conditioning: '{self.prompt_prefix.strip()}'"
+        if self.use_focal_loss:
+            extra_desc += f", Focal-Loss (gamma={self.focal_gamma})"
+        if self.threshold_calibration:
+            extra_desc += ", Threshold-Calibration: Active"
         print(f"  Enhancements Active -> Preprocessing: {self.use_preprocessing}, Class-Weights: {self.use_class_weights}, Label-Smoothing: {self.label_smoothing}, FGM-Adversarial: {self.use_fgm}{extra_desc}")
 
     def _set_seed(self, seed: Optional[int] = None):
@@ -326,6 +361,7 @@ class IndoBERTClassifierEvaluator:
         dataloader: DataLoader,
         num_labels: Optional[int] = None,
         log_priors: Optional[torch.Tensor] = None,
+        offset: Optional[np.ndarray] = None,
     ) -> Tuple[float, float, float, float, np.ndarray, List[int], List[int]]:
         model.eval()
         all_preds = []
@@ -345,6 +381,9 @@ class IndoBERTClassifierEvaluator:
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
                         logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
+                    if offset is not None:
+                        offset_t = torch.tensor(offset, dtype=logits.dtype, device=loss_device)
+                        logits = logits + offset_t
                     preds = torch.argmax(logits, dim=1)
 
                     all_preds.extend(preds.detach().cpu().numpy())
@@ -558,26 +597,40 @@ class IndoBERTClassifierEvaluator:
                     print(f"    - {lbl}: adjusted weight = {weight_arr[idx]:.3f}")
 
             class_weights_tensor = torch.tensor(weight_arr, dtype=torch.float, device=loss_device)
-            if self.valence_map:
-                print(f"  [HIERARCHICAL LOSS] Active: Valence-guided loss (intra_valence_weight={self.intra_valence_weight}) for labels: {label_list}")
+            if self.valence_map or self.use_focal_loss:
+                extra_loss_desc = []
+                if self.valence_map:
+                    extra_loss_desc.append(f"Valence-Guided (intra_weight={self.intra_valence_weight})")
+                if self.use_focal_loss:
+                    extra_loss_desc.append(f"Focal-Loss (gamma={self.focal_gamma})")
+                print(f"  [HIERARCHICAL / FOCAL LOSS] Active: {', '.join(extra_loss_desc)}")
                 criterion = HierarchicalValenceLoss(
                     valence_map=self.valence_map,
                     label_list=label_list,
                     weight=class_weights_tensor,
                     label_smoothing=self.label_smoothing,
                     intra_valence_weight=self.intra_valence_weight,
+                    use_focal_loss=self.use_focal_loss,
+                    focal_gamma=self.focal_gamma,
                 ).to(loss_device)
             else:
                 criterion = torch.nn.CrossEntropyLoss(weight=class_weights_tensor, label_smoothing=self.label_smoothing)
-        elif self.label_smoothing > 0.0 or self.valence_map:
-            if self.valence_map:
-                print(f"  [HIERARCHICAL LOSS] Active: Valence-guided loss (intra_valence_weight={self.intra_valence_weight}) for labels: {label_list}")
+        elif self.label_smoothing > 0.0 or self.valence_map or self.use_focal_loss:
+            if self.valence_map or self.use_focal_loss:
+                extra_loss_desc = []
+                if self.valence_map:
+                    extra_loss_desc.append(f"Valence-Guided (intra_weight={self.intra_valence_weight})")
+                if self.use_focal_loss:
+                    extra_loss_desc.append(f"Focal-Loss (gamma={self.focal_gamma})")
+                print(f"  [HIERARCHICAL / FOCAL LOSS] Active: {', '.join(extra_loss_desc)}")
                 criterion = HierarchicalValenceLoss(
                     valence_map=self.valence_map,
                     label_list=label_list,
                     weight=None,
                     label_smoothing=self.label_smoothing,
                     intra_valence_weight=self.intra_valence_weight,
+                    use_focal_loss=self.use_focal_loss,
+                    focal_gamma=self.focal_gamma,
                 ).to(loss_device)
             else:
                 criterion = torch.nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
@@ -735,8 +788,19 @@ class IndoBERTClassifierEvaluator:
             del best_model_weights
             print(f"  [Optimal Checkpoint Restored] Best Val Macro-F1: {best_val_f1:.4f} (from epoch {best_epoch})")
 
-        acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(model, test_loader, num_labels=num_labels, log_priors=log_priors)
-        test_probs, _ = self.predict_proba(model, test_loader, log_priors=log_priors)
+        calibrated_offset = None
+        if self.threshold_calibration and val_loader is not None:
+            val_logits, val_targets = self.get_raw_logits(model, val_loader, log_priors=log_priors)
+            calibrated_offset = self._calibrate_offsets(val_logits, val_targets, num_labels)
+            if np.any(calibrated_offset != 0.0):
+                print(f"  [THRESHOLD CALIBRATION] Active: Applied validation-calibrated logit offset vector: {np.round(calibrated_offset, 3)}")
+
+        acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(
+            model, test_loader, num_labels=num_labels, log_priors=log_priors, offset=calibrated_offset
+        )
+        test_probs, _ = self.predict_proba(
+            model, test_loader, log_priors=log_priors, offset=calibrated_offset
+        )
 
         # Explicit cleanup of model, optimizer, dataloaders from GPU VRAM
         release_model_vram(model)
@@ -770,11 +834,74 @@ class IndoBERTClassifierEvaluator:
 
         return res
 
+    def get_raw_logits(
+        self,
+        model: torch.nn.Module,
+        dataloader: DataLoader,
+        log_priors: Optional[torch.Tensor] = None,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Extracts unnormalized logits and targets for calibration."""
+        model.eval()
+        all_logits = []
+        all_labels = []
+        input_device = next(model.parameters()).device
+        use_amp = (self.device.type == "cuda")
+
+        with torch.no_grad():
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                for batch in dataloader:
+                    input_ids = batch["input_ids"].to(input_device, non_blocking=True)
+                    attention_mask = batch["attention_mask"].to(input_device, non_blocking=True)
+                    labels = batch["label"].to(input_device, non_blocking=True)
+
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    logits = outputs.logits
+                    loss_device = logits.device
+                    if log_priors is not None and self.eval_logit_adj_tau > 0.0:
+                        logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
+
+                    all_logits.append(logits.detach().cpu().numpy())
+                    all_labels.extend(labels.detach().cpu().numpy())
+                    del outputs, logits, input_ids, attention_mask, labels
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        return np.vstack(all_logits), np.array(all_labels)
+
+    @staticmethod
+    def _calibrate_offsets(logits: np.ndarray, targets: np.ndarray, num_labels: int) -> np.ndarray:
+        """
+        Coordinate search on validation set to calibrate logit offset b in [-0.5, 0.5]^K to maximize Macro-F1.
+        Initializes at zero to guarantee monotonic non-regression.
+        """
+        best_b = np.zeros(num_labels, dtype=np.float32)
+        base_preds = np.argmax(logits, axis=1)
+        target_labels = list(range(num_labels))
+        _, _, best_f1, _ = precision_recall_fscore_support(targets, base_preds, labels=target_labels, average="macro", zero_division=0)
+
+        step_candidates = [-0.4, -0.2, 0.0, 0.2, 0.4]
+        for _ in range(2):
+            for k in range(num_labels):
+                best_step = best_b[k]
+                for cand in step_candidates:
+                    b_test = best_b.copy()
+                    b_test[k] = cand
+                    preds = np.argmax(logits + b_test, axis=1)
+                    _, _, f1, _ = precision_recall_fscore_support(targets, preds, labels=target_labels, average="macro", zero_division=0)
+                    if f1 > best_f1 + 1e-4:
+                        best_f1 = f1
+                        best_step = cand
+                best_b[k] = best_step
+
+        return best_b
+
     def predict_proba(
         self,
         model: torch.nn.Module,
         dataloader: DataLoader,
         log_priors: Optional[torch.Tensor] = None,
+        offset: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Returns softmax probability distributions and ground-truth labels for ensembling."""
         model.eval()
@@ -795,6 +922,9 @@ class IndoBERTClassifierEvaluator:
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
                         logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
+                    if offset is not None:
+                        offset_t = torch.tensor(offset, dtype=logits.dtype, device=loss_device)
+                        logits = logits + offset_t
                     probs = torch.softmax(logits, dim=1)
 
                     all_probs.append(probs.detach().cpu().numpy())
@@ -895,6 +1025,9 @@ class IndoBERTClassifierEvaluator:
                 prompt_prefix=self.prompt_prefix,
                 valence_map=self.valence_map,
                 intra_valence_weight=self.intra_valence_weight,
+                threshold_calibration=self.threshold_calibration,
+                use_focal_loss=self.use_focal_loss,
+                focal_gamma=self.focal_gamma,
             )
 
             train_res = sub_evaluator.evaluate_dataset(
