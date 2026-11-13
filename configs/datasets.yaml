@@ -66,6 +66,8 @@ datasets:
     logit_adj_tau: 0.6
     eval_logit_adj_tau: 0.25
     threshold_calibration: true
+    use_focal_loss: true
+    focal_gamma: 1.0
     target_oversample:
       neutral: 2
     label_smoothing: 0.05
@@ -150,6 +152,9 @@ datasets:
     use_logit_adjustment: true
     logit_adj_tau: 0.8
     eval_logit_adj_tau: 0.35
+    threshold_calibration: true
+    use_focal_loss: true
+    focal_gamma: 1.2
     target_oversample:
       neg: 3
       pos: 2
@@ -193,6 +198,7 @@ datasets:
     fgm_epsilon: 1.0
     use_focal_loss: true
     focal_gamma: 1.5
+    threshold_calibration: true
     minority_classes: ["fear", "love", "sadness"]
     valence_guardrail: true
     valence_map:
@@ -243,6 +249,9 @@ datasets:
     use_logit_adjustment: true
     logit_adj_tau: 0.5
     eval_logit_adj_tau: 0.2
+    threshold_calibration: true
+    use_focal_loss: true
+    focal_gamma: 1.0
     target_oversample:
       neutral: 2
     label_smoothing: 0.05
