@@ -940,6 +940,8 @@ def run_benchmark_pipeline(
                     labels_to_augment=minority_classes,
                     base_train_df=ds.train,
                     test_df=ds.test,  # Strict zero-leakage check against test set
+                    threshold_relaxation_factor=cfg.get("threshold_relaxation_factor", None),
+                    custom_thresholds=cfg.get("custom_similarity_thresholds", None),
                 )
                 base_aug_dir = os.path.dirname(augmented_dir.rstrip("/"))
                 export_augmented_datasets(

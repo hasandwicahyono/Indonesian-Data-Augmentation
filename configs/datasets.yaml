@@ -62,14 +62,13 @@ datasets:
     early_stopping: true
     use_preprocessing: true
     use_class_weights: true
-    use_logit_adjustment: true
-    logit_adj_tau: 0.6
-    eval_logit_adj_tau: 0.25
-    threshold_calibration: true
-    use_focal_loss: true
+    use_logit_adjustment: false
+    logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.0
+    threshold_calibration: false
+    use_focal_loss: false
     focal_gamma: 1.0
-    target_oversample:
-      neutral: 2
+    target_oversample: null
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 0.5
@@ -149,15 +148,13 @@ datasets:
     early_stopping: true
     use_preprocessing: true
     use_class_weights: true
-    use_logit_adjustment: true
-    logit_adj_tau: 0.8
-    eval_logit_adj_tau: 0.35
-    threshold_calibration: true
-    use_focal_loss: true
-    focal_gamma: 1.2
-    target_oversample:
-      neg: 3
-      pos: 2
+    use_logit_adjustment: false
+    logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.0
+    threshold_calibration: false
+    use_focal_loss: false
+    focal_gamma: 1.0
+    target_oversample: null
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 1.0
@@ -205,7 +202,8 @@ datasets:
       positive: ["happy", "love"]
       negative: ["anger", "sadness", "fear"]
     intra_valence_weight: 1.4
-    best_aug_metric: "BLEU"
+    best_aug_metric: "ECU"
+    threshold_relaxation_factor: 0.85
     description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
     training_dynamics:
       loss:
@@ -217,18 +215,18 @@ datasets:
     run_ensemble: true
     ensemble_models:
       - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.50
+        weight: 0.70
       - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.30
+        weight: 0.15
       - model_name: "cahya/bert-base-indonesian-522M"
-        weight: 0.20
+        weight: 0.15
     ensemble_configs:
       - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.50
+        weight: 0.70
       - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.30
+        weight: 0.15
       - model_name: "cahya/bert-base-indonesian-522M"
-        weight: 0.20
+        weight: 0.15
 
   NusaX-Indonesian:
     name: "NusaX-Indonesian"
@@ -246,18 +244,23 @@ datasets:
     early_stopping: true
     use_preprocessing: true
     use_class_weights: true
-    use_logit_adjustment: true
-    logit_adj_tau: 0.5
-    eval_logit_adj_tau: 0.2
-    threshold_calibration: true
-    use_focal_loss: true
+    use_logit_adjustment: false
+    logit_adj_tau: 0.0
+    eval_logit_adj_tau: 0.0
+    threshold_calibration: false
+    use_focal_loss: false
     focal_gamma: 1.0
-    target_oversample:
-      neutral: 2
+    target_oversample: null
     label_smoothing: 0.05
     use_fgm: true
     fgm_epsilon: 0.5
-    minority_classes: ["neutral"]
+    minority_classes: ["neutral", "negative", "positive"]
+    threshold_relaxation_factor: 0.75
+    custom_similarity_thresholds:
+      ECU: 0.25
+      COS: 0.40
+      JAC: 0.12
+      BLEU: 0.10
     best_aug_metric: "COS"
     description: "NusaX-Indonesian: Curated Sentiment Analysis (Winata et al., 2023, 1000 samples)"
     run_ensemble: true

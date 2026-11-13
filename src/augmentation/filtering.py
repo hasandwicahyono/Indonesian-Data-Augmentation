@@ -214,13 +214,15 @@ def build_augmented_datasets(
     label_column: str = "label",
     all_text_column: str = "all_text",
     new_text_column: str = "new_text",
+    threshold_relaxation_factor: Optional[float] = None,
+    custom_thresholds: Optional[Dict[str, float]] = None,
 ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame], Dict[str, float]]:
     """
     Constructs augmented datasets for All-Text and New-Text variants across the 4 similarity metrics.
     Applies strict Anti-Hallucination verification and suffix-level semantic grounding.
     """
     thresholds = compute_similarity_thresholds(df, target_labels=labels_to_augment, label_column=label_column)
-    print(f"Computed Similarity Thresholds: {thresholds}")
+    print(f"Computed Base Similarity Thresholds: {thresholds}")
 
     test_texts = set(str(t).strip() for t in test_df[text_column].dropna()) if test_df is not None else set()
     leak_filtered_count = 0
@@ -240,13 +242,25 @@ def build_augmented_datasets(
         "BLEU": 0.08,
     }
 
-    is_small_corpus = (base_train_df is not None and len(base_train_df) <= 1000)
     effective_thresholds = thresholds.copy()
-    if is_small_corpus:
-        # Adaptively relax thresholds by 10% toward the floor for small curated corpora (e.g. NusaX)
+    if custom_thresholds:
+        for m in metrics:
+            if m in custom_thresholds:
+                floor = safety_floors.get(m, 0.1)
+                effective_thresholds[m] = max(floor, float(custom_thresholds[m]))
+        print(f"  [CUSTOM THRESHOLDS] Active similarity thresholds applied: {effective_thresholds}")
+    elif threshold_relaxation_factor is not None:
+        relax = float(threshold_relaxation_factor)
         for m in metrics:
             floor = safety_floors.get(m, 0.1)
-            effective_thresholds[m] = max(floor, thresholds[m] * 0.90)
+            effective_thresholds[m] = max(floor, thresholds[m] * relax)
+        print(f"  [THRESHOLD RELAXATION] Active: Scaled thresholds by {relax:.2f}x -> {effective_thresholds}")
+    elif base_train_df is not None and len(base_train_df) <= 1000:
+        # Default adaptive relaxation for small curated corpora (e.g. NusaX) to 75% of mean
+        for m in metrics:
+            floor = safety_floors.get(m, 0.1)
+            effective_thresholds[m] = max(floor, thresholds[m] * 0.75)
+        print(f"  [SMALL CORPUS ADAPTIVE] Scaled thresholds by 0.75x -> {effective_thresholds}")
 
     for _, row in df.iterrows():
         label = row[label_column]
