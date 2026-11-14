@@ -80,6 +80,24 @@ class MinimumBayesRiskCalibrator:
         np.fill_diagonal(C, 0.0)
         return C
 
+    @staticmethod
+    def build_valence_cost_matrix(
+        label_list: List[str],
+        valence_map: Dict[str, List[str]],
+        intra_valence_cost: float = 1.0,
+        cross_valence_cost: float = 2.0,
+        neutral_polar_cost: Optional[float] = None,
+    ) -> np.ndarray:
+        """Constructs a K x K valence-weighted cost matrix from affective grouping."""
+        from src.modeling.valence_loss import build_valence_cost_matrix
+        return build_valence_cost_matrix(
+            label_list=label_list,
+            valence_map=valence_map,
+            intra_valence_cost=intra_valence_cost,
+            cross_valence_cost=cross_valence_cost,
+            neutral_polar_cost=neutral_polar_cost,
+        )
+
     def derive_prior_costs(
         self,
         class_counts: Union[Dict[str, int], List[int], np.ndarray],

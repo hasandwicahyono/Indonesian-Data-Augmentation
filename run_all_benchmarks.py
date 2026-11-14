@@ -828,6 +828,9 @@ def run_benchmark_pipeline(
     run_training_dynamics: bool = False,
     run_similarity_distributions: bool = False,
     use_mbr: Optional[bool] = None,
+    use_valence_cost_matrix: Optional[bool] = None,
+    cross_valence_weight: Optional[float] = None,
+    valence_risk_weight: Optional[float] = None,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
     if log_file == "auto":
@@ -1012,7 +1015,11 @@ def run_benchmark_pipeline(
                 ensemble_configs=cfg.get("ensemble_models", None) if (run_ensemble and cfg.get("run_ensemble", False)) else None,
                 prompt_prefix=cfg.get("aspect_prompt_prefix", None),
                 valence_map=cfg.get("valence_map", None) if cfg.get("valence_guardrail", False) else None,
-                intra_valence_weight=cfg.get("intra_valence_weight", 1.4),
+                intra_valence_weight=cfg.get("intra_valence_weight", 1.0),
+                cross_valence_weight=cross_valence_weight if cross_valence_weight is not None else cfg.get("cross_valence_weight", 2.0),
+                valence_risk_weight=valence_risk_weight if valence_risk_weight is not None else cfg.get("valence_risk_weight", 0.5),
+                neutral_polar_cost=cfg.get("neutral_polar_cost", None),
+                use_valence_cost_matrix=use_valence_cost_matrix if use_valence_cost_matrix is not None else cfg.get("use_valence_cost_matrix", True if cfg.get("valence_guardrail", False) else False),
                 use_focal_loss=cfg.get("use_focal_loss", False),
                 focal_gamma=cfg.get("focal_gamma", 1.5),
                 use_mbr=use_mbr if use_mbr is not None else cfg.get("use_mbr", False),
@@ -1301,6 +1308,30 @@ if __name__ == "__main__":
         dest="use_mbr",
         help="Disable Minimum Bayes Risk (MBR) thresholding",
     )
+    parser.add_argument(
+        "--use_valence_cost_matrix",
+        action="store_true",
+        default=None,
+        help="Enable Valence-Weighted Cost Matrix Loss for datasets with valence mappings (e.g. EmoT, HoASA)",
+    )
+    parser.add_argument(
+        "--no_valence_cost_matrix",
+        action="store_false",
+        dest="use_valence_cost_matrix",
+        help="Disable Valence-Weighted Cost Matrix Loss",
+    )
+    parser.add_argument(
+        "--cross_valence_weight",
+        type=float,
+        default=None,
+        help="Misclassification penalty multiplier for cross-valence errors (e.g. positive vs negative, default: 2.0)",
+    )
+    parser.add_argument(
+        "--valence_risk_weight",
+        type=float,
+        default=None,
+        help="Posterior expected Bayes risk regularization weight lambda in loss (default: 0.5)",
+    )
     # IEEE TPAMI & Access Extended Arguments
     parser.add_argument(
         "--all_tpami_access",
@@ -1465,6 +1496,9 @@ if __name__ == "__main__":
         run_training_dynamics=args.run_training_dynamics,
         run_similarity_distributions=args.run_similarity_distributions,
         use_mbr=args.use_mbr,
+        use_valence_cost_matrix=args.use_valence_cost_matrix,
+        cross_valence_weight=args.cross_valence_weight,
+        valence_risk_weight=args.valence_risk_weight,
     )
 
     end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

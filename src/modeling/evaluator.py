@@ -53,20 +53,23 @@ from src.modeling.calibrator import AutoImbalanceCalibrator
 from src.modeling.adversarial import FGM
 from src.augmentation.filtering import is_hallucinatory_or_corrupt
 from src.utils.path_utils import resolve_path, ensure_dir
+from src.modeling.valence_loss import ValenceWeightedCostLoss, build_valence_cost_matrix
 
 
 class HierarchicalValenceLoss(torch.nn.Module):
     """
-    Hierarchical Valence-Guided Cross-Entropy Loss (Russell's Circumplex Emotion Geometry).
-    Decomposes flat multi-class emotion classification into:
-      L_total = L_base_ce + (beta - 1.0) * L_intra
-    where:
-      - L_base_ce enforces standard balanced classification across all classes
-      - L_intra enforces fine-grained discrimination within the true valence manifold
-        (e.g., distinguishing Anger vs. Sadness, and Love vs. Happy)
-    When intra_valence_weight > 1.0, increases gradient pressure on intra-valence boundary decisions,
-    directly reducing pairwise off-diagonal confusion without extra parameters or inference overhead.
-    Optionally incorporates Lin et al. Focal Loss modulation (gamma > 0) to dynamically weight hard instances.
+    Hierarchical Valence-Guided Cross-Entropy & Valence-Weighted Cost Matrix Loss
+    (Russell's Circumplex Emotion Geometry).
+
+    Supports two operational modes:
+      1. Valence-Weighted Cost Matrix Loss (Active by default when valence_map is provided):
+         L(z, y) = log( e^{z_y} + sum_{j != y} C_{y,j} * e^{z_j} ) - z_y + lambda_risk * sum_j C_{y,j} * p_j
+         where C_{y,j} = cross_valence_weight for cross-valence errors (e.g. positive <-> negative),
+         and intra_valence_weight for intra-valence errors (e.g. anger <-> sadness).
+      2. Hierarchical Intra-Valence Discrimination (legacy mode if use_cost_matrix=False):
+         L_total = L_base_ce + (beta - 1.0) * L_intra
+    Optionally incorporates Lin et al. Focal Loss modulation (gamma > 0) to dynamically weight hard instances
+    and valence-aware cost-weighted label smoothing.
     """
 
     def __init__(
@@ -75,44 +78,73 @@ class HierarchicalValenceLoss(torch.nn.Module):
         label_list: Optional[List[str]] = None,
         weight: Optional[torch.Tensor] = None,
         label_smoothing: float = 0.0,
-        intra_valence_weight: float = 1.4,
+        intra_valence_weight: float = 1.0,
+        cross_valence_weight: float = 2.0,
+        neutral_polar_cost: Optional[float] = None,
+        risk_weight: float = 0.5,
+        use_cost_matrix: bool = True,
         use_focal_loss: bool = False,
         focal_gamma: float = 1.5,
     ):
         super().__init__()
-        self.intra_weight = float(intra_valence_weight)
-        self.label_smoothing = float(label_smoothing)
-        self.use_focal_loss = bool(use_focal_loss)
-        self.focal_gamma = float(focal_gamma)
-        self.base_ce = torch.nn.CrossEntropyLoss(
-            weight=weight,
-            label_smoothing=label_smoothing,
-            reduction="none" if self.use_focal_loss else "mean",
-        )
-
-        # Precompute valence mask: mask[c, j] is True if class j shares the valence of class c
-        if valence_map and label_list:
-            K = len(label_list)
-            label2idx = {lbl: i for i, lbl in enumerate(label_list)}
-            mask = torch.zeros((K, K), dtype=torch.bool)
-            for _, group_labels in valence_map.items():
-                indices = [label2idx[l] for l in group_labels if l in label2idx]
-                for i in indices:
-                    for j in indices:
-                        mask[i, j] = True
-            self.register_buffer("valence_mask", mask)
-        else:
+        self.use_cost_matrix = bool(use_cost_matrix and valence_map is not None and label_list is not None)
+        if self.use_cost_matrix:
+            self.cost_loss = ValenceWeightedCostLoss(
+                label_list=label_list,
+                valence_map=valence_map,
+                weight=weight,
+                intra_valence_cost=intra_valence_weight,
+                cross_valence_cost=cross_valence_weight,
+                neutral_polar_cost=neutral_polar_cost,
+                risk_weight=risk_weight,
+                label_smoothing=label_smoothing,
+                use_focal_loss=use_focal_loss,
+                focal_gamma=focal_gamma,
+            )
+            self.base_ce = None
             self.valence_mask = None
+        else:
+            self.cost_loss = None
+            self.intra_weight = float(intra_valence_weight)
+            self.label_smoothing = float(label_smoothing)
+            self.use_focal_loss = bool(use_focal_loss)
+            self.focal_gamma = float(focal_gamma)
+            self.base_ce = torch.nn.CrossEntropyLoss(
+                weight=weight,
+                label_smoothing=label_smoothing,
+                reduction="none" if self.use_focal_loss else "mean",
+            )
+            # Precompute valence mask: mask[c, j] is True if class j shares the valence of class c
+            if valence_map and label_list:
+                K = len(label_list)
+                label2idx = {lbl: i for i, lbl in enumerate(label_list)}
+                mask = torch.zeros((K, K), dtype=torch.bool)
+                for _, group_labels in valence_map.items():
+                    indices = [label2idx[l] for l in group_labels if l in label2idx]
+                    for i in indices:
+                        for j in indices:
+                            mask[i, j] = True
+                self.register_buffer("valence_mask", mask)
+            else:
+                self.valence_mask = None
 
     @property
     def weight(self):
+        if self.cost_loss is not None:
+            return self.cost_loss.weight
         return self.base_ce.weight
 
     @weight.setter
     def weight(self, value):
-        self.base_ce.weight = value
+        if self.cost_loss is not None:
+            self.cost_loss.weight = value
+        elif self.base_ce is not None:
+            self.base_ce.weight = value
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        if self.cost_loss is not None:
+            return self.cost_loss(logits, targets)
+
         if self.use_focal_loss:
             sample_ce = self.base_ce(logits, targets)  # (B,)
             with torch.no_grad():
@@ -170,7 +202,11 @@ class IndoBERTClassifierEvaluator:
         ensemble_configs: Optional[List[Dict[str, Any]]] = None,
         prompt_prefix: Optional[str] = None,
         valence_map: Optional[Dict[str, List[str]]] = None,
-        intra_valence_weight: float = 1.4,
+        intra_valence_weight: float = 1.0,
+        cross_valence_weight: float = 2.0,
+        valence_risk_weight: float = 0.5,
+        neutral_polar_cost: Optional[float] = None,
+        use_valence_cost_matrix: bool = True,
         use_focal_loss: bool = False,
         focal_gamma: float = 1.5,
         threshold_calibration: bool = False,
@@ -202,6 +238,10 @@ class IndoBERTClassifierEvaluator:
         self.prompt_prefix = prompt_prefix
         self.valence_map = valence_map
         self.intra_valence_weight = intra_valence_weight
+        self.cross_valence_weight = cross_valence_weight
+        self.valence_risk_weight = valence_risk_weight
+        self.neutral_polar_cost = neutral_polar_cost
+        self.use_valence_cost_matrix = use_valence_cost_matrix
         self.use_focal_loss = use_focal_loss
         self.focal_gamma = focal_gamma
         self.threshold_calibration = threshold_calibration
@@ -612,16 +652,25 @@ class IndoBERTClassifierEvaluator:
             if self.valence_map or self.use_focal_loss:
                 extra_loss_desc = []
                 if self.valence_map:
-                    extra_loss_desc.append(f"Valence-Guided (intra_weight={self.intra_valence_weight})")
+                    if self.use_valence_cost_matrix:
+                        extra_loss_desc.append(
+                            f"Valence-Cost-Matrix (cross_w={self.cross_valence_weight}, risk_w={self.valence_risk_weight})"
+                        )
+                    else:
+                        extra_loss_desc.append(f"Valence-Guided (intra_weight={self.intra_valence_weight})")
                 if self.use_focal_loss:
                     extra_loss_desc.append(f"Focal-Loss (gamma={self.focal_gamma})")
-                print(f"  [HIERARCHICAL / FOCAL LOSS] Active: {', '.join(extra_loss_desc)}")
+                print(f"  [VALENCE COST LOSS / FOCAL LOSS] Active: {', '.join(extra_loss_desc)}")
                 criterion = HierarchicalValenceLoss(
                     valence_map=self.valence_map,
                     label_list=label_list,
                     weight=class_weights_tensor,
                     label_smoothing=self.label_smoothing,
                     intra_valence_weight=self.intra_valence_weight,
+                    cross_valence_weight=self.cross_valence_weight,
+                    neutral_polar_cost=self.neutral_polar_cost,
+                    risk_weight=self.valence_risk_weight,
+                    use_cost_matrix=self.use_valence_cost_matrix,
                     use_focal_loss=self.use_focal_loss,
                     focal_gamma=self.focal_gamma,
                 ).to(loss_device)
@@ -631,16 +680,25 @@ class IndoBERTClassifierEvaluator:
             if self.valence_map or self.use_focal_loss:
                 extra_loss_desc = []
                 if self.valence_map:
-                    extra_loss_desc.append(f"Valence-Guided (intra_weight={self.intra_valence_weight})")
+                    if self.use_valence_cost_matrix:
+                        extra_loss_desc.append(
+                            f"Valence-Cost-Matrix (cross_w={self.cross_valence_weight}, risk_w={self.valence_risk_weight})"
+                        )
+                    else:
+                        extra_loss_desc.append(f"Valence-Guided (intra_weight={self.intra_valence_weight})")
                 if self.use_focal_loss:
                     extra_loss_desc.append(f"Focal-Loss (gamma={self.focal_gamma})")
-                print(f"  [HIERARCHICAL / FOCAL LOSS] Active: {', '.join(extra_loss_desc)}")
+                print(f"  [VALENCE COST LOSS / FOCAL LOSS] Active: {', '.join(extra_loss_desc)}")
                 criterion = HierarchicalValenceLoss(
                     valence_map=self.valence_map,
                     label_list=label_list,
                     weight=None,
                     label_smoothing=self.label_smoothing,
                     intra_valence_weight=self.intra_valence_weight,
+                    cross_valence_weight=self.cross_valence_weight,
+                    neutral_polar_cost=self.neutral_polar_cost,
+                    risk_weight=self.valence_risk_weight,
+                    use_cost_matrix=self.use_valence_cost_matrix,
                     use_focal_loss=self.use_focal_loss,
                     focal_gamma=self.focal_gamma,
                 ).to(loss_device)
@@ -1076,6 +1134,10 @@ class IndoBERTClassifierEvaluator:
                 prompt_prefix=self.prompt_prefix,
                 valence_map=self.valence_map,
                 intra_valence_weight=self.intra_valence_weight,
+                cross_valence_weight=self.cross_valence_weight,
+                valence_risk_weight=self.valence_risk_weight,
+                neutral_polar_cost=self.neutral_polar_cost,
+                use_valence_cost_matrix=self.use_valence_cost_matrix,
                 threshold_calibration=self.threshold_calibration,
                 use_focal_loss=self.use_focal_loss,
                 focal_gamma=self.focal_gamma,
@@ -1187,6 +1249,8 @@ class IndoBERTClassifierEvaluator:
                 eval_logit_adj_tau=0.0,
                 target_oversample=None,
                 prompt_prefix=self.prompt_prefix,
+                valence_map=None,
+                use_valence_cost_matrix=False,
                 use_mbr=False,
             )
             raw_erm_res = raw_evaluator.evaluate_dataset(

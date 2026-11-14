@@ -162,6 +162,16 @@ datasets:
     mbr_accuracy_tolerance: 0.003
     mbr_alpha: 0.25
     mbr_max_minority_cost: 4.5
+    valence_guardrail: true
+    valence_map:
+      negative: ["neg"]
+      neutral: ["neut"]
+      positive: ["pos"]
+    intra_valence_weight: 1.0
+    cross_valence_weight: 2.5
+    neutral_polar_cost: 1.75
+    valence_risk_weight: 0.5
+    use_valence_cost_matrix: true
     target_oversample: null
     label_smoothing: 0.05
     use_fgm: true
@@ -220,7 +230,10 @@ datasets:
     valence_map:
       positive: ["happy", "love"]
       negative: ["anger", "sadness", "fear"]
-    intra_valence_weight: 1.4
+    intra_valence_weight: 1.0
+    cross_valence_weight: 2.0
+    valence_risk_weight: 0.5
+    use_valence_cost_matrix: true
     best_aug_metric: "ECU"
     threshold_relaxation_factor: 0.85
     description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
