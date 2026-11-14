@@ -687,7 +687,7 @@ def generate_tpami_comparisons_table(
 
         vname = best_dname.split("-")[-1]
         p_var_name = f"Proposed ({vname}-Constrained Aug. + AIC)"
-        if ds_name == "EmoT" and "Ensemble" in vname:
+        if "Ensemble" in vname:
             p_var_name = "Proposed Heterogeneous Soft-Voting Ensemble"
 
         block = [f"\\multirow{{{len(bench_list) + 1}}}{{*}}{{\\textbf{{{ds_name}}}}}"]

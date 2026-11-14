@@ -169,6 +169,17 @@ datasets:
       f1:
         base: { gap: 0.38, saturation_tau: 3.0, noise_std: 0.005 }
         aug: { gap: 0.45, saturation_tau: 2.6, noise_std: 0.004 }
+    run_ensemble: true
+    ensemble_models:
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.60
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.40
+    ensemble_configs:
+      - model_name: "indobenchmark/indobert-base-p1"
+        weight: 0.60
+      - model_name: "indolem/indobertweet-base-uncased"
+        weight: 0.40
 
   EmoT:
     name: "EmoT"
