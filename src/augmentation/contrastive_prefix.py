@@ -168,15 +168,21 @@ def format_contrastive_prefixes(
         contrast_prefix = f"[Aspek: {aspect} | Sentimen: {contrast_desc}] "
 
     elif "emotion" in d_lower or "emot" in d_lower:
-        positive_emotions = {"happy", "love"}
-        negative_emotions = {"anger", "fear", "sadness"}
-
-        if lbl in positive_emotions:
-            target_desc = f"{lbl.capitalize()} (Valensi Positif)"
-            contrast_desc = "Marah / Sedih (Valensi Negatif)"
-        elif lbl in negative_emotions:
-            target_desc = f"{lbl.capitalize()} (Valensi Negatif)"
-            contrast_desc = "Bahagia / Cinta (Valensi Positif)"
+        if lbl in ("sadness", "sedih", "4"):
+            target_desc = "Sedih / Kehilangan / Pilu"
+            contrast_desc = "Marah / Kekesalan / Murka"
+        elif lbl in ("anger", "marah", "0"):
+            target_desc = "Marah / Kekesalan / Jengkel"
+            contrast_desc = "Sedih / Pasrah / Menangis"
+        elif lbl in ("fear", "takut", "1"):
+            target_desc = "Takut / Khawatir / Cemas"
+            contrast_desc = "Tenang / Berani / Optimis"
+        elif lbl in ("happy", "bahagia", "senang", "2"):
+            target_desc = "Bahagia / Senang / Ceria"
+            contrast_desc = "Sedih / Kecewa / Murung"
+        elif lbl in ("love", "cinta", "sayang", "3"):
+            target_desc = "Cinta / Kasih Sayang / Kagum"
+            contrast_desc = "Benci / Muak / Dingin"
         else:
             target_desc = f"{lbl.capitalize()}"
             contrast_desc = "Netral / Kontras"
