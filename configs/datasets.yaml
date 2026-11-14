@@ -74,6 +74,10 @@ datasets:
     mbr_max_minority_cost: 4.5
     target_oversample: null
     label_smoothing: 0.05
+    use_contrastive_prefix: true
+    contrastive_domain: "sentiment"
+    contrastive_margin_threshold: 0.0
+    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 0.5
     minority_classes: ["neutral"]
@@ -123,6 +127,10 @@ datasets:
     eval_logit_adj_tau: 0.0
     target_oversample: null
     label_smoothing: 0.08
+    use_contrastive_prefix: true
+    contrastive_domain: "sentiment"
+    contrastive_margin_threshold: 0.0
+    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 1.0
     minority_classes: ["negative"]
@@ -174,6 +182,10 @@ datasets:
     use_valence_cost_matrix: true
     target_oversample: null
     label_smoothing: 0.05
+    use_contrastive_prefix: true
+    contrastive_domain: "hotel"
+    contrastive_margin_threshold: 0.0
+    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 1.0
     aspect_prompt_prefix: "[Aspek: Umum / Fasilitas Hotel] "
@@ -220,6 +232,10 @@ datasets:
     eval_logit_adj_tau: 0.0
     target_oversample: null
     label_smoothing: 0.08
+    use_contrastive_prefix: true
+    contrastive_domain: "emotion"
+    contrastive_margin_threshold: 0.0
+    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 1.0
     use_focal_loss: true
@@ -288,6 +304,10 @@ datasets:
     mbr_max_minority_cost: 4.5
     target_oversample: null
     label_smoothing: 0.05
+    use_contrastive_prefix: true
+    contrastive_domain: "sentiment"
+    contrastive_margin_threshold: 0.0
+    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 0.5
     minority_classes: ["neutral", "negative", "positive"]

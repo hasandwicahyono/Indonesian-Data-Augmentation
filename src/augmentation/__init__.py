@@ -39,6 +39,16 @@ from src.augmentation.filtering import (
 from src.augmentation.augmenter import (
     IndonesianAugmenter,
 )
+from src.augmentation.contrastive_prefix import (
+    ContrastiveAspectPrefixGenerator,
+    detect_aspect_from_text,
+    format_contrastive_prefixes,
+    compute_contrastive_margin,
+    compute_continuation_log_prob,
+    HOTEL_ASPECT_TAXONOMY,
+    EMOTION_THEME_TAXONOMY,
+    SENTIMENT_ASPECT_TAXONOMY,
+)
 
 __all__ = [
     "euclidean_distance",
@@ -64,4 +74,12 @@ __all__ = [
     "purge_hallucinations_from_existing_csv",
     "export_augmented_datasets",
     "IndonesianAugmenter",
+    "ContrastiveAspectPrefixGenerator",
+    "detect_aspect_from_text",
+    "format_contrastive_prefixes",
+    "compute_contrastive_margin",
+    "compute_continuation_log_prob",
+    "HOTEL_ASPECT_TAXONOMY",
+    "EMOTION_THEME_TAXONOMY",
+    "SENTIMENT_ASPECT_TAXONOMY",
 ]

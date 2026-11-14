@@ -927,10 +927,28 @@ def run_benchmark_pipeline(
             elif run_generation or not existing_aug:
                 print(f"\n  >>> STEP 1: Running Text Generation & Similarity Scoring for {ds_name}...")
                 minority_classes = cfg.get("minority_classes", ds.label_list)
+                use_contrastive = getattr(args, "use_contrastive_prefix", None)
+                if use_contrastive is None:
+                    use_contrastive = cfg.get("use_contrastive_prefix", True)
+                contrastive_domain = cfg.get(
+                    "contrastive_domain",
+                    "hotel" if "hoasa" in ds_name.lower() else ("emotion" if "emot" in ds_name.lower() else "sentiment"),
+                )
+                contrastive_thresh = getattr(args, "contrastive_margin_threshold", None)
+                if contrastive_thresh is None:
+                    contrastive_thresh = cfg.get("contrastive_margin_threshold", 0.0)
+                contrastive_cands = getattr(args, "contrastive_num_candidates", None)
+                if contrastive_cands is None:
+                    contrastive_cands = cfg.get("contrastive_num_candidates", 3)
+
                 augmenter = IndonesianAugmenter(
                     gen_model_name=gen_model,
                     embed_model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
                     device=device,
+                    use_contrastive_prefix=use_contrastive,
+                    contrastive_domain=contrastive_domain,
+                    contrastive_margin_threshold=contrastive_thresh,
+                    contrastive_num_candidates=contrastive_cands,
                 )
                 gen_df = augmenter.process_dataset(
                     ds.train,
@@ -1398,6 +1416,30 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Force re-running Phase 1 text generation even if augmented datasets already exist",
+    )
+    parser.add_argument(
+        "--use_contrastive_prefix",
+        action="store_true",
+        default=None,
+        help="Enable Contrastive Aspect Prefix Generation for Phase 1 text generation",
+    )
+    parser.add_argument(
+        "--no_contrastive_prefix",
+        action="store_false",
+        dest="use_contrastive_prefix",
+        help="Disable Contrastive Aspect Prefix Generation",
+    )
+    parser.add_argument(
+        "--contrastive_margin_threshold",
+        type=float,
+        default=None,
+        help="Minimum log-likelihood margin threshold Delta_contrast for keeping candidates (default: 0.0)",
+    )
+    parser.add_argument(
+        "--contrastive_num_candidates",
+        type=int,
+        default=None,
+        help="Number of candidate continuations to generate and rank per sample (default: 3)",
     )
     parser.add_argument(
         "--clean_gpu",

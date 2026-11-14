@@ -10,7 +10,7 @@ import gc
 import torch
 import pandas as pd
 import numpy as np
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple, Union
 from tqdm.auto import tqdm
 from transformers import pipeline, AutoTokenizer
 from sentence_transformers import SentenceTransformer
@@ -29,6 +29,12 @@ from src.augmentation.registry import (
     display_model_comparisons,
 )
 from src.augmentation.generative_models import benchmark_candidate_generative_models
+from src.augmentation.contrastive_prefix import (
+    ContrastiveAspectPrefixGenerator,
+    detect_aspect_from_text,
+    format_contrastive_prefixes,
+    compute_contrastive_margin,
+)
 
 
 def _is_accelerate_available() -> bool:
@@ -53,6 +59,11 @@ class IndonesianAugmenter:
         repetition_penalty: Optional[float] = None,
         no_repeat_ngram_size: Optional[int] = None,
         do_sample: Optional[bool] = None,
+        use_contrastive_prefix: bool = True,
+        contrastive_domain: str = "hotel",
+        contrastive_margin_threshold: float = 0.0,
+        contrastive_num_candidates: int = 3,
+        strip_contrastive_prefix: bool = True,
     ):
         """
         Args:
@@ -124,6 +135,21 @@ class IndonesianAugmenter:
             self.device = device
 
         self.preprocessor = IndonesianPreprocessor()
+        self.use_contrastive_prefix = use_contrastive_prefix
+        self.contrastive_domain = contrastive_domain
+        self.contrastive_margin_threshold = float(contrastive_margin_threshold)
+        self.contrastive_num_candidates = int(contrastive_num_candidates)
+        self.strip_contrastive_prefix = bool(strip_contrastive_prefix)
+
+        if self.use_contrastive_prefix:
+            self.contrastive_generator = ContrastiveAspectPrefixGenerator(
+                domain=self.contrastive_domain,
+                margin_threshold=self.contrastive_margin_threshold,
+                strip_prefix_in_output=self.strip_contrastive_prefix,
+            )
+        else:
+            self.contrastive_generator = None
+
         self._init_models()
 
     @classmethod
@@ -209,9 +235,38 @@ class IndonesianAugmenter:
             embed_device = "cpu"
         self.embed_model = SentenceTransformer(self.embed_model_name, device=embed_device)
 
-    def generate_continuation(self, text: str) -> str:
-        """Generates continuation text using causal language model with sentence boundary truncation."""
+    def generate_continuation(
+        self,
+        text: str,
+        label: Optional[str] = None,
+        return_meta: bool = False,
+    ) -> Union[str, Tuple[str, Dict[str, Any]]]:
+        """
+        Generates continuation text using causal language model with sentence boundary truncation.
+        When use_contrastive_prefix is enabled and label is provided, uses ContrastiveAspectPrefixGenerator
+        to steer aspect and polarity and score candidates against polar-opposite contrastive prefix.
+        Otherwise falls back to standard causal LM continuation.
+        """
         clean_text = self.preprocessor.preprocess(text)
+
+        if self.use_contrastive_prefix and self.contrastive_generator is not None and label is not None:
+            full_gen, meta = self.contrastive_generator.generate(
+                gen_pipeline=self.gen_pipeline,
+                text=clean_text,
+                label=str(label),
+                max_length=self.max_length,
+                num_candidates=self.contrastive_num_candidates,
+                gen_kwargs={
+                    "repetition_penalty": self.repetition_penalty,
+                    "no_repeat_ngram_size": self.no_repeat_ngram_size,
+                    "top_p": self.top_p,
+                    "temperature": self.temperature,
+                },
+            )
+            if return_meta:
+                return full_gen, meta
+            return full_gen
+
         prompt = clean_text[:self.max_length]
 
         gen_kwargs: Dict[str, Any] = {
@@ -237,10 +292,22 @@ class IndonesianAugmenter:
                 if last_punct > 5:
                     suffix = suffix[: last_punct + 1].strip()
                 full_gen = prompt + " " + suffix
-            return full_gen.strip()
+            res = full_gen.strip()
         except Exception as e:
             print(f"Generation error: {e}")
-            return prompt
+            res = prompt
+
+        meta = {
+            "aspect": "umum",
+            "target_prefix": "",
+            "contrast_prefix": "",
+            "contrastive_margin": 0.0,
+            "is_contrastive_valid": True,
+            "num_candidates_evaluated": 1,
+        }
+        if return_meta:
+            return res, meta
+        return res
 
     def process_dataset(
         self,
@@ -264,14 +331,15 @@ class IndonesianAugmenter:
             target_df = df if sample_limit is None else df.head(sample_limit)
 
         gen_model_tag = self.model_meta["generation"] if self.model_meta else self.gen_model_name
-        print(f"Starting generation [{gen_model_tag}] & similarity computation for {len(target_df)} rows...")
+        contrastive_tag = f" + ContrastivePrefix[{self.contrastive_domain}]" if self.use_contrastive_prefix else ""
+        print(f"Starting generation [{gen_model_tag}{contrastive_tag}] & similarity computation for {len(target_df)} rows...")
 
         for _, row in tqdm(target_df.iterrows(), total=len(target_df)):
             orig_text = str(row[text_column])
             label = row[label_column]
 
             clean_orig = self.preprocessor.preprocess(orig_text)
-            full_gen = self.generate_continuation(clean_orig)
+            full_gen, meta = self.generate_continuation(clean_orig, label=label, return_meta=True)
 
             if len(full_gen) > len(clean_orig):
                 new_text = full_gen[len(clean_orig):].strip()
@@ -288,11 +356,18 @@ class IndonesianAugmenter:
             j_sim = jaccard_similarity(clean_orig, new_text if new_text else all_text)
             b1, b2, b3, b4 = calculate_bleu_scores(clean_orig, new_text if new_text else all_text)
 
+            aspect_val = meta.get("aspect", "umum")
+            contrastive_margin_val = meta.get("contrastive_margin", 0.0)
+            is_contrastive_valid_val = meta.get("is_contrastive_valid", True)
+
             records.append({
                 "text": orig_text,
                 "label": label,
                 "new_text": new_text,
                 "all_text": all_text,
+                "aspect": aspect_val,
+                "contrastive_margin": contrastive_margin_val,
+                "is_contrastive_valid": is_contrastive_valid_val,
                 "original_embedding": ",".join(f"{v:.5f}" for v in emb_orig[:50]),
                 "new_embedding": ",".join(f"{v:.5f}" for v in emb_new[:50]),
                 "ecu_distance": e_dist,
