@@ -1,6 +1,6 @@
 Pipeline Stage,Component / Model,Hardware Platform,Throughput,Per-Sample Latency,Peak Memory,Algorithmic Complexity
-Phase 1: Generative Continuation,cahya/gpt2-small (117.8M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),314.7 tokens/sec,79.4 ms / seq,3.27 GB,$\mathcal{O}(B \cdot L \cdot D)$
-Phase 2: Semantic Metric Filtering,DistilUSE-Multilingual (134.7M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),3957.9 seq/sec,0.25 ms / seq,3.29 GB,$\mathcal{O}(N \cdot D)$
-Phase 3: IndoBERT Fine-Tuning,IndoBERT-base-p1 (124.5M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),198.6 samples/sec,80.6 ms / batch,3.27 GB,$\mathcal{O}(E \cdot N \cdot L^2)$
-Phase 3: Inference Latency,IndoBERT-base-p1 (124.5M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),831.3 seq/sec,1.20 ms / seq,3.27 GB,$\mathcal{O}(L^2 \cdot D)$
+Phase 1: Generative Continuation,cahya/gpt2-small (117.8M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),344.9 tokens/sec,72.5 ms / seq,3.13 GB,$\mathcal{O}(B \cdot L \cdot D)$
+Phase 2: Semantic Metric Filtering,DistilUSE-Multilingual (134.7M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),3742.0 seq/sec,0.27 ms / seq,3.14 GB,$\mathcal{O}(N \cdot D)$
+Phase 3: IndoBERT Fine-Tuning,IndoBERT-base-p1 (124.5M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),200.5 samples/sec,79.8 ms / batch,3.13 GB,$\mathcal{O}(E \cdot N \cdot L^2)$
+Phase 3: Inference Latency,IndoBERT-base-p1 (124.5M),NVIDIA CUDA (NVIDIA GeForce RTX 4070 Ti),827.9 seq/sec,1.21 ms / seq,3.13 GB,$\mathcal{O}(L^2 \cdot D)$
 Phase 4: Adaptive Logit Calibrator (AIC),Analytical Closed-Form Estimator,Host CPU (x86_64),Instantaneous (Closed-form),0.0033 ms total,< 10 MB,$\mathcal{O}(K)$
