@@ -60,7 +60,28 @@ def run_real_5fold_cv_for_dataset(
     model_name = cfg.get("model_name", "indobenchmark/indobert-base-p1")
     use_la = cfg.get("use_logit_adjustment", False)
     tau = cfg.get("logit_adj_tau", 0.0)
-    best_aug_metric = cfg.get("best_aug_metric", "BLEU")
+
+    # Dynamically resolve best_aug_metric from actual evaluation results if available
+    eval_excel_path = resolve_path(f"data/results/{dataset_name}_evaluation_results.xlsx")
+    best_aug_metric = None
+    if os.path.exists(eval_excel_path):
+        try:
+            eval_df = pd.read_excel(eval_excel_path)
+            aug_eval = eval_df[
+                eval_df["dataset_name"].str.contains("Augmented", case=False, na=False)
+                & ~eval_df["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+                & ~eval_df["dataset_name"].str.contains("Baseline", case=False, na=False)
+                & ~eval_df["dataset_name"].str.contains("Ensemble", case=False, na=False)
+            ]
+            if not aug_eval.empty:
+                best_eval_row = aug_eval.loc[aug_eval["macro_f1"].idxmax()]
+                best_dname = str(best_eval_row["dataset_name"])
+                best_aug_metric = best_dname.split("-Augmented-")[-1].replace("-Final", "").strip()
+                print(f"  [DYNAMIC CV SELECTION] Auto-selected empirical winner for {dataset_name}: {best_aug_metric} (Macro-F1: {best_eval_row['macro_f1']:.4f})")
+        except Exception as e:
+            print(f"Notice: Failed to dynamic-detect best metric from excel ({e}); using config fallback.")
+    if not best_aug_metric:
+        best_aug_metric = cfg.get("best_aug_metric", "BLEU")
 
     full_df = pd.concat([ds.train, ds.test], ignore_index=True)
     if max_samples_per_fold is not None and len(full_df) > max_samples_per_fold:

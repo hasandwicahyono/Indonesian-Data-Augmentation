@@ -1065,6 +1065,21 @@ def run_benchmark_pipeline(
                 seed=seed,
             )
             all_results[ds_name] = results_df
+
+            # Dynamically identify the best augmented metric from fresh evaluation
+            aug_subset = results_df[
+                results_df["dataset_name"].str.contains("Augmented", case=False, na=False)
+                & ~results_df["dataset_name"].str.contains("NotAugmented", case=False, na=False)
+                & ~results_df["dataset_name"].str.contains("Baseline", case=False, na=False)
+                & ~results_df["dataset_name"].str.contains("Ensemble", case=False, na=False)
+            ]
+            if not aug_subset.empty:
+                best_row = aug_subset.loc[aug_subset["macro_f1"].idxmax()]
+                best_name = str(best_row["dataset_name"])
+                dynamic_best_metric = best_name.split("-Augmented-")[-1].replace("-Final", "").strip()
+                cfg["best_aug_metric"] = dynamic_best_metric
+                print(f"\n  [DYNAMIC WINNER SELECTION] Fresh run best single-metric variant for {ds_name}: {dynamic_best_metric} (Macro-F1 = {best_row['macro_f1']:.4f}, Accuracy = {best_row['accuracy']:.4f})")
+
             del evaluator
             gc.collect()
             if torch.cuda.is_available():
