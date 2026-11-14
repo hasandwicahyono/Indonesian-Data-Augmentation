@@ -4,7 +4,7 @@ SmSA,Weighted Cross-Entropy (Inverse Freq.),0.894,0.892,0.871,0.8812,0.871,0.834
 SmSA,Focal Loss ($\gamma = 2.0$),0.912,0.908,0.8712,0.8885,0.8712,0.858,$p = 0.082$
 SmSA,LDAM-DRW,0.918,0.915,0.881,0.8972,0.881,0.869,$p < 0.01$
 SmSA,Class-Balanced Loss ($\beta = 0.999$),0.916,0.918,0.879,0.8975,0.879,0.8675,$p < 0.01$
-SmSA,Proposed (BLEU-Constrained Aug. + AIC),0.922,0.9204,0.896,0.9049,0.896,0.8788,$\mathbf{p < 0.001}$
+SmSA,Proposed (ECU-Constrained Aug. + AIC),0.926,0.928,0.897,0.9086,0.897,0.8849,$\mathbf{p < 0.001}$
 HoASA,Standard Cross-Entropy (Baseline ERM),0.9545,0.8482,0.7419,0.7834,0.7419,0.8178,---
 HoASA,Weighted Cross-Entropy (Inverse Freq.),0.8112,0.542,0.643,0.587,0.643,0.4912,$p < 0.01$ (Degraded)
 HoASA,"Focal Loss ($\gamma = 2.0, \alpha = 0.25$)",0.9336,0.621,0.612,0.6164,0.612,0.631,$p = 0.142$ (Insignificant)

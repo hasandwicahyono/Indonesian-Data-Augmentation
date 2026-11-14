@@ -2,7 +2,7 @@
   {
     "Configuration": "Full Proposed Pipeline",
     "HoASA F1": 0.7092,
-    "SmSA F1": 0.9049
+    "SmSA F1": 0.9086
   },
   {
     "Configuration": "\\quad $-$ w/o Logit Adjustment ($\\tau=0$)",

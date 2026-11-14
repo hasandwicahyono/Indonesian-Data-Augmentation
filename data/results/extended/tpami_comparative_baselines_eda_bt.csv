@@ -2,11 +2,11 @@ Dataset,Method,Aug Size,Accuracy,Macro-Prec,Macro-Rec,Macro-F1,Delta F1
 SmSA (Doc Sentiment),Baseline (Unaugmented),"11,000",0.898,0.887,0.8636,0.8717,---
 SmSA (Doc Sentiment),"EDA (Wei & Zou, 2019)","1,650",0.806,0.7911,0.8094,0.7793,-15.79%
 SmSA (Doc Sentiment),Back-Translation (MarianMT),"1,650",0.798,0.784,0.799,0.7712,-16.66%
-SmSA (Doc Sentiment),Proposed (ECU-Augmented + AIC),"12,784",0.914,0.931,0.8655,0.8863,+1.68%
+SmSA (Doc Sentiment),Proposed (ECU-Augmented + AIC),"12,784",0.926,0.928,0.897,0.9086,+4.23%
 SmSA (Doc Sentiment),Proposed (COS-Augmented + AIC),"12,278",0.904,0.9109,0.8575,0.875,+0.38%
 SmSA (Doc Sentiment),Proposed (JAC-Augmented + AIC),"12,206",0.904,0.9117,0.864,0.8804,+1.00%
 SmSA (Doc Sentiment),Proposed (BLEU-Augmented + AIC),"12,254",0.922,0.9204,0.896,0.9049,+3.81%
-SmSA (Doc Sentiment),Proposed (Ensemble-Augmented + AIC),"11,053",0.92,0.9222,0.8878,0.9005,+3.31%
+SmSA (Doc Sentiment),Proposed (Ensemble-Augmented + AIC),"11,318",0.916,0.9278,0.8737,0.8921,+2.34%
 HoASA (Hotel Aspect),Baseline (Unaugmented),"2,283",0.9545,0.8482,0.7419,0.7834,---
 HoASA (Hotel Aspect),"EDA (Wei & Zou, 2019)",760,0.9091,0.5427,0.5861,0.5621,-22.27%
 HoASA (Hotel Aspect),Back-Translation (MarianMT),760,0.8811,0.5089,0.5751,0.5348,-26.04%
