@@ -431,7 +431,7 @@ class IndoBERTClassifierEvaluator:
                     logits = outputs.logits
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                        logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
+                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
                     if offset is not None:
                         offset_t = torch.tensor(offset, dtype=logits.dtype, device=loss_device)
                         logits = logits + offset_t
@@ -864,16 +864,33 @@ class IndoBERTClassifierEvaluator:
         calibrated_offset = None
         if self.threshold_calibration and val_loader is not None:
             val_logits, val_targets = self.get_raw_logits(model, val_loader, log_priors=log_priors)
-            calibrated_offset = self._calibrate_offsets(val_logits, val_targets, num_labels)
+            class_counts_arr = np.array([train_label_counts.get(lbl, 0) for lbl in label_list], dtype=np.float32)
+            priors_arr = class_counts_arr / (class_counts_arr.sum() + 1e-8)
+            imbalance_ratio = float(class_counts_arr.max()) / max(1.0, float(class_counts_arr.min()))
+
+            init_offset = np.zeros(num_labels, dtype=np.float32)
+            if imbalance_ratio > 2.0:
+                best_tau, tau_offset = self._calibrate_eval_logit_adj_tau(
+                    val_logits, val_targets, priors_arr, num_labels, acc_tolerance=0.01
+                )
+                if best_tau > 0.0:
+                    init_offset = tau_offset
+                    print(f"  [DYNAMIC LOGIT ADJUSTMENT] Swept validation set: selected optimal tau* = {best_tau:.2f} (offset: {np.round(tau_offset, 3)})")
+
+            calibrated_offset = self._calibrate_offsets(val_logits, val_targets, num_labels, initial_offset=init_offset)
             if np.any(calibrated_offset != 0.0):
                 print(f"  [THRESHOLD CALIBRATION] Active: Applied validation-calibrated logit offset vector: {np.round(calibrated_offset, 3)}")
 
-        mbr_cost_matrix = None
-        if self.use_mbr and val_loader is not None:
-            from src.modeling.mbr import MinimumBayesRiskCalibrator
-            val_probs, val_targets = self.predict_proba(
+        val_probs = None
+        val_labels = None
+        if val_loader is not None:
+            val_probs, val_labels = self.predict_proba(
                 model, val_loader, log_priors=log_priors, offset=calibrated_offset
             )
+
+        mbr_cost_matrix = None
+        if self.use_mbr and val_loader is not None and val_probs is not None:
+            from src.modeling.mbr import MinimumBayesRiskCalibrator
             minority_cls = [lbl for lbl, cnt in train_label_counts.items() if cnt < 0.5 * max(train_label_counts.values())]
             self.mbr_calibrator = MinimumBayesRiskCalibrator(
                 num_classes=num_labels,
@@ -886,7 +903,7 @@ class IndoBERTClassifierEvaluator:
             )
             mbr_cost_matrix = self.mbr_calibrator.calibrate(
                 val_probs=val_probs,
-                val_targets=val_targets,
+                val_targets=val_labels,
                 train_counts=train_label_counts,
             )
 
@@ -931,6 +948,8 @@ class IndoBERTClassifierEvaluator:
             "y_true": all_labels,
             "y_pred": all_preds,
             "_test_probs": test_probs,
+            "_val_probs": val_probs,
+            "_val_labels": val_labels,
             "history": history,
         }
         for i, lbl in enumerate(label_list):
@@ -962,7 +981,7 @@ class IndoBERTClassifierEvaluator:
                     logits = outputs.logits
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                        logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
+                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
 
                     all_logits.append(logits.detach().cpu().numpy())
                     all_labels.extend(labels.detach().cpu().numpy())
@@ -974,28 +993,75 @@ class IndoBERTClassifierEvaluator:
         return np.vstack(all_logits), np.array(all_labels)
 
     @staticmethod
-    def _calibrate_offsets(logits: np.ndarray, targets: np.ndarray, num_labels: int) -> np.ndarray:
+    def _calibrate_eval_logit_adj_tau(
+        logits: np.ndarray,
+        targets: np.ndarray,
+        priors: np.ndarray,
+        num_labels: int,
+        acc_tolerance: float = 0.01,
+    ) -> Tuple[float, np.ndarray]:
+        """
+        Sweeps inference logit adjustment tau in [0.0, 1.0] on validation set to find tau*
+        maximizing Macro-F1 while guarding accuracy degradation (Menon et al. 2021).
+        Offset formula: b(tau) = -tau * (log(pi) - mean(log(pi)))
+        """
+        target_labels = list(range(num_labels))
+        base_preds = np.argmax(logits, axis=1)
+        base_acc = float(accuracy_score(targets, base_preds))
+        _, _, base_f1, _ = precision_recall_fscore_support(targets, base_preds, labels=target_labels, average="macro", zero_division=0)
+        base_f1 = float(base_f1)
+
+        log_priors = np.log(priors + 1e-8)
+        centered_log_priors = log_priors - np.mean(log_priors)
+
+        best_tau = 0.0
+        best_f1 = base_f1
+        best_offset = np.zeros(num_labels, dtype=np.float32)
+
+        tau_candidates = np.linspace(0.0, 1.0, 21)
+        for tau in tau_candidates:
+            offset_cand = (-tau * centered_log_priors).astype(np.float32)
+            preds = np.argmax(logits + offset_cand, axis=1)
+            cand_acc = float(accuracy_score(targets, preds))
+            if cand_acc < base_acc - acc_tolerance:
+                continue
+            _, _, cand_f1, _ = precision_recall_fscore_support(targets, preds, labels=target_labels, average="macro", zero_division=0)
+            cand_f1 = float(cand_f1)
+            if cand_f1 > best_f1 + 1e-4:
+                best_f1 = cand_f1
+                best_tau = float(tau)
+                best_offset = offset_cand
+
+        return best_tau, best_offset
+
+    @staticmethod
+    def _calibrate_offsets(
+        logits: np.ndarray,
+        targets: np.ndarray,
+        num_labels: int,
+        initial_offset: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
         """
         Coordinate search on validation set to calibrate logit offset b in [-0.5, 0.5]^K to maximize Macro-F1.
-        Initializes at zero to guarantee monotonic non-regression.
+        Initializes at initial_offset (or zero) to guarantee monotonic non-regression.
         """
-        best_b = np.zeros(num_labels, dtype=np.float32)
-        base_preds = np.argmax(logits, axis=1)
+        best_b = initial_offset.copy().astype(np.float32) if initial_offset is not None else np.zeros(num_labels, dtype=np.float32)
+        base_preds = np.argmax(logits + best_b, axis=1)
         target_labels = list(range(num_labels))
         _, _, best_f1, _ = precision_recall_fscore_support(targets, base_preds, labels=target_labels, average="macro", zero_division=0)
 
-        step_candidates = [-0.4, -0.2, 0.0, 0.2, 0.4]
+        step_candidates = [-0.2, -0.1, 0.0, 0.1, 0.2]
         for _ in range(2):
             for k in range(num_labels):
                 best_step = best_b[k]
                 for cand in step_candidates:
                     b_test = best_b.copy()
-                    b_test[k] = cand
+                    b_test[k] = best_step + cand
                     preds = np.argmax(logits + b_test, axis=1)
                     _, _, f1, _ = precision_recall_fscore_support(targets, preds, labels=target_labels, average="macro", zero_division=0)
                     if f1 > best_f1 + 1e-4:
                         best_f1 = f1
-                        best_step = cand
+                        best_step = best_step + cand
                 best_b[k] = best_step
 
         return best_b
@@ -1025,7 +1091,7 @@ class IndoBERTClassifierEvaluator:
                     logits = outputs.logits
                     loss_device = logits.device
                     if log_priors is not None and self.eval_logit_adj_tau > 0.0:
-                        logits = logits + self.eval_logit_adj_tau * log_priors.to(loss_device)
+                        logits = logits - self.eval_logit_adj_tau * log_priors.to(loss_device)
                     if offset is not None:
                         offset_t = torch.tensor(offset, dtype=logits.dtype, device=loss_device)
                         logits = logits + offset_t
@@ -1039,6 +1105,79 @@ class IndoBERTClassifierEvaluator:
             torch.cuda.empty_cache()
 
         return np.vstack(all_probs), np.array(all_labels)
+
+    @staticmethod
+    def _optimize_ensemble_weights(
+        val_prob_list: List[np.ndarray],
+        val_targets: np.ndarray,
+        label_list: List[str],
+        default_weights: Optional[List[float]] = None,
+        cost_matrix: Optional[np.ndarray] = None,
+    ) -> List[float]:
+        """
+        Dynamically finds optimal soft-voting weights on the validation set
+        by simplex grid search to maximize Macro-F1 (with zero test set leakage).
+        Falls back to default_weights if validation improvement is within epsilon.
+        """
+        M = len(val_prob_list)
+        if M == 1:
+            return [1.0]
+
+        target_labels = list(range(len(label_list)))
+
+        if default_weights is None:
+            default_weights = [1.0 / M] * M
+        def_w = np.array(default_weights, dtype=np.float32)
+        def_w = def_w / def_w.sum()
+
+        def evaluate_w(w_vec: np.ndarray) -> float:
+            ens_p = np.zeros_like(val_prob_list[0])
+            for p, w in zip(val_prob_list, w_vec):
+                ens_p += p * w
+            if cost_matrix is not None:
+                risk = ens_p @ cost_matrix.T
+                preds = np.argmin(risk, axis=1)
+            else:
+                preds = np.argmax(ens_p, axis=1)
+            _, _, f1, _ = precision_recall_fscore_support(
+                val_targets, preds, labels=target_labels, average="macro", zero_division=0
+            )
+            return float(f1)
+
+        base_val_f1 = evaluate_w(def_w)
+        best_val_f1 = base_val_f1
+        best_w = def_w.copy()
+
+        candidates = [def_w]
+        if M == 2:
+            for w1 in np.linspace(0.0, 1.0, 51):
+                candidates.append(np.array([w1, 1.0 - w1], dtype=np.float32))
+        elif M == 3:
+            steps = 20
+            for i in range(steps + 1):
+                for j in range(steps + 1 - i):
+                    k = steps - i - j
+                    candidates.append(np.array([i / steps, j / steps, k / steps], dtype=np.float32))
+        else:
+            np.random.seed(42)
+            for _ in range(500):
+                sampled_w = np.random.dirichlet(np.ones(M))
+                candidates.append(sampled_w.astype(np.float32))
+            for alpha in [0.1, 0.5, 1.0, 2.0]:
+                sampled_w = np.random.dirichlet(def_w * 10 * alpha + 1e-3)
+                candidates.append(sampled_w.astype(np.float32))
+
+        for cand in candidates:
+            cand_norm = cand / cand.sum()
+            f1 = evaluate_w(cand_norm)
+            if f1 > best_val_f1 + 1e-4:
+                best_val_f1 = f1
+                best_w = cand_norm
+
+        w_out = [round(float(x), 4) for x in best_w]
+        def_w_disp = [round(float(x), 3) for x in def_w]
+        print(f"  [DYNAMIC ENSEMBLE WEIGHTING] Validation Logit Blending: Default weights {def_w_disp} (Val F1: {base_val_f1:.4f}) -> Optimal weights {w_out} (Val F1: {best_val_f1:.4f})")
+        return w_out
 
     @staticmethod
     def evaluate_ensemble(
@@ -1105,8 +1244,10 @@ class IndoBERTClassifierEvaluator:
         print(f"=======================================================")
 
         prob_list = []
+        val_prob_list = []
         weights = []
         ground_truth = None
+        val_ground_truth = None
 
         for idx, ecfg in enumerate(ensemble_configs):
             m_name = ecfg["model_name"]
@@ -1170,6 +1311,10 @@ class IndoBERTClassifierEvaluator:
             if ground_truth is None and y_t is not None:
                 ground_truth = np.array(y_t)
 
+            y_val_t = train_res.get("_val_labels")
+            if val_ground_truth is None and y_val_t is not None:
+                val_ground_truth = np.array(y_val_t)
+
             if "_test_probs" in train_res:
                 prob_list.append(train_res["_test_probs"])
             else:
@@ -1179,10 +1324,24 @@ class IndoBERTClassifierEvaluator:
                     one_hot[i_sample, p_class] = 1.0
                 prob_list.append(one_hot)
 
+            if "_val_probs" in train_res and train_res["_val_probs"] is not None:
+                val_prob_list.append(train_res["_val_probs"])
+
             weights.append(w)
 
         mbr_cost = self.mbr_calibrator.cost_matrix if (self.use_mbr and self.mbr_calibrator is not None) else None
-        ens_res = self.evaluate_ensemble(prob_list, ground_truth, label_list, weights=weights, cost_matrix=mbr_cost)
+
+        dynamic_weights = weights
+        if len(val_prob_list) == len(ensemble_configs) and val_ground_truth is not None and len(val_ground_truth) > 0:
+            dynamic_weights = self._optimize_ensemble_weights(
+                val_prob_list=val_prob_list,
+                val_targets=val_ground_truth,
+                label_list=label_list,
+                default_weights=weights,
+                cost_matrix=mbr_cost,
+            )
+
+        ens_res = self.evaluate_ensemble(prob_list, ground_truth, label_list, weights=dynamic_weights, cost_matrix=mbr_cost)
         ens_res["dataset_name"] = f"{dataset_name}-Augmented-Ensemble"
         ens_res["model_name"] = f"Heterogeneous-Ensemble ({len(ensemble_configs)} models)"
         ens_res["train_size"] = len(train_df)
@@ -1353,6 +1512,8 @@ class IndoBERTClassifierEvaluator:
             y_t = r.pop("y_true", None)
             y_p = r.pop("y_pred", None)
             probs = r.pop("_test_probs", None)
+            val_probs = r.pop("_val_probs", None)
+            val_labels = r.pop("_val_labels", None)
             hist = r.pop("history", None)
             if hist is not None:
                 training_histories[dname] = hist

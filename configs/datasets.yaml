@@ -163,7 +163,7 @@ datasets:
     use_logit_adjustment: false
     logit_adj_tau: 0.0
     eval_logit_adj_tau: 0.0
-    threshold_calibration: false
+    threshold_calibration: true
     use_focal_loss: false
     focal_gamma: 1.0
     use_mbr: true
