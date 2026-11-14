@@ -879,6 +879,13 @@ def run_benchmark_pipeline(
     for ds_name in target_datasets:
         print(f"\n[{ds_name}] Processing Investigation...")
         cfg = copy.deepcopy(DATASET_CONFIGS[ds_name])
+        if getattr(args, "target_oversample", None):
+            try:
+                pairs = [p.split(":") for p in args.target_oversample.split(",")]
+                cfg["target_oversample"] = {k.strip(): int(v.strip()) for k, v in pairs}
+                print(f"  [CLI OVERRIDE] Target oversample set from CLI: {cfg['target_oversample']}")
+            except Exception as e:
+                print(f"Warning: Failed to parse --target_oversample '{args.target_oversample}': {e}")
         ds = load_dataset_data(manager, ds_name)
 
         # Dynamic Auto-Calibration of Imbalance Parameters
@@ -897,7 +904,8 @@ def run_benchmark_pipeline(
             cfg["use_logit_adjustment"] = cal["use_logit_adjustment"]
             cfg["logit_adj_tau"] = cal["logit_adj_tau"]
             cfg["eval_logit_adj_tau"] = cal["eval_logit_adj_tau"]
-            cfg["target_oversample"] = cal["target_oversample"]
+            if cfg.get("target_oversample") is None:
+                cfg["target_oversample"] = cal["target_oversample"]
             cfg["label_smoothing"] = cal["label_smoothing"]
             cfg["use_class_weights"] = cal["use_class_weights"]
 
@@ -1440,6 +1448,12 @@ if __name__ == "__main__":
         type=int,
         default=None,
         help="Number of candidate continuations to generate and rank per sample (default: 3)",
+    )
+    parser.add_argument(
+        "--target_oversample",
+        type=str,
+        default=None,
+        help="Custom target oversample mapping, e.g. 'neg:4,pos:2' (default: loaded from configs/datasets.yaml)",
     )
     parser.add_argument(
         "--clean_gpu",

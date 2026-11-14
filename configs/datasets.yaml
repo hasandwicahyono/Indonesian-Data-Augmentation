@@ -180,7 +180,9 @@ datasets:
     neutral_polar_cost: 1.75
     valence_risk_weight: 0.5
     use_valence_cost_matrix: true
-    target_oversample: null
+    target_oversample:
+      neg: 4
+      pos: 2
     label_smoothing: 0.05
     use_contrastive_prefix: true
     contrastive_domain: "hotel"

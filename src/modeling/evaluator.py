@@ -504,11 +504,14 @@ class IndoBERTClassifierEvaluator:
         if self.target_oversample:
             dfs_to_concat = [train_df]
             for target_class, multiplier in self.target_oversample.items():
-                minority_rows = train_df[train_df["label"] == target_class]
-                if not minority_rows.empty and multiplier > 1:
-                    replicated = pd.concat([minority_rows] * (multiplier - 1), ignore_index=True)
+                target_str = str(target_class).strip().lower()
+                mask = train_df["label"].astype(str).str.strip().str.lower() == target_str
+                minority_rows = train_df[mask]
+                mult_int = int(multiplier)
+                if not minority_rows.empty and mult_int > 1:
+                    replicated = pd.concat([minority_rows] * (mult_int - 1), ignore_index=True)
                     dfs_to_concat.append(replicated)
-                    print(f"  [TARGET OVERSAMPLER] Oversampled class '{target_class}' by {multiplier}x: {len(minority_rows)} -> {len(minority_rows) * multiplier} samples")
+                    print(f"  [TARGET OVERSAMPLER] Oversampled class '{target_class}' by {mult_int}x: {len(minority_rows)} -> {len(minority_rows) * mult_int} samples")
             train_df = pd.concat(dfs_to_concat, ignore_index=True).sample(frac=1.0, random_state=seed or self.seed).reset_index(drop=True)
 
         if self.use_logit_adjustment:
