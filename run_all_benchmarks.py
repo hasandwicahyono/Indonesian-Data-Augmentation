@@ -827,6 +827,7 @@ def run_benchmark_pipeline(
     run_lexical_diversity: bool = False,
     run_training_dynamics: bool = False,
     run_similarity_distributions: bool = False,
+    use_mbr: Optional[bool] = None,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
     if log_file == "auto":
@@ -1014,6 +1015,10 @@ def run_benchmark_pipeline(
                 intra_valence_weight=cfg.get("intra_valence_weight", 1.4),
                 use_focal_loss=cfg.get("use_focal_loss", False),
                 focal_gamma=cfg.get("focal_gamma", 1.5),
+                use_mbr=use_mbr if use_mbr is not None else cfg.get("use_mbr", False),
+                mbr_accuracy_tolerance=cfg.get("mbr_accuracy_tolerance", 0.003),
+                mbr_alpha=cfg.get("mbr_alpha", 0.25),
+                mbr_max_minority_cost=cfg.get("mbr_max_minority_cost", 5.0),
             )
 
             results_df = evaluator.evaluate_all_variants(
@@ -1284,6 +1289,18 @@ if __name__ == "__main__":
         dest="auto_calibrate",
         help="Disable automatic imbalance calibration and fallback to hardcoded configs",
     )
+    parser.add_argument(
+        "--use_mbr",
+        action="store_true",
+        default=None,
+        help="Enable Minimum Bayes Risk (MBR) thresholding and risk-optimal decision calibration",
+    )
+    parser.add_argument(
+        "--no_mbr",
+        action="store_false",
+        dest="use_mbr",
+        help="Disable Minimum Bayes Risk (MBR) thresholding",
+    )
     # IEEE TPAMI & Access Extended Arguments
     parser.add_argument(
         "--all_tpami_access",
@@ -1447,6 +1464,7 @@ if __name__ == "__main__":
         run_lexical_diversity=args.run_lexical_diversity,
         run_training_dynamics=args.run_training_dynamics,
         run_similarity_distributions=args.run_similarity_distributions,
+        use_mbr=args.use_mbr,
     )
 
     end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

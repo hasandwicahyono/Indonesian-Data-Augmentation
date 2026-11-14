@@ -7,10 +7,12 @@ and classification evaluator pipelines for IndoBERT and foundation ensembles.
 from src.modeling.calibrator import AutoImbalanceCalibrator
 from src.modeling.adversarial import FGM
 from src.modeling.evaluator import IndoBERTClassifierEvaluator
+from src.modeling.mbr import MinimumBayesRiskCalibrator
 
 __all__ = [
     "AutoImbalanceCalibrator",
     "FGM",
     "IndoBERTClassifierEvaluator",
+    "MinimumBayesRiskCalibrator",
 ]
 

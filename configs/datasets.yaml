@@ -68,6 +68,10 @@ datasets:
     threshold_calibration: false
     use_focal_loss: false
     focal_gamma: 1.0
+    use_mbr: false
+    mbr_accuracy_tolerance: 0.003
+    mbr_alpha: 0.25
+    mbr_max_minority_cost: 4.5
     target_oversample: null
     label_smoothing: 0.05
     use_fgm: true
@@ -154,6 +158,10 @@ datasets:
     threshold_calibration: false
     use_focal_loss: false
     focal_gamma: 1.0
+    use_mbr: true
+    mbr_accuracy_tolerance: 0.003
+    mbr_alpha: 0.25
+    mbr_max_minority_cost: 4.5
     target_oversample: null
     label_smoothing: 0.05
     use_fgm: true
@@ -261,6 +269,10 @@ datasets:
     threshold_calibration: false
     use_focal_loss: false
     focal_gamma: 1.0
+    use_mbr: false
+    mbr_accuracy_tolerance: 0.003
+    mbr_alpha: 0.25
+    mbr_max_minority_cost: 4.5
     target_oversample: null
     label_smoothing: 0.05
     use_fgm: true

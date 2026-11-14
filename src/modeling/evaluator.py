@@ -174,6 +174,10 @@ class IndoBERTClassifierEvaluator:
         use_focal_loss: bool = False,
         focal_gamma: float = 1.5,
         threshold_calibration: bool = False,
+        use_mbr: bool = False,
+        mbr_accuracy_tolerance: float = 0.003,
+        mbr_alpha: float = 0.25,
+        mbr_max_minority_cost: float = 5.0,
     ):
         self.model_name = model_name
         self.max_len = max_len
@@ -201,6 +205,11 @@ class IndoBERTClassifierEvaluator:
         self.use_focal_loss = use_focal_loss
         self.focal_gamma = focal_gamma
         self.threshold_calibration = threshold_calibration
+        self.use_mbr = use_mbr
+        self.mbr_accuracy_tolerance = mbr_accuracy_tolerance
+        self.mbr_alpha = mbr_alpha
+        self.mbr_max_minority_cost = mbr_max_minority_cost
+        self.mbr_calibrator = None
 
         self.num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         if device is not None:
@@ -226,6 +235,8 @@ class IndoBERTClassifierEvaluator:
             extra_desc += f", Focal-Loss (gamma={self.focal_gamma})"
         if self.threshold_calibration:
             extra_desc += ", Threshold-Calibration: Active"
+        if self.use_mbr:
+            extra_desc += f", Minimum-Bayes-Risk: Active (tol={self.mbr_accuracy_tolerance}, alpha={self.mbr_alpha})"
         print(f"  Enhancements Active -> Preprocessing: {self.use_preprocessing}, Class-Weights: {self.use_class_weights}, Label-Smoothing: {self.label_smoothing}, FGM-Adversarial: {self.use_fgm}{extra_desc}")
 
     def _set_seed(self, seed: Optional[int] = None):
@@ -439,6 +450,7 @@ class IndoBERTClassifierEvaluator:
             print("  [LEAKAGE CHECK PASSED] 0 overlapping samples between training and test sets.")
 
         test_label_counts = test_df["label"].value_counts().to_dict()
+        train_label_counts = train_df["label"].value_counts().to_dict()
         for lbl in label_list:
             if lbl not in test_label_counts:
                 print(f"  [CRITICAL WARNING] Label '{lbl}' is absent in test_df! Macro metrics will be distorted.")
@@ -795,12 +807,43 @@ class IndoBERTClassifierEvaluator:
             if np.any(calibrated_offset != 0.0):
                 print(f"  [THRESHOLD CALIBRATION] Active: Applied validation-calibrated logit offset vector: {np.round(calibrated_offset, 3)}")
 
-        acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(
-            model, test_loader, num_labels=num_labels, log_priors=log_priors, offset=calibrated_offset
-        )
-        test_probs, _ = self.predict_proba(
+        mbr_cost_matrix = None
+        if self.use_mbr and val_loader is not None:
+            from src.modeling.mbr import MinimumBayesRiskCalibrator
+            val_probs, val_targets = self.predict_proba(
+                model, val_loader, log_priors=log_priors, offset=calibrated_offset
+            )
+            minority_cls = [lbl for lbl, cnt in train_label_counts.items() if cnt < 0.5 * max(train_label_counts.values())]
+            self.mbr_calibrator = MinimumBayesRiskCalibrator(
+                num_classes=num_labels,
+                label_list=label_list,
+                minority_classes=minority_cls,
+                accuracy_tolerance=self.mbr_accuracy_tolerance,
+                alpha=self.mbr_alpha,
+                max_minority_cost=self.mbr_max_minority_cost,
+                verbose=True,
+            )
+            mbr_cost_matrix = self.mbr_calibrator.calibrate(
+                val_probs=val_probs,
+                val_targets=val_targets,
+                train_counts=train_label_counts,
+            )
+
+        test_probs, all_labels = self.predict_proba(
             model, test_loader, log_priors=log_priors, offset=calibrated_offset
         )
+
+        if self.use_mbr and self.mbr_calibrator is not None and self.mbr_calibrator.calibrated:
+            all_preds = self.mbr_calibrator.predict_mbr(test_probs, mbr_cost_matrix).tolist()
+            acc = float(accuracy_score(all_labels, all_preds))
+            target_labels = list(range(num_labels)) if num_labels is not None else None
+            prec, rec, f1, _ = precision_recall_fscore_support(all_labels, all_preds, labels=target_labels, average="macro", zero_division=0)
+            _, _, per_class_f1, _ = precision_recall_fscore_support(all_labels, all_preds, labels=target_labels, average=None, zero_division=0)
+            prec, rec, f1 = float(prec), float(rec), float(f1)
+        else:
+            acc, prec, rec, f1, per_class_f1, all_labels, all_preds = self.evaluate(
+                model, test_loader, num_labels=num_labels, log_priors=log_priors, offset=calibrated_offset
+            )
 
         # Explicit cleanup of model, optimizer, dataloaders from GPU VRAM
         release_model_vram(model)
@@ -942,6 +985,7 @@ class IndoBERTClassifierEvaluator:
         ground_truth: np.ndarray,
         label_list: List[str],
         weights: Optional[List[float]] = None,
+        cost_matrix: Optional[np.ndarray] = None,
     ) -> Dict[str, Any]:
         """Soft-voting ensemble across multiple models' predicted probability matrices."""
         if weights is None:
@@ -952,7 +996,11 @@ class IndoBERTClassifierEvaluator:
         for p, w in zip(prob_list, w_norm):
             ensemble_probs += p * w
 
-        all_preds = np.argmax(ensemble_probs, axis=1)
+        if cost_matrix is not None:
+            risk = ensemble_probs @ cost_matrix.T
+            all_preds = np.argmin(risk, axis=1)
+        else:
+            all_preds = np.argmax(ensemble_probs, axis=1)
         all_labels = ground_truth
 
         target_labels = list(range(len(label_list)))
@@ -966,6 +1014,9 @@ class IndoBERTClassifierEvaluator:
             "macro_precision": float(prec),
             "macro_recall": float(rec),
             "macro_f1": float(f1),
+            "y_true": all_labels.tolist() if isinstance(all_labels, np.ndarray) else all_labels,
+            "y_pred": all_preds.tolist() if isinstance(all_preds, np.ndarray) else all_preds,
+            "_test_probs": ensemble_probs,
         }
         for i, lbl in enumerate(label_list):
             res[f"f1_{lbl}"] = float(per_class_f1[i]) if i < len(per_class_f1) else 0.0
@@ -1028,6 +1079,10 @@ class IndoBERTClassifierEvaluator:
                 threshold_calibration=self.threshold_calibration,
                 use_focal_loss=self.use_focal_loss,
                 focal_gamma=self.focal_gamma,
+                use_mbr=self.use_mbr,
+                mbr_accuracy_tolerance=self.mbr_accuracy_tolerance,
+                mbr_alpha=self.mbr_alpha,
+                mbr_max_minority_cost=self.mbr_max_minority_cost,
             )
 
             train_res = sub_evaluator.evaluate_dataset(
@@ -1061,7 +1116,8 @@ class IndoBERTClassifierEvaluator:
 
             weights.append(w)
 
-        ens_res = self.evaluate_ensemble(prob_list, ground_truth, label_list, weights=weights)
+        mbr_cost = self.mbr_calibrator.cost_matrix if (self.use_mbr and self.mbr_calibrator is not None) else None
+        ens_res = self.evaluate_ensemble(prob_list, ground_truth, label_list, weights=weights, cost_matrix=mbr_cost)
         ens_res["dataset_name"] = f"{dataset_name}-Augmented-Ensemble"
         ens_res["model_name"] = f"Heterogeneous-Ensemble ({len(ensemble_configs)} models)"
         ens_res["train_size"] = len(train_df)
@@ -1071,13 +1127,6 @@ class IndoBERTClassifierEvaluator:
         ens_res["epochs_trained"] = epochs if epochs is not None else self.epochs
         ens_res["best_epoch"] = epochs if epochs is not None else self.epochs
         ens_res["val_macro_f1"] = None
-
-        w_norm = np.array(weights) / sum(weights)
-        ens_probs = np.zeros_like(prob_list[0])
-        for p, w in zip(prob_list, w_norm):
-            ens_probs += p * w
-        ens_res["y_true"] = ground_truth.tolist() if isinstance(ground_truth, np.ndarray) else ground_truth
-        ens_res["y_pred"] = np.argmax(ens_probs, axis=1).tolist()
         return ens_res
 
     def evaluate_all_variants(
@@ -1138,6 +1187,7 @@ class IndoBERTClassifierEvaluator:
                 eval_logit_adj_tau=0.0,
                 target_oversample=None,
                 prompt_prefix=self.prompt_prefix,
+                use_mbr=False,
             )
             raw_erm_res = raw_evaluator.evaluate_dataset(
                 base_train_df,
@@ -1235,13 +1285,15 @@ class IndoBERTClassifierEvaluator:
             dname = r["dataset_name"]
             y_t = r.pop("y_true", None)
             y_p = r.pop("y_pred", None)
-            r.pop("_test_probs", None)
+            probs = r.pop("_test_probs", None)
             hist = r.pop("history", None)
             if hist is not None:
                 training_histories[dname] = hist
             if y_t is not None and y_p is not None:
                 predictions[f"{dname}__true"] = np.array(y_t)
                 predictions[f"{dname}__pred"] = np.array(y_p)
+            if probs is not None:
+                predictions[f"{dname}__probs"] = np.array(probs)
 
         results_df = pd.DataFrame(results)
         ensure_dir(os.path.dirname(resolved_output))
