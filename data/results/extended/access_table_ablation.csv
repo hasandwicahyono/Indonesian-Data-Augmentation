@@ -1,5 +1,5 @@
 Configuration,HoASA F1,SmSA F1
-Full Proposed Pipeline,0.6877,0.8981
+Full Proposed Pipeline,0.7092,0.9049
 \quad $-$ w/o Logit Adjustment ($\tau=0$),0.6174,0.9122
 \quad $-$ w/o Minority Oversampling,0.6435,0.9168
 \quad $-$ w/o Semantic Filtering (Raw GPT-2),0.672,0.9092
