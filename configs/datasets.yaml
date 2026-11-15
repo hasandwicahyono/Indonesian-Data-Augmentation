@@ -50,7 +50,6 @@ datasets:
     name: "SmSA"
     domain: "Document Sentiment"
     task: "Sentiment Analysis"
-    num_classes: 3
     classes: ["negative", "neutral", "positive"]
     model_name: "indobenchmark/indobert-base-p1"
     max_len: 128
@@ -61,27 +60,10 @@ datasets:
     patience: 5
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: true
-    use_logit_adjustment: false
-    logit_adj_tau: 0.0
-    eval_logit_adj_tau: 0.0
-    threshold_calibration: false
-    use_focal_loss: false
-    focal_gamma: 1.0
-    use_mbr: false
-    mbr_accuracy_tolerance: 0.003
-    mbr_alpha: 0.25
-    mbr_max_minority_cost: 4.5
-    target_oversample: null
-    label_smoothing: 0.05
     use_contrastive_prefix: true
     contrastive_domain: "sentiment"
-    contrastive_margin_threshold: 0.0
-    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 0.5
-    minority_classes: ["neutral"]
-    best_aug_metric: "COS"
     description: "SmSA: Prosa Document Sentiment (3 classes: negative, neutral, positive)"
     training_dynamics:
       loss:
@@ -93,24 +75,13 @@ datasets:
     run_ensemble: true
     ensemble_models:
       - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.50
       - model_name: "cahya/bert-base-indonesian-522M"
-        weight: 0.30
       - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.20
-    ensemble_configs:
-      - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.50
-      - model_name: "cahya/bert-base-indonesian-522M"
-        weight: 0.30
-      - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.20
 
   MovieOpini:
     name: "MovieOpini"
     domain: "Film Review Sentiment"
     task: "Sentiment Analysis"
-    num_classes: 2
     classes: ["negative", "positive"]
     model_name: "indolem/indobertweet-base-uncased"
     max_len: 96
@@ -121,20 +92,10 @@ datasets:
     patience: 5
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: false
-    use_logit_adjustment: false
-    logit_adj_tau: 0.0
-    eval_logit_adj_tau: 0.0
-    target_oversample: null
-    label_smoothing: 0.08
     use_contrastive_prefix: true
     contrastive_domain: "sentiment"
-    contrastive_margin_threshold: 0.0
-    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 1.0
-    minority_classes: ["negative"]
-    best_aug_metric: "BLEU"
     description: "MovieOpini: Indonesian Movie Review Sentiment (2 balanced classes: positive, negative)"
     training_dynamics:
       loss:
@@ -148,7 +109,6 @@ datasets:
     name: "HoASA"
     domain: "Aspect Hotel Sentiment"
     task: "Aspect-Based Sentiment Analysis"
-    num_classes: 3
     classes: ["neg", "neut", "pos"]
     model_name: "indobenchmark/indobert-base-p1"
     max_len: 128
@@ -159,13 +119,7 @@ datasets:
     patience: 5
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: true
-    use_logit_adjustment: false
-    logit_adj_tau: 0.0
-    eval_logit_adj_tau: 0.0
     threshold_calibration: true
-    use_focal_loss: false
-    focal_gamma: 1.0
     use_mbr: true
     mbr_accuracy_tolerance: 0.003
     mbr_alpha: 0.25
@@ -183,16 +137,11 @@ datasets:
     target_oversample:
       neg: 4
       pos: 2
-    label_smoothing: 0.05
     use_contrastive_prefix: true
     contrastive_domain: "hotel"
-    contrastive_margin_threshold: 0.0
-    contrastive_num_candidates: 3
+    aspect_prompt_prefix: "[Aspek: Umum / Fasilitas Hotel] "
     use_fgm: true
     fgm_epsilon: 1.0
-    aspect_prompt_prefix: "[Aspek: Umum / Fasilitas Hotel] "
-    minority_classes: ["neg", "pos"]
-    best_aug_metric: "COS"
     description: "HoASA: Hotel Aspect Sentiment (3 extreme imbalanced classes: neg 1.3%, pos 10.1%, neut 88.6%)"
     training_dynamics:
       loss:
@@ -204,20 +153,12 @@ datasets:
     run_ensemble: true
     ensemble_models:
       - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.60
       - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.40
-    ensemble_configs:
-      - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.60
-      - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.40
 
   EmoT:
     name: "EmoT"
     domain: "Twitter Emotion Analysis"
     task: "Emotion Classification"
-    num_classes: 5
     classes: ["anger", "fear", "happy", "love", "sadness"]
     model_name: "indolem/indobertweet-base-uncased"
     max_len: 128
@@ -228,24 +169,7 @@ datasets:
     patience: 5
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: true
-    use_logit_adjustment: false
-    logit_adj_tau: 0.0
-    eval_logit_adj_tau: 0.0
-    target_oversample:
-      fear: 2
-      love: 2
-    label_smoothing: 0.06
-    use_contrastive_prefix: true
-    contrastive_domain: "emotion"
-    contrastive_margin_threshold: 0.0
-    contrastive_num_candidates: 3
-    use_fgm: true
-    fgm_epsilon: 1.0
-    use_focal_loss: false
-    focal_gamma: 1.5
     threshold_calibration: true
-    minority_classes: ["fear", "love", "sadness"]
     valence_guardrail: true
     valence_map:
       positive: ["happy", "love"]
@@ -254,8 +178,13 @@ datasets:
     cross_valence_weight: 2.5
     valence_risk_weight: 0.6
     use_valence_cost_matrix: true
-    best_aug_metric: "COS"
-    threshold_relaxation_factor: 0.85
+    target_oversample:
+      fear: 2
+      love: 2
+    use_contrastive_prefix: true
+    contrastive_domain: "emotion"
+    use_fgm: true
+    fgm_epsilon: 1.0
     description: "EmoT: Twitter Emotion Analysis (5 classes: anger, fear, happy, love, sadness)"
     training_dynamics:
       loss:
@@ -267,20 +196,12 @@ datasets:
     run_ensemble: true
     ensemble_models:
       - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.90
       - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.10
-    ensemble_configs:
-      - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.90
-      - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.10
 
   NusaX-Indonesian:
     name: "NusaX-Indonesian"
     domain: "Multi-Topic Sentiment"
     task: "Sentiment Analysis"
-    num_classes: 3
     classes: ["negative", "neutral", "positive"]
     model_name: "indobenchmark/indobert-base-p1"
     max_len: 128
@@ -291,46 +212,18 @@ datasets:
     patience: 5
     early_stopping: true
     use_preprocessing: true
-    use_class_weights: true
-    use_logit_adjustment: false
-    logit_adj_tau: 0.0
-    eval_logit_adj_tau: 0.0
-    threshold_calibration: false
-    use_focal_loss: false
-    focal_gamma: 1.0
-    use_mbr: false
-    mbr_accuracy_tolerance: 0.003
-    mbr_alpha: 0.25
-    mbr_max_minority_cost: 4.5
-    target_oversample: null
-    label_smoothing: 0.05
     use_contrastive_prefix: true
     contrastive_domain: "sentiment"
-    contrastive_margin_threshold: 0.0
-    contrastive_num_candidates: 3
     use_fgm: true
     fgm_epsilon: 0.5
-    minority_classes: ["neutral", "negative", "positive"]
-    threshold_relaxation_factor: 0.75
     custom_similarity_thresholds:
       ECU: 0.25
       COS: 0.40
       JAC: 0.12
       BLEU: 0.10
-    best_aug_metric: "COS"
     description: "NusaX-Indonesian: Curated Sentiment Analysis (Winata et al., 2023, 1000 samples)"
     run_ensemble: true
     ensemble_models:
       - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.50
       - model_name: "cahya/bert-base-indonesian-522M"
-        weight: 0.30
       - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.20
-    ensemble_configs:
-      - model_name: "indobenchmark/indobert-base-p1"
-        weight: 0.50
-      - model_name: "cahya/bert-base-indonesian-522M"
-        weight: 0.30
-      - model_name: "indolem/indobertweet-base-uncased"
-        weight: 0.20

@@ -1240,7 +1240,8 @@ class IndoBERTClassifierEvaluator:
         """Trains and soft-votes across multiple heterogeneous models."""
         print(f"\n=======================================================")
         print(f"  Running Heterogeneous Ensemble for {dataset_name}")
-        print(f"  Ensemble Architecture: {[c['model_name'] for c in ensemble_configs]}")
+        arch_names = [c["model_name"] if isinstance(c, dict) else str(c) for c in ensemble_configs]
+        print(f"  Ensemble Architecture: {arch_names}")
         print(f"=======================================================")
 
         prob_list = []
@@ -1250,8 +1251,8 @@ class IndoBERTClassifierEvaluator:
         val_ground_truth = None
 
         for idx, ecfg in enumerate(ensemble_configs):
-            m_name = ecfg["model_name"]
-            w = ecfg.get("weight", 1.0)
+            m_name = ecfg["model_name"] if isinstance(ecfg, dict) else str(ecfg)
+            w = ecfg.get("weight", 1.0) if isinstance(ecfg, dict) else 1.0
             print(f"\n  [Ensemble Sub-Model {idx+1}/{len(ensemble_configs)}] Training: {m_name} (weight: {w})")
 
             sub_evaluator = IndoBERTClassifierEvaluator(
