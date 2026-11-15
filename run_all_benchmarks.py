@@ -1401,8 +1401,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cv_epochs",
         type=int,
-        default=2,
-        help="Number of epochs per fold for real 5-fold cross validation (default: 2)",
+        default=None,
+        help="Number of epochs per fold for real 5-fold cross validation (default: dynamic by dataset volume: 5 for N<=1k, 3 for N<=5k, 2 for N>5k)",
     )
     parser.add_argument(
         "--run_comparative_baselines",

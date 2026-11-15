@@ -70,22 +70,24 @@ class AutoImbalanceCalibrator:
 
         # 4. Target Oversampling (Preventing Batch Gradient Starvation)
         target_oversample = {}
-        sorted_counts = sorted(counts.values())
-        second_largest = sorted_counts[-2] if len(sorted_counts) >= 2 else sorted_counts[-1]
+        max_count = max(counts.values()) if counts else 1
 
         for m_lbl in minority_classes:
             expected_per_batch = batch_size * priors[m_lbl]
-            if expected_per_batch < 1.5 or counts[m_lbl] < 100:
-                ratio_to_med = int(round(second_largest / max(1, counts[m_lbl])))
-                # Cap multiplier for extremely scarce minority classes (<50 samples or IR > 15) to prevent over-triggering
-                max_mult = 3 if (counts[m_lbl] < 50 or imbalance_ratio > 15.0) else 4
-                multiplier = int(np.clip(ratio_to_med, 2, max_mult))
-                if multiplier > 1:
-                    target_oversample[m_lbl] = multiplier
-            elif counts[m_lbl] < 0.5 * second_largest:
-                multiplier = min(2, int(round(second_largest / max(1, counts[m_lbl]))))
-                if multiplier > 1:
-                    target_oversample[m_lbl] = multiplier
+            ratio_to_max = counts[m_lbl] / max(1, max_count)
+            if expected_per_batch < 0.5 or (ratio_to_max < 0.05 and imbalance_ratio > 10.0):
+                # Severe tail starvation: allocate 4x replication to guarantee >= 0.8 sample per batch
+                multiplier = 4
+            elif expected_per_batch < 1.5 or ratio_to_max < 0.25:
+                multiplier = 2
+            elif ratio_to_max < 0.65 and len(counts) >= 4:
+                # Multi-class fine-grained emotion / intent minority tail
+                multiplier = 2
+            else:
+                multiplier = 1
+
+            if multiplier > 1:
+                target_oversample[m_lbl] = multiplier
 
         if not target_oversample:
             target_oversample = None

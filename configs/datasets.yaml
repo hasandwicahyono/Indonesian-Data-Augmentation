@@ -134,9 +134,6 @@ datasets:
     neutral_polar_cost: 1.75
     valence_risk_weight: 0.5
     use_valence_cost_matrix: true
-    target_oversample:
-      neg: 4
-      pos: 2
     use_contrastive_prefix: true
     contrastive_domain: "hotel"
     aspect_prompt_prefix: "[Aspek: Umum / Fasilitas Hotel] "
@@ -178,9 +175,6 @@ datasets:
     cross_valence_weight: 2.5
     valence_risk_weight: 0.6
     use_valence_cost_matrix: true
-    target_oversample:
-      fear: 2
-      love: 2
     use_contrastive_prefix: true
     contrastive_domain: "emotion"
     use_fgm: true

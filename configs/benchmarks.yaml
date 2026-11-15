@@ -33,7 +33,7 @@ sota_baselines:
 cross_validation:
   n_splits: 5
   seed: 42
-  default_epochs: 2
+  default_epochs: "dynamic"  # Dynamically auto-scaled: 5 for N<=1k, 3 for N<=5k, 2 for N>5k
 
 paths:
   results_dir: "data/results"

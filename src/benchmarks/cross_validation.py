@@ -31,7 +31,7 @@ from src.utils.config import load_dataset_config
 
 def run_real_5fold_cv_for_dataset(
     dataset_name: str,
-    epochs: int = 3,
+    epochs: Optional[int] = None,
     batch_size: int = 64,
     device: Optional[str] = None,
     max_samples_per_fold: Optional[int] = None,
@@ -42,10 +42,6 @@ def run_real_5fold_cv_for_dataset(
     Returns the real experimental metrics dictionary.
     """
     device_str = device if device is not None else resolve_device()
-
-    print("\n" + "=" * 80)
-    print(f"RUNNING REAL 5-FOLD CV EXPERIMENT: {dataset_name} ({epochs} epochs/fold)")
-    print("=" * 80)
 
     manager = IndonesianDatasetsManager()
     cfg = load_dataset_config(dataset_name)
@@ -91,7 +87,21 @@ def run_real_5fold_cv_for_dataset(
             sampled_parts.append(grp.sample(min(len(grp), n_per_class), random_state=42))
         full_df = pd.concat(sampled_parts, ignore_index=True)
 
+    if epochs is None:
+        if len(full_df) <= 1000:
+            actual_epochs = 5
+        elif len(full_df) <= 5000:
+            actual_epochs = 3
+        else:
+            actual_epochs = 2
+        print(f"  [DYNAMIC CV EPOCHS] Auto-scaled to {actual_epochs} epochs based on dataset volume ({len(full_df)} samples)")
+    else:
+        actual_epochs = epochs
+
+    print("\n" + "=" * 80)
+    print(f"RUNNING REAL 5-FOLD CV EXPERIMENT: {dataset_name} ({actual_epochs} epochs/fold)")
     print(f"Total dataset volume for 5-fold CV: {len(full_df)} samples, Classes: {ds.label_list}")
+    print("=" * 80)
 
     aug_rel = f"data/augmented/all_text/{dataset_name}-Augmented-{best_aug_metric}-ALL-Text-Final.csv"
     aug_path = resolve_path(aug_rel)
@@ -105,7 +115,7 @@ def run_real_5fold_cv_for_dataset(
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     fold_results = {
         "dataset": dataset_name,
-        "epochs": epochs,
+        "epochs": actual_epochs,
         "baseline_f1": [],
         "baseline_acc": [],
         "augmented_f1": [],
@@ -117,7 +127,7 @@ def run_real_5fold_cv_for_dataset(
         model_name=model_name,
         max_len=cfg.get("max_len", 128),
         batch_size=batch_size,
-        epochs=epochs,
+        epochs=actual_epochs,
         lr=2e-5,
         early_stopping=False,
         use_preprocessing=True,
@@ -142,7 +152,7 @@ def run_real_5fold_cv_for_dataset(
             test_df=test_fold,
             label_list=ds.label_list,
             name=f"{dataset_name}-Fold{fold_idx+1}-Baseline",
-            epochs=epochs,
+            epochs=actual_epochs,
         )
         base_f1 = float(base_res["macro_f1"])
         base_acc = float(base_res["accuracy"])
@@ -164,7 +174,7 @@ def run_real_5fold_cv_for_dataset(
             test_df=test_fold,
             label_list=ds.label_list,
             name=f"{dataset_name}-Fold{fold_idx+1}-Augmented",
-            epochs=epochs,
+            epochs=actual_epochs,
         )
         aug_f1 = float(aug_res["macro_f1"])
         aug_acc = float(aug_res["accuracy"])
