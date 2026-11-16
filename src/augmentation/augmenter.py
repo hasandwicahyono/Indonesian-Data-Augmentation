@@ -334,7 +334,8 @@ class IndonesianAugmenter:
         contrastive_tag = f" + ContrastivePrefix[{self.contrastive_domain}]" if self.use_contrastive_prefix else ""
         print(f"Starting generation [{gen_model_tag}{contrastive_tag}] & similarity computation for {len(target_df)} rows...")
 
-        for _, row in tqdm(target_df.iterrows(), total=len(target_df)):
+        disable_pbar = os.environ.get("DISABLE_TQDM", "0") == "1"
+        for _, row in tqdm(target_df.iterrows(), total=len(target_df), mininterval=2.0, disable=disable_pbar):
             orig_text = str(row[text_column])
             label = row[label_column]
 

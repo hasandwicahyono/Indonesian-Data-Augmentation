@@ -307,7 +307,8 @@ class IndoBERTClassifierEvaluator:
         use_amp = (self.device.type == "cuda")
         input_device = next(model.parameters()).device
 
-        pbar = tqdm(dataloader, desc="  Training Steps", leave=False, dynamic_ncols=True)
+        disable_pbar = os.environ.get("DISABLE_TQDM", "0") == "1"
+        pbar = tqdm(dataloader, desc="  Training Steps", leave=False, dynamic_ncols=True, mininterval=2.0, disable=disable_pbar)
         for step, batch in enumerate(pbar):
             input_ids = batch["input_ids"].to(input_device, non_blocking=True)
             attention_mask = batch["attention_mask"].to(input_device, non_blocking=True)

@@ -61,11 +61,16 @@ class TeeLogger:
     """
     Tee logger that duplicates output to console stream and a log file simultaneously.
     Provides immediate flushing so logs persist in real time even on crashes, kills, or disconnects.
+    Filters out transient progress bar lines (e.g. carriage-return updates from tqdm) from
+    the disk log file to prevent runaway log file explosion (slashing file sizes by >99%).
     """
 
-    def __init__(self, file_obj, console_stream):
+    def __init__(self, file_obj, console_stream, filter_progress_bar: bool = True):
         self.file_obj = file_obj
         self.console_stream = console_stream
+        self.filter_progress_bar = filter_progress_bar
+        self._file_buffer = ""
+        self._prev_blank = False
 
     def write(self, data):
         try:
@@ -73,9 +78,43 @@ class TeeLogger:
             self.console_stream.flush()
         except Exception:
             pass
+
+        if not self.filter_progress_bar:
+            try:
+                self.file_obj.write(data)
+                self.file_obj.flush()
+            except Exception:
+                pass
+            return
+
         try:
-            self.file_obj.write(data)
-            self.file_obj.flush()
+            self._file_buffer += data
+            if "\n" in self._file_buffer:
+                parts = self._file_buffer.split("\n")
+                complete_lines = parts[:-1]
+                self._file_buffer = parts[-1]
+
+                for line in complete_lines:
+                    if "\r" in line:
+                        subparts = [p.strip() for p in line.split("\r") if p.strip()]
+                        kept = [p for p in subparts if not any(k in p for k in ["Training Steps:", "Loading weights:", "it/s]"])]
+                        if kept:
+                            txt = kept[-1]
+                            if txt:
+                                self.file_obj.write(txt + "\n")
+                                self._prev_blank = False
+                    else:
+                        txt = line.strip()
+                        if any(k in txt for k in ["Training Steps:", "Loading weights:", "it/s]"]):
+                            continue
+                        if not txt:
+                            if not self._prev_blank:
+                                self.file_obj.write("\n")
+                                self._prev_blank = True
+                        else:
+                            self.file_obj.write(line.rstrip() + "\n")
+                            self._prev_blank = False
+                self.file_obj.flush()
         except Exception:
             pass
 
@@ -85,6 +124,17 @@ class TeeLogger:
         except Exception:
             pass
         try:
+            if self._file_buffer:
+                buf = self._file_buffer
+                if "\r" in buf:
+                    subparts = [p.strip() for p in buf.split("\r") if p.strip()]
+                    kept = [p for p in subparts if not any(k in p for k in ["Training Steps:", "Loading weights:", "it/s]"])]
+                    buf = kept[-1] if kept else ""
+                txt = buf.strip()
+                if txt and not any(k in txt for k in ["Training Steps:", "Loading weights:", "it/s]"]):
+                    self.file_obj.write(txt + "\n")
+                    self._prev_blank = False
+                self._file_buffer = ""
             self.file_obj.flush()
         except Exception:
             pass
@@ -834,12 +884,15 @@ def run_benchmark_pipeline(
     run_lexical_diversity: bool = False,
     run_training_dynamics: bool = False,
     run_similarity_distributions: bool = False,
+    no_pbar: bool = False,
     use_mbr: Optional[bool] = None,
     use_valence_cost_matrix: Optional[bool] = None,
     cross_valence_weight: Optional[float] = None,
     valence_risk_weight: Optional[float] = None,
 ):
     """Executes the full evaluation pipeline and renders all visualizations."""
+    if no_pbar:
+        os.environ["DISABLE_TQDM"] = "1"
     if log_file == "auto":
         os.makedirs(log_dir, exist_ok=True)
         ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1534,8 +1587,17 @@ if __name__ == "__main__":
         default=False,
         help="Disable automatic console logging to text file",
     )
+    parser.add_argument(
+        "--no_pbar",
+        action="store_true",
+        default=False,
+        help="Disable interactive tqdm progress bars in console and logs",
+    )
 
     args = parser.parse_args()
+
+    if args.no_pbar:
+        os.environ["DISABLE_TQDM"] = "1"
 
     if args.no_log:
         active_log_file = None
@@ -1594,6 +1656,7 @@ if __name__ == "__main__":
         run_lexical_diversity=args.run_lexical_diversity,
         run_training_dynamics=args.run_training_dynamics,
         run_similarity_distributions=args.run_similarity_distributions,
+        no_pbar=args.no_pbar,
         use_mbr=args.use_mbr,
         use_valence_cost_matrix=args.use_valence_cost_matrix,
         cross_valence_weight=args.cross_valence_weight,
