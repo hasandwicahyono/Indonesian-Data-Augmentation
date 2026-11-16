@@ -341,17 +341,6 @@ def compute_and_save_dataset_statistics(
         except Exception as e:
             print(f"  [Notice] Could not compute statistics for {dname}: {e}")
 
-        records.append({
-            "Dataset": name,
-            "Domain / Task": domain,
-            "Classes (K)": num_classes,
-            "Train Size": train_len,
-            "Val Size": val_len,
-            "Test Size": test_len,
-            "Label Distribution (Train)": dist_str_csv,
-            "Imbalance Ratio (IR)": f"{ir}x ({ir_desc})",
-        })
-
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(extended_results_dir, exist_ok=True)
 
