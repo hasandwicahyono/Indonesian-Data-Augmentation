@@ -58,6 +58,7 @@ datasets:
     weight_decay: 0.01
     patience: 5
     early_stopping: true
+    early_stopping_metric: "harmonic"
     use_preprocessing: true
     use_contrastive_prefix: true
     contrastive_domain: "sentiment"
@@ -82,6 +83,7 @@ datasets:
     weight_decay: 0.01
     patience: 5
     early_stopping: true
+    early_stopping_metric: "harmonic"
     use_preprocessing: true
     use_contrastive_prefix: true
     contrastive_domain: "sentiment"
@@ -101,6 +103,7 @@ datasets:
     weight_decay: 0.01
     patience: 5
     early_stopping: true
+    early_stopping_metric: "harmonic"
     use_preprocessing: true
     threshold_calibration: true
     use_mbr: true
@@ -140,6 +143,7 @@ datasets:
     weight_decay: 0.01
     patience: 5
     early_stopping: true
+    early_stopping_metric: "harmonic"
     use_preprocessing: true
     threshold_calibration: true
     valence_guardrail: true
@@ -172,6 +176,7 @@ datasets:
     weight_decay: 0.01
     patience: 5
     early_stopping: true
+    early_stopping_metric: "harmonic"
     use_preprocessing: true
     use_contrastive_prefix: true
     contrastive_domain: "sentiment"

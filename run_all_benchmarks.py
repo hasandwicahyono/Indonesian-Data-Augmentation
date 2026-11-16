@@ -1097,6 +1097,7 @@ def run_benchmark_pipeline(
                 device=device,
                 seed=seed,
                 early_stopping=cfg["early_stopping"],
+                early_stopping_metric=cfg.get("early_stopping_metric", "harmonic"),
                 patience=cfg["patience"],
                 use_preprocessing=cfg["use_preprocessing"],
                 use_class_weights=cfg.get("use_class_weights", True),
