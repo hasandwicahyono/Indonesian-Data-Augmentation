@@ -163,6 +163,23 @@ G.~I. Winata, A.~F. Aji, S.~Cahyawijaya, R.~Mahendra, F.~Koto, A.~Romadhony,
   Conference of the European Chapter of the Association for Computational
   Linguistics (EACL)}, 2023, pp. 815--834.
 
+\bibitem{ahmadian2024hybrid}
+H.~Ahmadian, T.~F. Abidin, H.~Riza, and K.~Muchtar, ``Hybrid models for emotion
+  classification and sentiment analysis in indonesian language,'' \emph{Applied
+  Computational Intelligence and Soft Computing}, vol. 2024, pp. 1--15, 2024.
+
+\bibitem{purnomo2024comparison}
+T.~D. Purnomo and J.~Sutopo, ``Comparison of pre-trained {BERT}-based
+  transformer models for regional language text sentiment analysis in
+  indonesia,'' \emph{International Journal of Science and Technology}, vol.~3,
+  no.~3, pp. 11--21, 2024.
+
+\bibitem{nasution2025benchmarking}
+A.~H. Nasution, A.~Onan, Y.~Murakami, W.~Monika, and A.~Hanafiah,
+  ``Benchmarking open-source large language models for sentiment and emotion
+  classification in indonesian tweets,'' \emph{IEEE Access}, vol.~13, pp.
+  94\,009--94\,025, 2025.
+
 \bibitem{raudys1991small}
 S.~J. Raudys and A.~K. Jain, ``Small sample size effects in statistical pattern
   recognition: Recommendations for practitioners,'' \emph{IEEE Transactions on
