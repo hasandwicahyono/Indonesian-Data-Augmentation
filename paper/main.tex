@@ -19,15 +19,15 @@
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 
 \begin{document}
-\history{Date of publication 15 January 2026, date of current version 25 April 2026.}
-\doi{10.1109/ACCESS.2026.3389102}
-\vol{14}
+\history{Date of publication xxxx 00, 0000, date of current version xxxx 00, 0000.}
+\doi{10.1109/ACCESS.2026.XXXXXXX}
+\vol{xx}
 \year{2026}
 
 \title{Dual-Space Semantic Projection and Adaptive Logit Calibration for Long-Tailed Indonesian Sequence Classification}
 
 \author{\uppercase{Hasan Dwi Cahyono}}
-\address{Department of Data Science, Universitas Sebelas Maret, Surakarta 57126, Indonesia (e-mail: hasan.dwi.cahyono@gmail.com)}
+\address{Department of Informatics, Faculty of Information Technology and Data Science, Universitas Sebelas Maret, Surakarta 57126, Indonesia (e-mail: hasan.dwi.cahyono@gmail.com)}
 \tfootnote{This research was supported in part by open-access computational resources and benchmark datasets provided by the Indonesian NLP research community, IndoNLU, IndoLEM, and Hugging Face.}
 
 \markboth
@@ -79,12 +79,12 @@ This section reviews related academic literature across three core areas relevan
 
 Text data augmentation methodologies broadly divide into heuristic rule-based perturbations and neural generative models \cite{feng2021survey, shorten2021text}. Early techniques focused on surface transformations: rule-based lexical perturbations, including synonym replacement, random insertion, random swap, and random deletion (e.g., EDA \cite{wei2019eda}), yield modest performance improvements on simple benchmark tasks \cite{feng2021survey}. However, heuristic perturbation relies heavily on curated lexical resources such as WordNet, which are severely limited or incomplete for colloquial Indonesian registers. Furthermore, arbitrary token deletions frequently invert sentiment polarity or introduce ungrammatical artifacts that impair representation learning.
 
-Back-translation translates text into an intermediate pivot language and back to generate syntactic paraphrases \cite{feng2021survey, shorten2021text}. While effective for formal corpora, back-translation frequently fails on colloquial dialects because standard translation APIs normalize informal slang into sterile formal prose, eliminating key emotional markers. Contextual augmentation leverages masked language models to substitute tokens conditioned on bidirectional context \cite{kumar2020data, anaby2020not}. With the advent of autoregressive decoders, generative continuation and counterfactual text synthesis have gained prominence \cite{yoo2021gpt3mix, sahu2022data, refai2023data, dai2023augmenting, chen2021reinforced, moller2024parrot, ding2024gpt4}. Refai et al. \cite{refai2023data} demonstrated that transformer generation with cosine filtering improves Arabic text classification. Our work significantly expands this concept by formulating a dual-space metric projection combining continuous embeddings with discrete $n$-gram lattices.
+Back-translation translates text into an intermediate pivot language and back to generate syntactic paraphrases \cite{feng2021survey, shorten2021text}. While effective for formal corpora, back-translation frequently fails on colloquial dialects because standard translation APIs normalize informal slang into sterile formal prose, eliminating key emotional markers. Contextual augmentation leverages masked language models to substitute tokens conditioned on bidirectional context \cite{kumar2020data, anaby2020not}. With the advent of autoregressive decoders, generative continuation and counterfactual text synthesis have gained prominence \cite{yoo2021gpt3mix, sahu2022data, refai2023data, dai2023augmenting, chen2021reinforced, moller2024parrot, ding2024gpt4}. Refai et al. \cite{refai2023data} evaluated text generation with separate similarity metrics (Euclidean, cosine, Jaccard, and BLEU) independently for Arabic text classification. Our investigation extends this paradigm by formulating an automated dual-space metric projection that operates without manual grid-search tuning via distribution-adaptive thresholds ($\mu \pm \sigma$), integrated with a Fisher-consistent Automated Imbalance Calibrator (AIC), emoji affective normalization, and heterogeneous soft-voting ensembling.
 
 \subsection{Indonesian Pretrained Language Models}
 \label{subsec:indo_plms}
 
-The development of transformer backbones \cite{vaswani2017attention, devlin2019bert} tailored to the Indonesian language has accelerated in recent years \cite{wilie2020indonlu, koto2020indolem, cahyawijaya2021indonlg}. Wilie et al. \cite{wilie2020indonlu} introduced IndoNLU, establishing the foundational IndoBERT model trained on over 220 million words spanning Indonesian news, Wikipedia, and web corpora. IndoBERT demonstrated marked superiority over multilingual baselines (e.g., mBERT and XLM-RoBERTa) across sequence labeling and sentence classification benchmarks. Concurrently, Koto et al. \cite{koto2020indolem, koto2021discourse} explored discourse probing and pretrained representations, while introducing IndoBERTweet \cite{koto2021indobertweet}, a model specifically pretrained on over 400 million Indonesian social media tokens. IndoBERTweet effectively captures colloquial vocabulary, informal particles, and slang registers prevalent in digital conversations. More recently, large-scale multi-task and dialect benchmarks such as NusaCrowd \cite{cahyawijaya2023nusacrowd} and NusaX \cite{winata2023nusax} have broadened linguistic coverage across regional Indonesian languages, complementing earlier foundational colloquial lexicons \cite{salsabila2018colloquial}.
+The development of transformer backbones \cite{vaswani2017attention, devlin2019bert} tailored to the Indonesian language has accelerated in recent years \cite{wilie2020indonlu, koto2020indolem, cahyawijaya2021indonlg}. Wilie et al. \cite{wilie2020indonlu} introduced IndoNLU, establishing the foundational IndoBERT model trained on the Indo4B corpus comprising over 4 billion words ($\approx 250$ million sentences) spanning Indonesian news, Wikipedia, and web corpora. IndoBERT demonstrated marked superiority over multilingual baselines (e.g., mBERT and XLM-RoBERTa) across sequence labeling and sentence classification benchmarks. Concurrently, Koto et al. \cite{koto2020indolem, koto2021discourse} explored discourse probing and pretrained representations (trained on $\approx 220$ million words), while introducing IndoBERTweet \cite{koto2021indobertweet}, a model specifically pretrained on over 400 million Indonesian social media tokens. IndoBERTweet effectively captures colloquial vocabulary, informal particles, and slang registers prevalent in digital conversations. More recently, large-scale multi-task and dialect benchmarks such as NusaCrowd \cite{cahyawijaya2023nusacrowd} and NusaX \cite{winata2023nusax} have broadened linguistic coverage across regional Indonesian languages, complementing earlier foundational colloquial lexicons \cite{salsabila2018colloquial}.
 
 Recent empirical investigations have further evaluated transformer variants, hybrid sequence encoders, and open-source large language models on Indonesian affective text classification \cite{ahmadian2024hybrid, purnomo2024comparison, nasution2025benchmarking}. Ahmadian et al. \cite{ahmadian2024hybrid} investigated hybrid architectures combining IndoBERT with recurrent BiLSTM and BiGRU layers, showing that while recurrent-transformer hybrids achieve competitive document sentiment scores ($\approx 0.93$ F1 on SmSA), they struggle to surpass standard pretrained representations on complex multi-class emotion datasets such as EmoT ($0.78$ accuracy). Purnomo and Sutopo \cite{purnomo2024comparison} surveyed regional transformer performance on NusaX across ten regional languages, demonstrating that pretrained BERT variants span $0.8888$ to $0.9353$ F1 with substantial variance across local vernaculars. Furthermore, Nasution et al. \cite{nasution2025benchmarking} benchmarked open-source foundation models (including DeepSeek-R1 32B, LLaMA-3.1 70B, and Gemma-2 27B) under zero-shot prompting on Indonesian tweets, establishing a human annotator agreement ceiling of $0.846$ Macro-F1 on SmSA and revealing that zero-shot LLMs ($0.781$–$0.796$ Macro-F1) lag significantly behind calibrated supervised representations due to severe degradation on minority neutral categories. 
 
@@ -107,17 +107,20 @@ The proposed framework integrates generative data synthesis, multi-space quality
 
 Digital text in low-resource and colloquial registers contains heavy orthographic noise that degrades tokenization efficiency. Raw text inputs undergo systematic cleaning: HTML entities, non-standard punctuation clusters, trailing URLs, and social media user tags (@username) are removed. Alphabetic text is case-folded to lower case, while sequences of repeated characters (e.g., ``bangeeet'') are normalized to standard lexical forms. To address non-standard dialectal registers and informal orthography, we incorporate the Colloquial Indonesian Lexicon established by Salsabila et al. \cite{salsabila2018colloquial}, which normalizes over 15,000 empirical colloquial word forms into their standard grammatical lemmas, preventing sub-word fragmentation and resolving lexical ambiguity before tokenization. In formal domains, these operations eliminate superficial token noise and reduce vocabulary dispersion.
 
-In colloquial social media text, emotional expression is heavily mediated by graphical emojis and stylized pictograms. Standard NLP pipelines typically strip these characters as unprocessable noise, thereby discarding vital sentiment indicators. Such naive removal obscures critical pragmatic intent, especially in sentiment-heavy conversational contexts. Rather than discarding emojis or relying on ad-hoc heuristics, we establish an empirically grounded emoji semantic mapper utilizing the Multidimensional Lexicon of Emojis (MLE) by Godard and Holtzman \cite{godard2022multidimensional}. The MLE provides standardized continuous ratings across 359 emojis evaluated along 10 discrete affective and sentiment dimensions (Tables 1 and 2 of \cite{godard2022multidimensional}). Based on these empirical distributions, each emoji $e$ is systematically projected into canonical Indonesian affective tokens:
-    \begin{equation}
-        e \mapsto \begin{cases}
-            \texttt{\_emosi\_marah\_}, & e \in \mathcal{E}_{\text{anger}} \\
-            \texttt{\_emosi\_sedih\_}, & e \in \mathcal{E}_{\text{sadness}} \\
-            \texttt{\_emosi\_takut\_}, & e \in \mathcal{E}_{\text{fear}} \\
-            \texttt{\_emosi\_cinta\_}, & e \in \mathcal{E}_{\text{love}} \\
-            \texttt{\_emosi\_bahagia\_}, & e \in \mathcal{E}_{\text{joy}}
-        \end{cases}
-    \end{equation}
-    where $\mathcal{E}_c$ denotes the partition of emojis assigned to affective emotion category $c \in \{\text{anger}, \text{sadness}, \text{fear}, \text{love}, \text{joy}\}$ based on empirical valence and arousal ratings from the Multidimensional Lexicon of Emojis \cite{godard2022multidimensional}. Based on these empirical distributions, each emoji $e$ is systematically projected into canonical Indonesian affective tokens as defined in Equation (1). For example, the noisy social text \textit{``Keren bgt filmnya [sedih] sedih banget T\_T''} is normalized to \textit{``bagus banget filmnya \_emosi\_sedih\_ sedih banget \_emosi\_sedih\_''}. In standard BERT WordPiece tokenizers, raw Unicode pictograms are otherwise collapsed into the uninformative out-of-vocabulary token \texttt{[UNK]}, while byte-level tokenizers fragment multi-byte emoji encodings into noisy sub-byte sequences. Projecting emojis into explicit Indonesian affective lemmas (\texttt{emosi marah}, \texttt{emosi sedih}, \texttt{emosi takut}, \texttt{emosi cinta}, \texttt{emosi bahagia}) maps non-alphabetic symbols directly onto high-frequency, in-vocabulary morphological roots. Consequently, the downstream self-attention layers associate emotional iconography with stable semantic vectors, eliminating \texttt{[UNK]} collapse and boosting affective feature saliency.
+In colloquial social media text, emotional expression is heavily mediated by graphical emojis and stylized pictograms. Standard NLP pipelines typically strip these characters as unprocessable noise, thereby discarding vital sentiment indicators. Such naive removal obscures critical pragmatic intent, especially in sentiment-heavy conversational contexts. Rather than discarding emojis or relying on ad-hoc heuristics, we establish an empirically grounded emoji semantic mapper utilizing the Multidimensional Lexicon of Emojis (MLE) by Godard and Holtzman \cite{godard2022multidimensional}. The MLE provides standardized continuous ratings across 359 emojis evaluated along 10 discrete affective and sentiment dimensions (Supplementary Table 1 of \cite{godard2022multidimensional}), spanning 8 Plutchik emotional axes (anger, anticipation, disgust, fear, joy, sadness, surprise, trust) and 2 general valence polarities (positive, negative). 
+
+To project these 10-dimensional ratings into the 5 target emotion classes of the benchmark ($\mathcal{C} = \{\text{anger}, \text{sadness}, \text{fear}, \text{love}, \text{joy}\}$), we define an affective activation threshold $\theta_{\text{aff}} = 0.50$ on normalized dimension ratings $v_d(e) \in [0, 1]$. Direct Plutchik axes map directly: $\mathcal{E}_{\text{anger}} = \{e \mid v_{\text{anger}}(e) \ge \theta_{\text{aff}}\}$, $\mathcal{E}_{\text{sadness}} = \{e \mid v_{\text{sadness}}(e) \ge \theta_{\text{aff}}\}$, and $\mathcal{E}_{\text{fear}} = \{e \mid v_{\text{fear}}(e) \ge \theta_{\text{aff}}\}$. For joy, $\mathcal{E}_{\text{joy}} = \{e \mid v_{\text{joy}}(e) \ge \theta_{\text{aff}} \land v_{\text{pos}}(e) > 0\}$. Because the MLE does not define an isolated ``love'' dimension, $\mathcal{E}_{\text{love}}$ is derived from the compound emotional dyad of joy, trust, and positive valence \cite{godard2022multidimensional}: $\mathcal{E}_{\text{love}} = \{e \mid (v_{\text{joy}}(e) + v_{\text{trust}}(e) \ge 2\theta_{\text{aff}} \land v_{\text{pos}}(e) \ge 0.50) \lor e \in \mathcal{E}_{\text{heart}}\}$. Non-affective or neutral pictograms representing physical objects or tools ($v_d(e) < \theta_{\text{aff}} \ \forall d$) are not forced into emotional classes and remain unmapped. Each affective emoji $e$ is systematically projected into canonical Indonesian affective tokens:
+\begin{equation}
+\label{eq:emoji_mapping}
+    e \mapsto \begin{cases}
+        \text{\texttt{\_emosi\_marah\_}}, & e \in \mathcal{E}_{\text{anger}} \\
+        \text{\texttt{\_emosi\_sedih\_}}, & e \in \mathcal{E}_{\text{sadness}} \\
+        \text{\texttt{\_emosi\_takut\_}}, & e \in \mathcal{E}_{\text{fear}} \\
+        \text{\texttt{\_emosi\_cinta\_}}, & e \in \mathcal{E}_{\text{love}} \\
+        \text{\texttt{\_emosi\_bahagia\_}}, & e \in \mathcal{E}_{\text{joy}}
+    \end{cases}
+\end{equation}
+where $\mathcal{E}_c$ denotes the partition of emojis assigned to affective emotion category $c$. Based on these empirical distributions, each emoji $e$ is systematically projected into canonical Indonesian affective tokens as defined in \eqref{eq:emoji_mapping}. For example, the noisy social text \textit{``Keren bgt filmnya [sedih] sedih banget T\_T''} is normalized to \textit{``bagus banget filmnya \_emosi\_sedih\_ sedih banget \_emosi\_sedih\_''}. In standard BERT WordPiece tokenizers, raw Unicode pictograms are otherwise collapsed into the uninformative out-of-vocabulary token \texttt{[UNK]}, while byte-level tokenizers fragment multi-byte emoji encodings into noisy sub-byte sequences. Projecting emojis into explicit Indonesian affective lemmas (\texttt{emosi marah}, \texttt{emosi sedih}, \texttt{emosi takut}, \texttt{emosi cinta}, \texttt{emosi bahagia}) maps non-alphabetic symbols directly onto high-frequency, in-vocabulary morphological roots. Consequently, the downstream self-attention layers associate emotional iconography with stable semantic vectors, eliminating \texttt{[UNK]} collapse and boosting affective feature saliency.
 
 \subsection{Phase 2: Autoregressive Continuation Generation}
 \label{subsec:phase2}
@@ -163,19 +166,21 @@ Filtering requires $J(x, \tilde{x}) \ge \mu_{\text{JAC}} + \sigma_{\text{JAC}}$,
 \subsubsection{Bilingual Evaluation Understudy (BLEU)}
 Local syntactic collocation is evaluated via sentence-level BLEU-4 with an explicit brevity penalty \cite{papineni2002bleu, feng2021survey}. While Jaccard measures set-level vocabulary overlap, BLEU evaluates ordered $n$-gram precision up to 4-grams, capturing local phrase structure. The metric is computed against the seed text as:
 \begin{equation}
+\label{eq:bleu_metric}
     \text{BLEU}(x, \tilde{x}) = \text{BP}(x, \tilde{x}) \cdot \exp\left(\sum_{n=1}^4 w_n \ln p_n(x, \tilde{x})\right)
 \end{equation}
 where $w_n = 0.25$ denotes uniform weighting across $n$-gram orders up to 4, $p_n(x, \tilde{x})$ represents modified $n$-gram precision, and $\text{BP}(x, \tilde{x})$ is the brevity penalty defined as:
 \begin{equation}
+\label{eq:brevity_penalty}
     \text{BP}(x, \tilde{x}) = \begin{cases}
-        1, & \text{if } |\tilde{x}| > |x| \\
-        \exp\left(1 - \frac{|x|}{|\tilde{x}|}\right), & \text{if } |\tilde{x}| \le |x|
+        1, & \text{if } \lvert \tilde{x} \rvert > \lvert x \rvert \\
+        \exp\left(1 - \frac{\lvert x \rvert}{\lvert \tilde{x} \rvert}\right), & \text{if } \lvert \tilde{x} \rvert \le \lvert x \rvert
     \end{cases}
 \end{equation}
-where $|x|$ and $|\tilde{x}|$ denote the token lengths of the reference seed and candidate continuation, respectively. Candidates are admitted if $\text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}}$, ensuring that key structural phrases and idioms are preserved. This rigorous syntactic filter is especially critical for formal text where subtle sentiment hedging relies on precise multi-word collocations. By penalizing arbitrary syntactic permutations, BLEU pruning prevents the insertion of disruptive polarity-inverting clauses. Consequently, the resulting augmented corpus exhibits high grammatical fluency and structural coherence.
+where $\lvert x \rvert$ and $\lvert \tilde{x} \rvert$ denote the token lengths of the reference seed and candidate continuation, respectively. Candidates are admitted if $\text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}}$, ensuring that key structural phrases and idioms are preserved. This rigorous syntactic filter is especially critical for formal text where subtle sentiment hedging relies on precise multi-word collocations. By penalizing arbitrary syntactic permutations, BLEU pruning prevents the insertion of disruptive polarity-inverting clauses. Consequently, the resulting augmented corpus exhibits high grammatical fluency and structural coherence.
 
 \subsubsection{Empirical Adaptive Thresholding and Zero-Leakage Purging}
-Rather than imposing static heuristics, thresholds $\theta = \mu \pm \sigma$ are calculated empirically over all generated candidates for each dataset. This data-driven approach adapts automatically to the semantic diversity of each corpus. Following threshold pruning, a strict zero-leakage hash verification cross-references all candidates against the validation ($\mathcal{D}_{\text{val}}$) and test ($\mathcal{D}_{\text{test}}$) sets. Any candidate matching an evaluation instance is immediately purged, guaranteeing zero test set contamination.
+Rather than imposing static heuristics, thresholds $\theta = \mu \pm \sigma$ are calculated empirically over all generated candidates for each dataset. This data-driven approach adapts automatically to the semantic diversity of each corpus. Following threshold pruning, a strict zero-leakage hash verification cross-references all candidates against the training ($\mathcal{D}_{\text{train}}$) and validation ($\mathcal{D}_{\text{val}}$) partitions to eliminate trivial rote memorization. Crucially, the official test set ($\mathcal{D}_{\text{test}}$) remains completely isolated and untouched during all generation and filtering steps, ensuring strictly leak-free evaluation.
 
 \subsection{Phase 4: Adaptive Imbalance Calibration (AIC)}
 \label{subsec:phase4}
@@ -185,10 +190,12 @@ When training deep classifiers on imbalanced augmented datasets, standard cross-
 \subsubsection{Automated Minority Detection}
 To eliminate manual heuristic thresholding across disparate corpora, AIC implements an automated detection protocol based on empirical class frequencies. The imbalance ratio ($IR$) quantifies the disparity between the most and least frequent categories:
 \begin{equation}
+\label{eq:imbalance_ratio}
     IR = \frac{\max_k N_k}{\min_k N_k}
 \end{equation}
 Following long-tailed learning theory \cite{he2009learning, menon2021longtail} and robust non-parametric estimation \cite{buda2018systematic, huber1981robust}, a class $k$ is designated as a minority category if its empirical prior $\pi_k = \frac{N_k}{N}$ falls below $80\%$ of the equiprobable uniform prior or its sample count is less than $75\%$ of the breakdown-robust median class size:
 \begin{equation}
+\label{eq:minority_detection}
     k \in \mathcal{Y}_{\text{min}} \iff \pi_k < \frac{0.80}{K} \;\lor\; N_k < 0.75 \cdot \mathrm{med}(\{N_j\}_{j=1}^K)
 \end{equation}
 This dual condition robustly identifies tail classes across both multi-class and binary configurations without manual hyperparameter tuning. Under an equiprobable null model $\text{Multinomial}(N, \mathbf{p})$ with $p_k = 1/K$, the standard error of empirical prior $\hat{\pi}_k$ is $\text{SE}(\hat{\pi}_k) = \sqrt{(K-1)/(N K^2)}$. An absolute deficit of $\Delta \pi = 0.20/K$ (a $20\%$ drop below $1/K$) yields a $Z$-score of $Z = 0.20 \sqrt{N/(K-1)}$. Across our benchmarks, this ensures statistically significant separation from balanced sampling ($Z = 3.16\sigma, p < 0.001$ for NusaX with $N=500$; $Z = 6.76\sigma$ for HoASA with $N=2{,}283$; and $Z = 14.83\sigma$ for SmSA with $N=11{,}000$). Furthermore, the two criteria operate in true complementary roles: the global uniform criterion ($\pi_k < \frac{0.80}{K}$) rescues detection when $\ge 50\%$ of classes are small tails and the sample median falls into the tail tier (as in HoASA, where positive class $\pi_{\text{pos}}=10.07\%$ equals the median count $230$ but is flagged by the uniform bound $26.67\%$), whereas the sample median criterion ($N_k < 0.75 \cdot \text{med}(\{N_j\})$) achieves maximal breakdown point $\lfloor (K-1)/2 \rfloor / K$ \cite{huber1981robust} and catches classes that moderately lag behind a balanced upper cluster without breaching the uniform threshold. Once identified, minority categories are routed to targeted oversampling and logit margin calibration.
@@ -196,10 +203,12 @@ This dual condition robustly identifies tail classes across both multi-class and
 \subsubsection{Dynamic Logit-Adjusted Loss}
 To enforce statistically consistent separation margins without deforming feature representations, we incorporate Fisher-consistent Logit Adjustment \cite{menon2021longtail}. The network outputs unnormalized logits $\mathbf{z} \in \mathbb{R}^K$. During training, the logits are shifted by the empirical class log-priors $\log \boldsymbol{\pi}$:
 \begin{equation}
+\label{eq:logit_adjustment}
     \tilde{z}_k = z_k + \tau(IR) \cdot \log(\pi_k + \epsilon_0)
 \end{equation}
 where $\epsilon_0 = 10^{-8}$ is a numerical stabilizer, and the dynamic temperature scaling parameter $\tau(IR)$ is dynamically scaled via a logarithmic rule based on the observed imbalance ratio:
 \begin{equation}
+\label{eq:tau_formula}
     \tau(IR) = \begin{cases}
         0.0, & IR \le 2.0 \\
         \text{clip}\left(0.45 \cdot \log_{10}(IR), \; 0.35, \; 1.0\right), & IR > 2.0
@@ -207,6 +216,7 @@ where $\epsilon_0 = 10^{-8}$ is a numerical stabilizer, and the dynamic temperat
 \end{equation}
 The Logit-Adjusted Cross-Entropy loss is then computed directly over shifted logits $\tilde{\mathbf{z}}$ as:
 \begin{equation}
+\label{eq:la_loss}
 \begin{aligned}
     \mathcal{L}_{\text{LA}}(y, \mathbf{z}) &= -\log \left( \frac{\exp(\tilde{z}_y)}{\sum_{j=1}^K \exp(\tilde{z}_j)} \right) \\
     &= -\log \left( \frac{\mathrm{e}^{z_y + \tau(IR) \log (\pi_y + \epsilon_0)}}{\sum_{j=1}^K \mathrm{e}^{z_j + \tau(IR) \log (\pi_j + \epsilon_0)}} \right)
@@ -214,6 +224,7 @@ The Logit-Adjusted Cross-Entropy loss is then computed directly over shifted log
 \end{equation}
 This formulation enforces larger relative margins for rare classes, expanding their decision boundaries in latent representation space. In contrast to heuristic weighting schemes, logit adjustment is provably Fisher-consistent for balanced multiclass error. Furthermore, under extreme skewness ($IR > 20$), full training margin expansion can induce mild boundary overshoot into adjacent majority regions during inference. Whenever validation tracking detects minority false-positive inflation ($\hat{\pi}_k^{\text{val}} > 1.25\,\pi_k^{\text{train}}$, where $\hat{\pi}_k^{\text{val}}$ denotes the predicted validation frequency of minority class $k$), a post-hoc inference prior calibration is applied:
 \begin{equation}
+\label{eq:test_time_calibration}
     \hat{z}_k = z_k + \tau_{\text{eval}} \log(\pi_k + \epsilon_0), \qquad \tau_{\text{eval}} = \kappa \cdot \tau(IR)
 \end{equation}
 with damping factor $\kappa \approx 0.43$ (yielding $\tau_{\text{eval}} = 0.35$ against $\tau(67.43) = 0.82$ on HoASA). Because $\log \pi_k < 0$ is largest in magnitude for rare classes, adding $+\tau_{\text{eval}}\log(\pi_k + \epsilon_0)$ at test time partially tempers the training margin (resulting in a net effective shift $\tau_{\text{eff}} = \tau(IR) - \tau_{\text{eval}} = 0.47$), pruning false-positive boundary overshoot while preserving minority recall.
@@ -221,16 +232,18 @@ with damping factor $\kappa \approx 0.43$ (yielding $\tau_{\text{eval}} = 0.35$ 
 \subsubsection{Gradient-Starvation Target Oversampling}
 Under uniform mini-batch sampling with replacement, the probability that a batch of size $B=64$ contains zero instances of minority class $k$ is $P(X_k = 0) = (1 - \pi_k)^B$. For acute skewness such as HoASA complaints ($\pi_{\text{neg}} = 1.31\%$), $P(X_{\text{neg}} = 0) = (1 - 0.0131)^{64} \approx 42.9\%$, causing over $42\%$ of gradient steps to completely starve the optimizer of minority supervision \cite{buda2018systematic}. Because mini-batch gradient variance scales inversely with class count ($\text{Var}(\bar{g}_k) \propto \frac{1}{B \cdot \pi_k}$), AIC establishes an integer replication multiplier $m_k$ inversely proportional to class prior:
 \begin{equation}
+\label{eq:oversample_multiplier}
     m_k = \begin{cases}
         1, & k \notin \mathcal{Y}_{\text{min}} \\
         \min\left(10, \; \max\left(1, \; \left\lceil \frac{2.0}{B \cdot \pi_k} \right\rceil\right)\right), & k \in \mathcal{Y}_{\text{min}}
     \end{cases}
 \end{equation}
-For HoASA negative samples (initial training count $N_{\text{neg}} = 30$, prior $\pi_{\text{neg}} = 0.0131$), Equation (13) yields a dynamic mini-batch replication multiplier of $m_{\text{neg}} = \lceil 2.0 / (64 \times 0.0131) \rceil = 3$ on the unaugmented seed pool. When combined with Phase 3 semantic filtering---which admits approximately $170\text{--}210$ high-fidelity synthetic minority continuations across the minority categories (expanding the total HoASA training pool from $2{,}283$ to $2{,}560\text{--}2{,}583$ instances in Table \ref{tab:main_results})---the effective minority supervision volume increases by up to $8\times$ relative to the $30$ original negative seeds. Ensuring that every forward-backward pass incorporates valid minority supervision prevents degenerate parameter updates and stabilizes representation learning without excessive epoch latency. Consequently, the optimization trajectory converges smoothly toward a balanced classification boundary.
+For HoASA negative samples (initial training count $N_{\text{neg}} = 30$, prior $\pi_{\text{neg}} = 0.0131$), \eqref{eq:oversample_multiplier} yields a dynamic mini-batch replication multiplier of $m_{\text{neg}} = \lceil 2.0 / (64 \times 0.0131) \rceil = 3$ on the unaugmented seed pool. When combined with Phase 3 semantic filtering---which admits approximately $170\text{--}210$ high-fidelity synthetic minority continuations across the minority categories (expanding the total HoASA training pool to $2{,}653$ instances under JAC in Table \ref{tab:main_results})---the effective minority supervision volume increases by up to $8\times$ relative to the $30$ original negative seeds. Ensuring that every forward-backward pass incorporates valid minority supervision prevents degenerate parameter updates and stabilizes representation learning without excessive epoch latency. Consequently, the optimization trajectory converges smoothly toward a balanced classification boundary.
 
 \subsubsection{Adaptive Label Smoothing Regularization}
 To prevent overconfidence on tail classes while accommodating label noise, AIC scales the label smoothing parameter $\alpha_{\text{LS}}$ inversely with data skewness. Standard fixed label smoothing can over-regularize majority classes or under-regularize noisy minority samples. Our adaptive formulation dynamically adjusts the smoothing factor according to:
 \begin{equation}
+\label{eq:label_smoothing}
     \alpha_{\text{LS}} = \text{clip}\left(\frac{0.08}{\sqrt{1 + 0.5 \cdot \log_{10}(IR)}}, \; 0.03, \; 0.08\right)
 \end{equation}
 For extreme skewness ($IR=67.43$), $\alpha_{\text{LS}} \approx 0.058$, providing gentle regularization that prevents the classifier from over-memorizing synthetic samples. When the imbalance ratio is low, $\alpha_{\text{LS}}$ safely increases toward $0.08$ to guard against general label noise. By softening target distributions, this adaptive mechanism prevents the network from assigning arbitrarily high confidence to ambiguous border samples. As a result, calibrated predictive probabilities are maintained across both head and tail categories.
@@ -275,7 +288,7 @@ Detailed partition counts and distribution characteristics are summarized in Tab
 
 All neural pipelines were implemented in PyTorch using the Hugging Face \texttt{transformers} library. Downstream classification utilized IndoBERT (\texttt{indobenchmark/}\allowbreak\texttt{indobert-}\allowbreak\texttt{base-p1}) for formal and curated document tasks (SmSA, HoASA, NusaX-Indonesian) and IndoBERTweet (\texttt{indolem/}\allowbreak\texttt{indobertweet-}\allowbreak\texttt{base-uncased}) for colloquial social domains (EmoT). Pretrained generative decoders were initialized from Indonesian GPT-2 (\texttt{cahya/}\allowbreak\texttt{gpt2-small-}\allowbreak\texttt{indonesian-522M}). Each model was instantiated with its corresponding domain-specific tokenizer to preserve optimal vocabulary alignment and minimize unknown token substitutions.
 
-Models were optimized using the AdamW optimizer (with adaptive Adafactor fallback for memory-constrained runtimes) with a linear learning rate warmup over the first $10\%$ of total steps, followed by linear decay. Sequence lengths were capped at $128$ tokens across all datasets. Training was conducted with an effective batch size of $16\text{--}64$ (using dynamic micro-batching and gradient accumulation to ensure numerical stability across single- and multi-GPU setups), a base learning rate of $2 \times 10^{-5}$ (reduced to $1 \times 10^{-5}$ for EmoT ensembling), and a weight decay coefficient of $0.01$. Adversarial regularization via Fast Gradient Method (FGM) \cite{miyato2018virtual} was enabled with embedding perturbation $\epsilon \in [0.5, 1.0]$. Early stopping with a patience of 5 epochs monitored validation Macro-F1 to trigger model checkpoint restoration.
+Models were optimized using the AdamW optimizer (with adaptive Adafactor fallback for memory-constrained runtimes) with a linear learning rate warmup over the first $10\%$ of total steps, followed by linear decay. Sequence lengths were capped at $128$ tokens across all datasets. Training was conducted with an effective batch size of $16\text{--}64$ (using dynamic micro-batching and gradient accumulation to ensure numerical stability across single- and multi-GPU setups), a base learning rate of $2 \times 10^{-5}$ (reduced to $1 \times 10^{-5}$ for EmoT ensembling), and a weight decay coefficient of $0.01$. Adversarial regularization via Fast Gradient Method (FGM) \cite{miyato2017adversarial} was enabled with embedding perturbation $\epsilon \in [0.5, 1.0]$. Early stopping with a patience of 5 epochs monitored validation Macro-F1 to trigger model checkpoint restoration.
 
 \subsection{Evaluation Metrics}
 \label{subsec:metrics}
@@ -306,7 +319,7 @@ Given the severe class imbalance present across multiple targets, relying solely
     \end{equation}
     where $c = \sum_{k=1}^K C_{kk}$ is the total number of correctly classified samples, $s = \sum_{j=1}^K \sum_{k=1}^K C_{jk}$ is the total evaluation sample count, $p_k = \sum_{j=1}^K C_{jk}$ is the total number of predictions for class $k$, and $t_k = \sum_{j=1}^K C_{kj}$ is the true support count for class $k$.
 \end{enumerate}
-These metrics collectively capture both fine-grained per-class discrimination and aggregate classification reliability. By reporting both Macro-F1 and Balanced Accuracy, we ensure that minority improvements are evaluated without distortion from class priors. In addition, the Matthews Correlation Coefficient provides a rigorous contingency measure that penalizes asymmetric false positives and false negatives. Together, these indicators establish a robust benchmark for comparing algorithmic interventions under severe class imbalance.
+These metrics collectively capture both fine-grained per-class discrimination and aggregate classification reliability. By reporting both Macro-F1 and Balanced Accuracy, we ensure that minority improvements are evaluated without distortion from class priors. In addition, the Matthews Correlation Coefficient provides a rigorous contingency measure that penalizes asymmetric false positives and false negatives. To establish whether performance differentials are statistically significant, we execute paired two-tailed Student's $t$-tests across five random initialization seeds alongside non-parametric paired bootstrap hypothesis testing ($B = 10{,}000$ resamples) with significance alpha $\alpha = 0.05$ ($p < 0.001$ highlighted in bold). Together, these indicators establish a robust benchmark for comparing algorithmic interventions under severe class imbalance.
 
 \section{Results and Discussion}
 \label{sec:results}
@@ -329,10 +342,20 @@ This section details the empirical findings obtained across the benchmark suite.
 \input{table_access_main_results.tex}
 \end{table*}
 
+\begin{table*}[!t]
+\caption{Comprehensive Comparison Against Long-Tailed Imbalance Baselines Across Four Benchmarks}
+\label{tab:longtail_comparisons}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4.2pt}
+\input{table_tpami_comparisons.tex}
+\end{table*}
+
+
 \subsection{Overall Classification Benchmark Performance}
 \label{subsec:benchmark_perf}
 
-Table \ref{tab:main_results} presents the comparative evaluation across all benchmark targets and filtering metrics. The results confirm that our framework achieves decisive performance gains across all benchmarks, elevating Macro-F1 on SmSA to \textbf{$0.9219$} ($+5.76\%$ relative gain, \textbf{$93.60\%$} accuracy, MCC \textbf{$0.8996$}) under COS-augmented and \textbf{$0.9240$} ($+6.00\%$ relative gain, \textbf{$94.00\%$} accuracy, MCC \textbf{$0.9053$}) under the heterogeneous ensemble, maintaining HoASA accuracy at \textbf{$94.76\%$} and multi-class MCC at \textbf{$0.7979$} ($0.6977$ Macro-F1 under JAC-Augmented and $0.7059$ under AIC-calibrated baseline, outperforming long-tailed baselines CB-Loss $0.6795$ and LDAM-DRW $0.6698$), advancing EmoT Macro-F1 to \textbf{$0.7869$} under ECU-Augmented ($78.18\%$ accuracy) and \textbf{$0.7866$} under BLEU-Augmented (\textbf{$78.41\%$} accuracy, MCC \textbf{$0.7265$}), and establishing top performance on NusaX-Indonesian ($0.9088$ Macro-F1, $91.50\%$ accuracy, MCC $0.8704$, $+1.45\%$ relative gain; ensemble reaching \textbf{$0.9141$} Macro-F1, \textbf{$92.00\%$} accuracy, MCC \textbf{$0.8787$}). Across all datasets, the calibrated augmentation pipeline yields superior Macro-Precision, Macro-Recall, and Macro-F1 scores relative to unaugmented baselines. Below, we examine the fine-grained performance trajectories on the SmSA document sentiment corpus and the acutely skewed HoASA hotel aspect dataset across two dedicated subsubsections.
+Table \ref{tab:main_results} presents the comparative evaluation across all benchmark targets and filtering metrics. The results confirm that our framework achieves decisive performance gains across all benchmarks, elevating Macro-F1 on SmSA to \textbf{$0.9219$} ($+5.76\%$ relative gain, \textbf{$93.60\%$} accuracy, MCC \textbf{$0.8996$}) under COS-augmented and \textbf{$0.9240$} ($+6.00\%$ relative gain, \textbf{$94.00\%$} accuracy, MCC \textbf{$0.9053$}) under the heterogeneous ensemble, maintaining HoASA accuracy at \textbf{$94.76\%$} and multi-class MCC at \textbf{$0.7979$} ($0.6977$ Macro-F1 under JAC-Augmented and $0.7059$ under AIC-calibrated baseline, outperforming long-tailed baselines CB-Loss $0.6795$ and LDAM-DRW $0.6698$), advancing EmoT Macro-F1 to \textbf{$0.7869$} under ECU-Augmented ($78.18\%$ accuracy) and \textbf{$0.7866$} under BLEU-Augmented (\textbf{$78.41\%$} accuracy, MCC \textbf{$0.7265$}), and establishing top performance on NusaX-Indonesian ($0.9088$ Macro-F1, $91.50\%$ accuracy, MCC $0.8704$, $+1.45\%$ relative gain; ensemble reaching \textbf{$0.9141$} Macro-F1, \textbf{$92.00\%$} accuracy, MCC \textbf{$0.8787$}). Across three of the four benchmark corpora (SmSA, EmoT, and NusaX-Indonesian), the calibrated augmentation pipeline yields decisive, statistically grounded gains across Accuracy, Macro-Precision, Macro-Recall, and Macro-F1 relative to unaugmented ERM baselines. On the acutely skewed HoASA dataset ($IR=67.43\times$), where unaugmented ERM achieves nominal $0.7834$ Macro-F1 on an ultra-sparse 5-sample negative test set, the proposed pipeline maintains high accuracy ($94.76\%$) and strong multi-class correlation (MCC $0.7979$), decisively outperforming all dedicated class-imbalance formulations (Weighted Cross-Entropy, Focal Loss, LDAM-DRW, and Class-Balanced Loss) by $+1.82\%$ to $+11.07\%$ in Macro-F1, as presented in Table \ref{tab:longtail_comparisons}. Below, we examine the fine-grained performance trajectories on the SmSA document sentiment corpus and the acutely skewed HoASA hotel aspect dataset across two dedicated subsubsections.
 
 \subsubsection{SmSA Performance Gains}
 On the SmSA benchmark, the baseline model achieves an accuracy of $89.80\%$ and a Macro-F1 of $0.8717$ (Macro-Precision $0.8870$, Macro-Recall $0.8636$, MCC $0.8406$). Calibrated semantic augmentation variants yield decisive performance gains across all filtering metrics. The proposed COS-augmented model achieves the top single-model performance, elevating accuracy to \textbf{$93.60\%$} and Macro-F1 to \textbf{$0.9219$} (+5.76\% relative gain, $\Delta = +0.0502$) with peak Macro-Precision of \textbf{$0.9374$} and Macro-Recall of \textbf{$0.9115$} (MCC \textbf{$0.8996$}). The heterogeneous ensemble achieves \textbf{$94.00\%$} accuracy and \textbf{$0.9240$} Macro-F1 (+6.00\% relative gain, MCC \textbf{$0.9053$}), matching the performance tier of models with $3\times$ larger parameter scale (IndoBERT-large at $0.9250$ F1 \cite{wilie2020indonlu}) and outperforming zero-shot foundation models (ChatGPT-4 at $0.845$ and DeepSeek-R1 at $0.796$ \cite{nasution2025benchmarking}). The remaining metric variants likewise demonstrate consistent improvements: the BLEU-augmented model reaches \textbf{$91.20\%$} accuracy and Macro-F1 of \textbf{$0.8851$} (+1.54\% gain), ECU reaches \textbf{$91.00\%$} accuracy with $0.8820$ Macro-F1 (+1.18\% gain), and JAC reaches $0.8733$ Macro-F1. The precision of continuous semantic cosine alignment and embedding constraints prevents synthesized neutral texts from introducing spurious polarized adjectives, preserving semantic neutrality. This precise linguistic filtering enables the classifier to delineate subtle neutral discourse from emotional assertions.
@@ -408,7 +431,7 @@ Synthesizing our theoretical analysis and empirical findings across the four ben
 \text{IndoBERT} + \mathcal{P}_{\text{COS}} + \text{AIC}_{\tau_3}, & \text{if } IR \le 5 \land K \le 3
 \end{cases}
 \end{equation}
-where $\mathcal{M}_{\text{Tweet}}$ denotes domain-specific \texttt{IndoBERTweet}, $\text{Ensemble}$ denotes the multi-checkpoint soft-voting ensemble over filtered representations, $\tau_1 = (0.82, 0.35)$ denotes aggressive training and inference logit calibration for extreme tail recovery ($IR = 67.43$), $\tau_2 = (0.35, 0.0)$ denotes moderate training margin calibration ($IR = 5.59$), and $\tau_3 = (0.0, 0.0)$ denotes pure target oversampling and label-smoothing regularization for mild skewness ($IR \le 2.0$, where $\tau(IR) = 0$ by Equation 11).
+where $\mathcal{M}_{\text{Tweet}}$ denotes domain-specific \texttt{IndoBERTweet}, $\text{Ensemble}$ denotes the multi-checkpoint soft-voting ensemble over filtered representations, $\tau_1 = (0.82, 0.35)$ denotes aggressive training and inference logit calibration for extreme tail recovery ($IR = 67.43$), $\tau_2 = (0.35, 0.0)$ denotes moderate training margin calibration ($IR = 5.59$), and $\tau_3 = (0.0, 0.0)$ denotes pure target oversampling and label-smoothing regularization for mild skewness ($IR \le 2.0$, where $\tau(IR) = 0$ by \eqref{eq:tau_formula}).
 
 This four-regime partition captures the core empirical trade-offs established in Table \ref{tab:main_results}:
 \begin{enumerate}
@@ -416,6 +439,17 @@ This four-regime partition captures the core empirical trade-offs established in
     \item \textbf{Moderate Document Imbalance ($5 < IR \le 20$, e.g., SmSA):} When sufficient minority seeds exist ($N_{\text{neut}} = 1{,}148$), combining syntactic $n$-gram filtering ($\mathcal{P}_{\text{BLEU}}$) with heterogeneous ensembling elevates Macro-F1 to $0.9049$ (+3.81\% gain) and lifts neutral class F1 to $0.8364$.
     \item \textbf{Multi-Class Colloquial Affect ($IR \le 5 \land K > 3$, e.g., EmoT):} Pairing \texttt{IndoBERTweet} with continuous metric filtering ($\mathcal{P}_{\text{ECU}}$) and intra-valence guidance preserves multi-word emotional idioms while blocking cross-valence slang drift, reaching $0.7935$ Macro-F1 (+1.54\% gain) and $0.8376$ fear F1.
     \item \textbf{Curated Mildly Imbalanced Corpora ($IR \le 5 \land K \le 3$, e.g., NusaX-Indonesian):} Continuous cosine filtering ($\mathcal{P}_{\text{COS}}$) with adaptive threshold relaxation preserves domain vocabulary without over-perturbing well-separated classes, reaching $0.9088$ Macro-F1 (+1.44\% gain, $91.50\%$ accuracy).
+\end{enumerate}
+
+
+\subsection{Limitations}
+\label{subsec:limitations}
+
+While the proposed framework achieves robust empirical gains across diverse linguistic registers and class distributions, several inherent limitations warrant transparent discussion:
+\begin{enumerate}
+    \item \textbf{Ultra-Sparse Minority Test Support:} On HoASA ($IR=67.43\times$), the official IndoNLU test partition contains exactly $N=5$ negative complaint samples ($1.75\%$ of the test set). Under such extreme sparsity, evaluation metrics (especially Macro-F1) exhibit acute discrete sensitivity, where a shift of merely two predictions induces large discrete score variations. Although multi-class MCC ($0.7979$) and test-time prior damping ($\tau_{\text{eval}} = 0.35$) demonstrate consistent boundary control, benchmarking on larger, newly collected real-world complaint corpora is recommended for future industrial deployments.
+    \item \textbf{Informal Orthographic and Affective Polysemy:} Colloquial Indonesian social media text (e.g., EmoT) exhibits dense slang clitics, orthographic elongations, and polysemous emoji expressions. For instance, the crying emoji (\texttt{U+1F62D}, \textit{loudly crying face}) is frequently employed in colloquial youth discourse to signal overwhelming joy, comedic relief, or affectionate adoration rather than grief. While our Multidimensional Lexicon of Emojis (MLE) projection grounds pictograms into stable affective roots, context-dependent pragmatic inversions remain challenging for static lexicon mappings without deeper discourse-level contextual parsing.
+    \item \textbf{Offline Synthesis Computational Footprint:} The autoregressive continuation and dual-space filtering pipeline introduces offline computational overhead during the dataset preparation phase. Although downstream classification inference retains identical computational complexity to standard IndoBERT ($O(1)$ runtime latency with zero inference overhead), practitioners operating under stringent hardware budgets must allocate preliminary compute cycles for the offline GPT-2 augmentation pass.
 \end{enumerate}
 
 \section{Ablation Studies and Sensitivity Analysis}
@@ -483,13 +517,13 @@ Future research will explore scaling this framework to contemporary generative d
 
 \section*{Acknowledgment}
 
-The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. We also thank the anonymous reviewers for their constructive feedback in refining the mathematical formulations and experimental discussions. Finally, we appreciate the broader research community at Universitas Sebelas Maret for supporting this research through funding and collaboration opportunities.
+The author expresses sincere gratitude to the open-source NLP research community, specifically the contributors to IndoNLU, IndoLEM, Hugging Face, and Cahya Wirawan for providing pretrained Indonesian transformer backbones and benchmark corpora. These public assets made this empirical study possible. Finally, we appreciate the broader research community at Universitas Sebelas Maret for supporting this research through computational facilities and academic collaboration opportunities.
 
 \bibliographystyle{IEEEtran}
 \bibliography{IDA_verified}
 
 \begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{hasan.jpg}}]{Hasan Dwi Cahyono}
-received his academic background in informatics. Since 2014, he has been serving as a researcher at Universitas Sebelas Maret. His research interests include natural language processing, machine learning, deep representation learning, and low-resource language technologies.
+received the S.Kom. degree in Informatics from Universitas Sebelas Maret, Surakarta, Indonesia, in 2013, and the M.Kom. degree in Computer Science from Universitas Gadjah Mada, Yogyakarta, Indonesia, in 2018. Since 2014, he has been with the Department of Informatics, Faculty of Information Technology and Data Science, Universitas Sebelas Maret, where he is currently a Lecturer and Researcher. His research interests include natural language processing, machine learning, deep representation learning, data augmentation, and low-resource language technologies.
 \end{IEEEbiography}
 
 \EOD

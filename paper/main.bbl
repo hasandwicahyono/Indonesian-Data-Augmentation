@@ -337,10 +337,12 @@ M.~Buda, A.~Maki, and M.~A. Mazurowski, ``A systematic study of the class
 P.~J. Huber, \emph{Robust Statistics}.\hskip 1em plus 0.5em minus 0.4em\relax
   New York: John Wiley \& Sons, 1981.
 
-\bibitem{miyato2018virtual}
-T.~Miyato, S.~ichi Maeda, M.~Koyama, and S.~Ishii, ``Virtual adversarial
-  training: A regularization method for supervised and semi-supervised
-  learning,'' \emph{IEEE Transactions on Pattern Analysis and Machine
-  Intelligence}, vol.~41, no.~8, pp. 1979--1993, 2019.
+\bibitem{miyato2017adversarial}
+\BIBentryALTinterwordspacing
+T.~Miyato, A.~M. Dai, and I.~Goodfellow, ``Adversarial training methods for
+  semi-supervised text classification,'' in \emph{International Conference on
+  Learning Representations (ICLR)}, 2017. [Online]. Available:
+  \url{https://openreview.net/forum?id=r1Xikp9gx}
+\BIBentrySTDinterwordspacing
 
 \end{thebibliography}

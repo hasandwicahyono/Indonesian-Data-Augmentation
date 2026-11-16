@@ -15,42 +15,42 @@ Database file #1: IDA_verified.bib
 Done.
 You've used 56 entries,
             4087 wiz_defined-function locations,
-            1112 strings with 20332 characters,
-and the built_in function-call counts, 56555 in all, are:
-= -- 4290
-> -- 1668
-< -- 539
-+ -- 979
-- -- 350
-* -- 2746
-:= -- 7452
+            1112 strings with 20377 characters,
+and the built_in function-call counts, 56027 in all, are:
+= -- 4239
+> -- 1654
+< -- 526
++ -- 969
+- -- 349
+* -- 2720
+:= -- 7394
 add.period$ -- 112
 call.type$ -- 56
 change.case$ -- 54
-chr.to.int$ -- 1365
+chr.to.int$ -- 1335
 cite$ -- 56
-duplicate$ -- 3784
-empty$ -- 4554
-format.name$ -- 344
-if$ -- 13443
+duplicate$ -- 3756
+empty$ -- 4541
+format.name$ -- 343
+if$ -- 13317
 int.to.chr$ -- 0
 int.to.str$ -- 56
-missing$ -- 674
-newline$ -- 191
+missing$ -- 672
+newline$ -- 193
 num.names$ -- 56
-pop$ -- 1687
+pop$ -- 1691
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 4337
+skip$ -- 4298
 stack$ -- 0
-substring$ -- 3438
-swap$ -- 3315
-text.length$ -- 84
+substring$ -- 3368
+swap$ -- 3270
+text.length$ -- 81
 text.prefix$ -- 0
 top$ -- 5
 type$ -- 56
 warning$ -- 0
-while$ -- 251
+while$ -- 247
 width$ -- 58
 write$ -- 552
