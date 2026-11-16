@@ -1,33 +1,33 @@
-\begin{tabularx}{\textwidth}{l l l >{\raggedright\arraybackslash}X c c >{\centering\arraybackslash}X}
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}X c c c}
 \toprule
-\textbf{Dataset} & \textbf{Study / Reference} & \textbf{Model / Architecture} & \textbf{Evaluation Protocol / Setting} & \textbf{Published Score} & \textbf{Our Baseline} & \textbf{Our Proposed Pipeline} \\
+\textbf{Dataset} & \textbf{Study / Reference} & \textbf{Model / Architecture} & \textbf{Evaluation Protocol / Setting} & \textbf{Published} & \textbf{Our Baseline} & \textbf{Our Proposed} \\
 \midrule
 \multirow{6}{*}{\textbf{SmSA}}
-& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-base (124M) & Supervised fine-tuning, IndoNLU split & 89.33\% F1 & \multirow{6}{*}{\shortstack[c]{0.8717 F1\\(89.80\% Acc)}} & \multirow{6}{*}{\shortstack[c]{\textbf{0.9219} (COS)\\ \textbf{0.9240} (Ensemble)\\(94.00\% Acc, MCC 0.9053)}} \\
-& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-large (335M) & Supervised fine-tuning, IndoNLU split & 92.51\% F1 & & \\
-& Ahmadian et al. \cite{ahmadian2024hybrid} & IndoBERT + BiLSTM-Large & Supervised hybrid recurrent-transformer & 0.9300 F1 & & \\
-& Nasution et al. \cite{nasution2025benchmarking} & DeepSeek-R1 (32B) & Zero-shot LLM reasoning & 0.7960 Macro-F1 & & \\
-& Nasution et al. \cite{nasution2025benchmarking} & ChatGPT-4 ($\sim$1.8T) & Zero-shot prompt evaluation & 0.8450 Macro-F1 & & \\
-& Nasution et al. \cite{nasution2025benchmarking} & Human Baseline & Inter-annotator agreement ceiling & 0.8460 Macro-F1 & & \\
+& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-base (124M) & Supervised FT, IndoNLU split & 89.33\% F1 & \multirow{6}{*}{\shortstack[c]{0.8717 F1\\(89.80\% Acc)}} & \multirow{6}{*}{\shortstack[c]{\textbf{0.9219} (COS)\\ \textbf{0.9240} (Ens.)\\(94.00\% Acc)}} \\
+& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-large (335M) & Supervised FT, IndoNLU split & 92.51\% F1 & & \\
+& Ahmadian et al. \cite{ahmadian2024hybrid} & IndoBERT+BiLSTM & Supervised hybrid pipeline & 0.9300 F1 & & \\
+& Nasution et al. \cite{nasution2025benchmarking} & DeepSeek-R1 (32B) & Zero-shot LLM reasoning & 0.7960 F1 & & \\
+& Nasution et al. \cite{nasution2025benchmarking} & ChatGPT-4 ($\sim$1.8T) & Zero-shot prompt evaluation & 0.8450 F1 & & \\
+& Nasution et al. \cite{nasution2025benchmarking} & Human Baseline & Inter-annotator ceiling & 0.8460 F1 & & \\
 \midrule
 \multirow{6}{*}{\textbf{EmoT}}
-& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-base (124M) & Supervised fine-tuning, IndoNLU split & 71.80\% F1 & \multirow{6}{*}{\shortstack[c]{0.7814 F1\\(77.95\% Acc)}} & \multirow{6}{*}{\shortstack[c]{\textbf{0.7869} (ECU)\\ \textbf{0.7866} (BLEU, 78.41\% Acc)\\ \textbf{0.7862} (Ensemble)}} \\
-& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-large (335M) & Supervised fine-tuning, IndoNLU split & 72.23\% F1 & & \\
-& Koto et al. \cite{koto2020indolem} & IndoBERTweet (124M) & Supervised fine-tuning on Twitter domain & 0.7710 F1 & & \\
-& Ahmadian et al. \cite{ahmadian2024hybrid} & Hybrid BiLSTM-Transformer & Supervised fine-tuning, Phase 1 & 78.00\% Acc & & \\
-& Nasution et al. \cite{nasution2025benchmarking} & LLaMA-3.1 (70B) & Zero-shot LLM reasoning & 0.7810 Macro-F1 & & \\
-& Nasution et al. \cite{nasution2025benchmarking} & Human Baseline & Inter-annotator agreement ceiling & 0.7720 Macro-F1 & & \\
+& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-base (124M) & Supervised FT, IndoNLU split & 71.80\% F1 & \multirow{6}{*}{\shortstack[c]{0.7814 F1\\(77.95\% Acc)}} & \multirow{6}{*}{\shortstack[c]{\textbf{0.7869} (ECU)\\ \textbf{0.7866} (BLEU)\\ \textbf{0.7862} (Ens.)}} \\
+& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-large (335M) & Supervised FT, IndoNLU split & 72.23\% F1 & & \\
+& Koto et al. \cite{koto2020indolem} & IndoBERTweet (124M) & Supervised FT, Twitter domain & 0.7710 F1 & & \\
+& Ahmadian et al. \cite{ahmadian2024hybrid} & Hybrid Transformer & Supervised FT, Phase 1 & 78.00\% Acc & & \\
+& Nasution et al. \cite{nasution2025benchmarking} & LLaMA-3.1 (70B) & Zero-shot LLM reasoning & 0.7810 F1 & & \\
+& Nasution et al. \cite{nasution2025benchmarking} & Human Baseline & Inter-annotator ceiling & 0.7720 F1 & & \\
 \midrule
 \multirow{4}{*}{\textbf{HoASA}}
-& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-base (124M) & Multi-aspect joint evaluation ($\sim$90\% dominant) & 89.98\% F1 & \multirow{4}{*}{\shortstack[c]{0.7834 F1\\(95.45\% Acc)\\$F_1(\text{neg})=0.50$}} & \multirow{4}{*}{\shortstack[c]{\textbf{0.6977} (JAC)\\ \textbf{0.7059} (AIC Base)\\(94.76\% Acc, MCC 0.7979)\\$F_1(\text{neg})=0.25$}} \\
-& Purnomo \& Sutopo \cite{purnomo2024comparison} & IndoBERT (124M) & Multi-aspect joint classification & 89.80\% F1 & & \\
-& Dedicated Imbalance Baselines & WCE / Focal / LDAM / CB-Loss & Isolated general aspect sub-task ($IR=67.43\times$) & 0.5870--0.6795 F1 & & \\
-& Standard ERM (Unaugmented) & IndoBERT-base (124M) & Isolated general aspect sub-task ($IR=67.43\times$) & $F_1(\text{neg})=0.00$--$0.50$ & & \\
+& Wilie et al. \cite{wilie2020indonlu} & IndoBERT-base (124M) & Joint multi-aspect evaluation & 89.98\% F1 & \multirow{4}{*}{\shortstack[c]{0.7834 F1\\(95.45\% Acc)\\$F_1(\text{neg})=0.50$}} & \multirow{4}{*}{\shortstack[c]{\textbf{0.6977} (JAC)\\ \textbf{0.7059} (AIC Base)\\(94.76\% Acc)\\$F_1(\text{neg})=0.25$}} \\
+& Purnomo \& Sutopo \cite{purnomo2024comparison} & IndoBERT (124M) & Joint multi-aspect classification & 89.80\% F1 & & \\
+& Imbalance Baselines & WCE / Focal / LDAM / CB & Isolated general aspect ($IR=67.4$) & 0.587--0.679 & & \\
+& Baseline ERM & IndoBERT-base (124M) & Isolated general aspect ($IR=67.4$) & $F_1(\text{neg})=0.00$ & & \\
 \midrule
 \multirow{4}{*}{\textbf{NusaX-Ind.}}
-& Winata et al. \cite{winata2023nusax} & mBERT (178M) & Supervised fine-tuning, official test split & 0.8460 Macro-F1 & \multirow{4}{*}{\shortstack[c]{0.8958 F1\\(90.50\% Acc)}} & \multirow{4}{*}{\shortstack[c]{\textbf{0.9088} (COS)\\ \textbf{0.9141} (Ensemble)\\(92.00\% Acc, MCC 0.8787)}} \\
-& Winata et al. \cite{winata2023nusax} & IndoBERT-base (124M) & Supervised fine-tuning, official test split & 0.8920 Macro-F1 & & \\
-& Winata et al. \cite{winata2023nusax} & XLM-RoBERTa-large (560M) & Supervised multilingual scaling (560M params) & 0.8960 Macro-F1 & & \\
-& Cahyawijaya et al. \cite{cahyawijaya2023nusacrowd} & GPT-3 (text-davinci-003, 175B) & Zero-shot cross-lingual prompting & 0.8240 Macro-F1 & & \\
+& Winata et al. \cite{winata2023nusax} & mBERT (178M) & Supervised FT, official test split & 0.8460 F1 & \multirow{4}{*}{\shortstack[c]{0.8958 F1\\(90.50\% Acc)}} & \multirow{4}{*}{\shortstack[c]{\textbf{0.9088} (COS)\\ \textbf{0.9141} (Ens.)\\(92.00\% Acc)}} \\
+& Winata et al. \cite{winata2023nusax} & IndoBERT-base (124M) & Supervised FT, official test split & 0.8920 F1 & & \\
+& Winata et al. \cite{winata2023nusax} & XLM-RoBERTa-large & Supervised scaling (560M params) & 0.8960 F1 & & \\
+& Cahyawijaya et al. \cite{cahyawijaya2023nusacrowd} & GPT-3 (text-davinci) & Zero-shot cross-lingual prompt & 0.8240 F1 & & \\
 \bottomrule
 \end{tabularx}
