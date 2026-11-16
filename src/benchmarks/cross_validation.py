@@ -44,15 +44,25 @@ def run_real_5fold_cv_for_dataset(
     device_str = device if device is not None else resolve_device()
 
     manager = IndonesianDatasetsManager()
-    cfg = load_dataset_config(dataset_name)
+    try:
+        cfg = load_dataset_config(dataset_name)
+    except Exception:
+        cfg = {
+            "model_name": "indobenchmark/indobert-base-p1",
+            "max_len": 128,
+            "use_logit_adjustment": False,
+            "logit_adj_tau": 0.0,
+        }
+
     ds_key = dataset_name.lower().replace("-", "_")
     if hasattr(manager, f"load_{ds_key}"):
-        load_fn = getattr(manager, f"load_{ds_key}")
+        ds = getattr(manager, f"load_{ds_key}")()
     elif dataset_name in ["NusaX", "NusaX-Indonesian"]:
-        load_fn = manager.load_nusax_indonesian
+        ds = manager.load_nusax_indonesian(binary_only=False)
+    elif hasattr(manager, f"load_{dataset_name.lower()}"):
+        ds = getattr(manager, f"load_{dataset_name.lower()}")()
     else:
-        load_fn = getattr(manager, f"load_{dataset_name.lower()}")
-    ds = load_fn()
+        ds = manager.load_generic_dataset(dataset_name)
     model_name = cfg.get("model_name", "indobenchmark/indobert-base-p1")
     use_la = cfg.get("use_logit_adjustment", False)
     tau = cfg.get("logit_adj_tau", 0.0)

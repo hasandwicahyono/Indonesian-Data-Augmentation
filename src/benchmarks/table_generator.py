@@ -116,7 +116,10 @@ def generate_access_dataset_stats_table(
             setting = get_investigated_settings(dname)
             method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
             domain = setting.get("domain", "Sentiment Analysis")
-            loader_fn = getattr(manager, method_name) if hasattr(manager, method_name) else manager.load_nusax_indonesian
+            if hasattr(manager, method_name):
+                loader_fn = getattr(manager, method_name)
+            else:
+                loader_fn = (lambda d=dname: manager.load_generic_dataset(d))
             datasets.append((dname, domain, loader_fn))
 
         for name, domain, load_fn in datasets:

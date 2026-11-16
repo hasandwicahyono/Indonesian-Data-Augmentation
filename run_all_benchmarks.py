@@ -172,7 +172,7 @@ DATASET_CONFIGS = load_dataset_config()
 # Dataset and File Helpers
 # =====================================================================
 def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> CustomDataset:
-    """Loads dataset partitions using IndonesianDatasetsManager."""
+    """Loads dataset partitions using IndonesianDatasetsManager with generic fallback."""
     if dataset_name == "SmSA":
         return manager.load_smsa()
     elif dataset_name == "MovieOpini":
@@ -185,7 +185,7 @@ def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> 
         # Standard 3-class curated benchmark (500 train, 100 val, 400 test)
         return manager.load_nusax_indonesian(binary_only=False)
     else:
-        raise ValueError(f"Unknown dataset name: {dataset_name}")
+        return manager.load_generic_dataset(dataset_name)
 
 
 def load_augmented_datasets(
@@ -260,29 +260,36 @@ def compute_and_save_dataset_statistics(
         manager = IndonesianDatasetsManager()
 
     investigated = get_investigated_datasets()
-    datasets = []
-    for dname in investigated:
-        setting = get_investigated_settings(dname)
-        method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
-        domain = setting.get("domain", "Sentiment Analysis")
-        loader_fn = getattr(manager, method_name) if hasattr(manager, method_name) else manager.load_nusax_indonesian
-        datasets.append((dname, domain, loader_fn))
-
     records = []
-    for name, domain, load_fn in datasets:
-        ds = load_fn()
-        num_classes = len(ds.label_list)
-        train_len = len(ds.train)
-        val_len = len(ds.val)
-        test_len = len(ds.test)
+    for dname in investigated:
+        try:
+            ds = load_dataset_data(manager, dname)
+            domain = DATASET_CONFIGS.get(dname, {}).get("domain", "Classification")
+            num_classes = len(ds.label_list)
+            train_len = len(ds.train)
+            val_len = len(ds.val) if ds.val is not None else 0
+            test_len = len(ds.test)
 
-        counts = ds.train["label"].value_counts()
-        max_c = counts.max()
-        min_c = counts.min()
-        ir = round(max_c / max(1, min_c), 2)
-        ir_desc = "Balanced" if ir <= 1.2 else ("Mild" if ir <= 3.0 else ("Moderate" if ir <= 10.0 else "Extreme"))
+            counts = ds.train["label"].value_counts()
+            max_c = counts.max()
+            min_c = counts.min()
+            ir = round(max_c / max(1, min_c), 2)
+            ir_desc = "Balanced" if ir <= 1.2 else ("Mild" if ir <= 3.0 else ("Moderate" if ir <= 10.0 else "Extreme"))
 
-        dist_str_csv = ", ".join([f"{lbl}: {c} ({(c/train_len)*100:.1f}%)" for lbl, c in counts.items()])
+            dist_str_csv = ", ".join([f"{lbl}: {c} ({(c/train_len)*100:.1f}%)" for lbl, c in counts.items()])
+
+            records.append({
+                "Dataset": dname,
+                "Domain / Task": domain,
+                "Classes (K)": num_classes,
+                "Train Size": train_len,
+                "Val Size": val_len,
+                "Test Size": test_len,
+                "Label Distribution (Train)": dist_str_csv,
+                "Imbalance Ratio (IR)": f"{ir}x ({ir_desc})",
+            })
+        except Exception as e:
+            print(f"  [Notice] Could not compute statistics for {dname}: {e}")
 
         records.append({
             "Dataset": name,
@@ -878,7 +885,28 @@ def run_benchmark_pipeline(
 
     for ds_name in target_datasets:
         print(f"\n[{ds_name}] Processing Investigation...")
-        cfg = copy.deepcopy(DATASET_CONFIGS[ds_name])
+        default_cfg = {
+            "name": ds_name,
+            "domain": "Classification",
+            "task": "Text Classification",
+            "model_name": "indobenchmark/indobert-base-p1",
+            "max_len": 128,
+            "batch_size": 16,
+            "epochs": 50,
+            "lr": 2.0e-5,
+            "weight_decay": 0.01,
+            "patience": 5,
+            "early_stopping": True,
+            "use_preprocessing": True,
+            "use_contrastive_prefix": True,
+            "contrastive_domain": "sentiment",
+            "use_fgm": True,
+            "fgm_epsilon": 0.5,
+            "threshold_calibration": True,
+            "run_ensemble": False,
+        }
+        cfg = copy.deepcopy(default_cfg)
+        cfg.update(DATASET_CONFIGS.get(ds_name, {}))
         if getattr(args, "target_oversample", None):
             try:
                 pairs = [p.split(":") for p in args.target_oversample.split(",")]

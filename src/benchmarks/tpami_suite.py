@@ -836,7 +836,10 @@ def generate_tpami_lexical_diversity_table(
     for dname in get_investigated_datasets():
         setting = get_investigated_settings(dname)
         method_name = setting.get("loader_method", f"load_{dname.lower().replace('-', '_')}")
-        loader_fn = getattr(manager, method_name) if hasattr(manager, method_name) else manager.load_nusax_indonesian
+        if hasattr(manager, method_name):
+            loader_fn = getattr(manager, method_name)
+        else:
+            loader_fn = (lambda d=dname: manager.load_generic_dataset(d))
         datasets_to_eval.append((dname, loader_fn))
 
     records = []

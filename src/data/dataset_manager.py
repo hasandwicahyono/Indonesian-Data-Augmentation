@@ -163,8 +163,160 @@ class IndonesianDatasetsManager:
                 datasets[dname] = getattr(self, method_name)()
             elif dname in ["NusaX", "NusaX-Indonesian"]:
                 datasets[dname] = self.load_nusax_indonesian()
+            else:
+                datasets[dname] = self.load_generic_dataset(dname)
 
         if include_movie_opini and "MovieOpini" not in datasets:
             datasets["MovieOpini"] = self.load_movie_opini()
         return datasets
+
+    def load_generic_dataset(
+        self,
+        dataset_name_or_path: str,
+        text_col: Optional[str] = None,
+        label_col: Optional[str] = None,
+        test_size: float = 0.2,
+        val_size: float = 0.1,
+        seed: int = 42,
+    ) -> CustomDataset:
+        """
+        Generic plug-and-play dataset auto-loader.
+        Supports:
+          - A dataset name located under self.data_dir or data/raw/
+          - A directory containing train/val/test splits (CSV, TSV, Parquet)
+          - A single standalone dataset file, auto-creating stratified train/val/test splits
+        Auto-detects text and label columns, extracts unique labels, and returns CustomDataset.
+        """
+        def _read_table(fpath: str) -> pd.DataFrame:
+            ext = os.path.splitext(fpath)[-1].lower()
+            if ext == ".tsv":
+                return pd.read_csv(fpath, sep="\t")
+            elif ext == ".parquet":
+                return pd.read_parquet(fpath)
+            else:
+                return pd.read_csv(fpath)
+
+        def _standardize_cols(df: pd.DataFrame, u_text: Optional[str], u_label: Optional[str]) -> pd.DataFrame:
+            cols_lower = {str(c).lower(): c for c in df.columns}
+            t_cand = [u_text] if u_text else ["text", "tweet", "sentence", "content", "sms", "review", "document", "teks"]
+            l_cand = [u_label] if u_label else ["label", "sentiment", "category", "class", "target", "kategori", "label_id"]
+
+            t_col = None
+            for c in t_cand:
+                if c and c.lower() in cols_lower:
+                    t_col = cols_lower[c.lower()]
+                    break
+            if t_col is None:
+                str_cols = df.select_dtypes(include=["object", "string"]).columns
+                t_col = str_cols[0] if len(str_cols) > 0 else df.columns[0]
+
+            l_col = None
+            for c in l_cand:
+                if c and c.lower() in cols_lower and cols_lower[c.lower()] != t_col:
+                    l_col = cols_lower[c.lower()]
+                    break
+            if l_col is None:
+                remaining = [c for c in df.columns if c != t_col]
+                l_col = remaining[-1] if remaining else df.columns[-1]
+
+            out_df = pd.DataFrame({
+                "text": df[t_col].astype(str),
+                "label": df[l_col].astype(str).str.strip(),
+            })
+            out_df = out_df.dropna(subset=["text", "label"])
+            out_df = out_df[out_df["text"].str.strip() != ""].reset_index(drop=True)
+            return out_df
+
+        # Resolve path
+        resolved_path = None
+        candidates = [
+            dataset_name_or_path,
+            os.path.join(self.data_dir, dataset_name_or_path),
+            os.path.join(resolve_path("data/raw"), dataset_name_or_path),
+            os.path.join(resolve_path("data"), dataset_name_or_path),
+        ]
+        # Also check with extensions
+        ext_candidates = []
+        for c in candidates:
+            ext_candidates.append(c)
+            for ext in [".csv", ".tsv", ".parquet"]:
+                ext_candidates.append(c + ext)
+
+        for cand in ext_candidates:
+            if os.path.exists(cand):
+                resolved_path = os.path.abspath(cand)
+                break
+
+        if resolved_path is None:
+            raise FileNotFoundError(
+                f"Dataset '{dataset_name_or_path}' not found. Searched in: {candidates}"
+            )
+
+        dname = os.path.basename(os.path.normpath(resolved_path))
+        for ext in [".csv", ".tsv", ".parquet"]:
+            if dname.lower().endswith(ext):
+                dname = dname[:-len(ext)]
+
+        if os.path.isdir(resolved_path):
+            files = os.listdir(resolved_path)
+            train_f, test_f, val_f = None, None, None
+            for f in sorted(files):
+                f_low = f.lower()
+                full_f = os.path.join(resolved_path, f)
+                if not os.path.isfile(full_f):
+                    continue
+                if any(k in f_low for k in ["train", "latih"]):
+                    train_f = full_f
+                elif any(k in f_low for k in ["test", "uji"]):
+                    test_f = full_f
+                elif any(k in f_low for k in ["val", "valid"]):
+                    val_f = full_f
+
+            if train_f is not None and test_f is not None:
+                train_df = _standardize_cols(_read_table(train_f), text_col, label_col)
+                test_df = _standardize_cols(_read_table(test_f), text_col, label_col)
+                val_df = _standardize_cols(_read_table(val_f), text_col, label_col) if val_f else None
+            elif train_f is not None:
+                # Only train file in dir -> split
+                full_df = _standardize_cols(_read_table(train_f), text_col, label_col)
+                min_class_cnt = full_df["label"].value_counts().min()
+                strat = full_df["label"] if (full_df["label"].nunique() > 1 and min_class_cnt >= 2) else None
+                train_val_df, test_df = train_test_split(full_df, test_size=test_size, random_state=seed, stratify=strat)
+                if val_size > 0:
+                    rel_val = val_size / (1.0 - test_size)
+                    strat_tv = train_val_df["label"] if (train_val_df["label"].nunique() > 1 and train_val_df["label"].value_counts().min() >= 2) else None
+                    train_df, val_df = train_test_split(train_val_df, test_size=rel_val, random_state=seed, stratify=strat_tv)
+                else:
+                    train_df, val_df = train_val_df, None
+            else:
+                # Pick first data file in directory
+                first_f = [os.path.join(resolved_path, f) for f in files if f.endswith((".csv", ".tsv", ".parquet"))]
+                if not first_f:
+                    raise FileNotFoundError(f"No tabular data file (csv/tsv/parquet) found in {resolved_path}")
+                full_df = _standardize_cols(_read_table(first_f[0]), text_col, label_col)
+                min_class_cnt = full_df["label"].value_counts().min()
+                strat = full_df["label"] if (full_df["label"].nunique() > 1 and min_class_cnt >= 2) else None
+                train_val_df, test_df = train_test_split(full_df, test_size=test_size, random_state=seed, stratify=strat)
+                if val_size > 0:
+                    rel_val = val_size / (1.0 - test_size)
+                    strat_tv = train_val_df["label"] if (train_val_df["label"].nunique() > 1 and train_val_df["label"].value_counts().min() >= 2) else None
+                    train_df, val_df = train_test_split(train_val_df, test_size=rel_val, random_state=seed, stratify=strat_tv)
+                else:
+                    train_df, val_df = train_val_df, None
+        else:
+            # Standalone file
+            full_df = _standardize_cols(_read_table(resolved_path), text_col, label_col)
+            min_class_cnt = full_df["label"].value_counts().min()
+            strat = full_df["label"] if (full_df["label"].nunique() > 1 and min_class_cnt >= 2) else None
+            train_val_df, test_df = train_test_split(full_df, test_size=test_size, random_state=seed, stratify=strat)
+            if val_size > 0:
+                rel_val = val_size / (1.0 - test_size)
+                strat_tv = train_val_df["label"] if (train_val_df["label"].nunique() > 1 and train_val_df["label"].value_counts().min() >= 2) else None
+                train_df, val_df = train_test_split(train_val_df, test_size=rel_val, random_state=seed, stratify=strat_tv)
+            else:
+                train_df, val_df = train_val_df, None
+
+        labels = sorted(list(train_df["label"].unique()))
+        print(f"  [GENERIC DATASET LOADED] '{dname}': Train={len(train_df)}, Val={len(val_df) if val_df is not None else 0}, Test={len(test_df)}, Classes ({len(labels)})={labels}")
+        return CustomDataset(dname, train_df, test_df, labels, val=val_df)
 
