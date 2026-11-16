@@ -31,7 +31,7 @@
   },
   {
     "Dataset": "NusaX-Indonesian",
-    "Domain / Task": "Curated Sentiment Analysis",
+    "Domain / Task": "Multi-Topic Sentiment",
     "Classes (K)": 3,
     "Train Size": 500,
     "Val Size": 100,
