@@ -31,7 +31,6 @@ from src.augmentation.registry import (
     list_candidate_models,
     display_model_comparisons,
 )
-from src.augmentation.generative_models import benchmark_candidate_generative_models
 from src.augmentation.contrastive_prefix import (
     ContrastiveAspectPrefixGenerator,
     detect_aspect_from_text,
@@ -162,25 +161,6 @@ class IndonesianAugmenter:
     @classmethod
     def display_model_comparisons(cls):
         display_model_comparisons()
-
-    @classmethod
-    def benchmark_generative_models(
-        cls,
-        models: Optional[List[str]] = None,
-        prompts: Optional[List[str]] = None,
-        device: Optional[str] = None,
-        output_csv: str = "data/results/extended/generative_models_comparison.csv",
-        output_tex: str = "paper/table_generative_models_comparison.tex",
-        force: bool = False,
-    ) -> pd.DataFrame:
-        return benchmark_candidate_generative_models(
-            models=models,
-            prompts=prompts,
-            device=device,
-            output_csv=output_csv,
-            output_tex=output_tex,
-            force=force,
-        )
 
     def _init_models(self):
         """Initializes generator and embedder models."""

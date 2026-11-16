@@ -42,12 +42,6 @@ def distance_to_similarity(distance: float) -> float:
         return 0.0
 
 
-def squared_sum(x: Union[List[float], np.ndarray, Any]) -> float:
-    """Returns the square root of the sum of squares."""
-    arr = _to_numpy(x)
-    return float(np.linalg.norm(arr))
-
-
 def cos_similarity(x: Union[List[float], np.ndarray, Any], y: Union[List[float], np.ndarray, Any]) -> float:
     """Calculates cosine similarity between two embedding vectors."""
     arr_x = _to_numpy(x)
