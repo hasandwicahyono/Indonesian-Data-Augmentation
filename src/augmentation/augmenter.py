@@ -13,7 +13,10 @@ import numpy as np
 from typing import Optional, List, Dict, Any, Tuple, Union
 from tqdm.auto import tqdm
 from transformers import pipeline, AutoTokenizer
-from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
 
 from src.data.preprocessor import IndonesianPreprocessor
 from src.augmentation.similarity import (
@@ -233,6 +236,8 @@ class IndonesianAugmenter:
             embed_device = f"cuda:{self.device}"
         else:
             embed_device = "cpu"
+        if SentenceTransformer is None:
+            raise ImportError("sentence-transformers is required for IndonesianAugmenter. Please install it with 'pip install sentence-transformers'.")
         self.embed_model = SentenceTransformer(self.embed_model_name, device=embed_device)
 
     def generate_continuation(

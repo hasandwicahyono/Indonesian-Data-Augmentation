@@ -29,7 +29,10 @@ import torch
 import numpy as np
 import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
 
 from src.utils.path_utils import resolve_path, ensure_dir
 from src.utils.hardware import resolve_device
@@ -137,6 +140,9 @@ def benchmark_candidate_generative_models(
     print("BENCHMARKING GENERATIVE BACKBONE MODELS FOR INDONESIAN DATA AUGMENTATION")
     print(f"Device: {device_str} | Candidate Models: {models} | Evaluated Prompts: {len(prompts)}")
     print("=" * 85)
+
+    if SentenceTransformer is None:
+        raise ImportError("sentence_transformers is required for semantic fidelity evaluation. Please run 'pip install sentence-transformers'.")
 
     print("Loading Sentence Embedding Model for Semantic Fidelity Evaluation...")
     embed_model = SentenceTransformer(

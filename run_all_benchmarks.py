@@ -1322,6 +1322,12 @@ if __name__ == "__main__":
         help=f"Datasets to evaluate (choices: {', '.join(default_datasets)}, all)",
     )
     parser.add_argument(
+        "--run_all",
+        action="store_true",
+        default=False,
+        help="Execute comprehensive benchmark evaluations across all investigated datasets",
+    )
+    parser.add_argument(
         "--plot_only",
         action="store_true",
         default=False,
@@ -1623,9 +1629,10 @@ if __name__ == "__main__":
         IndonesianAugmenter.display_model_comparisons()
         sys.exit(0)
 
-    selected = args.datasets
-    if "all" in [s.lower() for s in selected]:
+    if args.run_all or "all" in [s.lower() for s in args.datasets]:
         selected = get_investigated_datasets()
+    else:
+        selected = args.datasets
 
     run_benchmark_pipeline(
         target_datasets=selected,
