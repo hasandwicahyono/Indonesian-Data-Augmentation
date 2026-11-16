@@ -34,6 +34,7 @@ from src.benchmarks.tpami_suite import (
     generate_tpami_computational_budget_table,
     generate_tpami_lexical_diversity_table,
     generate_tpami_training_dynamics_plot,
+    plot_similarity_distributions,
 )
 
 __all__ = [

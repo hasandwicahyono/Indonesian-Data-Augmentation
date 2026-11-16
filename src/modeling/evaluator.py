@@ -188,6 +188,7 @@ class IndoBERTClassifierEvaluator:
         device: Optional[str] = None,
         seed: int = 42,
         early_stopping: bool = True,
+        early_stopping_metric: str = "harmonic",
         patience: int = 2,
         min_delta: float = 1e-4,
         use_preprocessing: bool = True,
@@ -223,6 +224,7 @@ class IndoBERTClassifierEvaluator:
         self.weight_decay = weight_decay
         self.seed = seed
         self.early_stopping = early_stopping
+        self.early_stopping_metric = str(early_stopping_metric).lower()
         self.patience = patience
         self.min_delta = min_delta
         self.use_preprocessing = use_preprocessing
@@ -468,15 +470,17 @@ class IndoBERTClassifierEvaluator:
         seed: Optional[int] = None,
         epochs: Optional[int] = None,
         early_stopping: Optional[bool] = None,
+        early_stopping_metric: Optional[str] = None,
         patience: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Trains and evaluates IndoBERT on a single dataset pair."""
         val_info = f", Val: {len(val_df)}" if val_df is not None else ""
         num_epochs = epochs if epochs is not None else self.epochs
         use_early_stopping = early_stopping if early_stopping is not None else self.early_stopping
+        es_metric = (early_stopping_metric if early_stopping_metric is not None else self.early_stopping_metric).lower()
         pat = patience if patience is not None else self.patience
 
-        print(f"\nEvaluating: {name} (Train: {len(train_df)}{val_info}, Test: {len(test_df)}, Epochs: {num_epochs}, EarlyStopping: {use_early_stopping} [patience={pat}])")
+        print(f"\nEvaluating: {name} (Train: {len(train_df)}{val_info}, Test: {len(test_df)}, Epochs: {num_epochs}, EarlyStopping: {use_early_stopping} [metric={es_metric}, patience={pat}])")
 
         train_text_set = set(str(t).strip() for t in train_df["text"].dropna())
         test_text_set = set(str(t).strip() for t in test_df["text"].dropna())
@@ -741,7 +745,10 @@ class IndoBERTClassifierEvaluator:
 
         optimizer, scheduler = _build_optimizer_and_scheduler(micro_batch_size, grad_accum_steps)
 
+        best_val_score = -1.0
         best_val_f1 = -1.0
+        best_val_acc = -1.0
+        best_val_harmonic = -1.0
         best_train_loss = float("inf")
         best_model_weights = None
         best_epoch = 0
@@ -752,6 +759,7 @@ class IndoBERTClassifierEvaluator:
             "train_loss": [],
             "val_accuracy": [],
             "val_macro_f1": [],
+            "val_harmonic_score": [],
         }
 
         epoch = 0
@@ -811,7 +819,11 @@ class IndoBERTClassifierEvaluator:
                 history["train_loss"].clear()
                 history["val_accuracy"].clear()
                 history["val_macro_f1"].clear()
+                history["val_harmonic_score"].clear()
+                best_val_score = -1.0
                 best_val_f1 = -1.0
+                best_val_acc = -1.0
+                best_val_harmonic = -1.0
                 best_train_loss = float("inf")
                 best_model_weights = None
                 patience_counter = 0
@@ -823,11 +835,27 @@ class IndoBERTClassifierEvaluator:
             history["train_loss"].append(float(loss))
             if val_loader is not None:
                 v_acc, v_prec, v_rec, v_f1, _, _, _ = self.evaluate(model, val_loader, num_labels=num_labels, log_priors=log_priors)
+                v_harmonic = (2.0 * v_acc * v_f1) / (v_acc + v_f1 + 1e-8) if (v_acc + v_f1) > 0 else 0.0
                 history["val_accuracy"].append(float(v_acc))
                 history["val_macro_f1"].append(float(v_f1))
-                print(f"  Epoch {epoch+1}/{num_epochs} - Loss: {loss:.4f} | Val Acc: {v_acc:.4f} | Val Macro-F1: {v_f1:.4f}")
-                if v_f1 > best_val_f1 + self.min_delta:
+                history["val_harmonic_score"].append(float(v_harmonic))
+
+                if es_metric == "harmonic":
+                    current_score = v_harmonic
+                    score_label = "Harmonic Score (Acc & Macro-F1)"
+                elif es_metric in ("acc", "accuracy"):
+                    current_score = v_acc
+                    score_label = "Val Accuracy"
+                else:
+                    current_score = v_f1
+                    score_label = "Val Macro-F1"
+
+                print(f"  Epoch {epoch+1}/{num_epochs} - Loss: {loss:.4f} | Val Acc: {v_acc:.4f} | Val Macro-F1: {v_f1:.4f} | Harmonic: {v_harmonic:.4f}")
+                if current_score > best_val_score + self.min_delta:
+                    best_val_score = current_score
                     best_val_f1 = v_f1
+                    best_val_acc = v_acc
+                    best_val_harmonic = v_harmonic
                     best_epoch = epoch + 1
                     target_model = model.module if hasattr(model, "module") else model
                     # Store optimal checkpoint on CPU to prevent GPU VRAM exhaustion
@@ -836,7 +864,7 @@ class IndoBERTClassifierEvaluator:
                 else:
                     patience_counter += 1
                     if use_early_stopping and patience_counter >= pat:
-                        print(f"  [Early Stopping Triggered] No improvement in Val Macro-F1 for {pat} consecutive epochs. Halting at epoch {epoch+1}/{num_epochs}.")
+                        print(f"  [Early Stopping Triggered] No improvement in {score_label} for {pat} consecutive epochs. Halting at epoch {epoch+1}/{num_epochs}.")
                         break
             else:
                 print(f"  Epoch {epoch+1}/{num_epochs} - Train Loss: {loss:.4f}")
@@ -860,7 +888,10 @@ class IndoBERTClassifierEvaluator:
             target_model = model.module if hasattr(model, "module") else model
             target_model.load_state_dict(best_model_weights)
             del best_model_weights
-            print(f"  [Optimal Checkpoint Restored] Best Val Macro-F1: {best_val_f1:.4f} (from epoch {best_epoch})")
+            if es_metric == "harmonic":
+                print(f"  [Optimal Checkpoint Restored] Best Epoch: {best_epoch} (Harmonic: {best_val_harmonic:.4f} | Val Macro-F1: {best_val_f1:.4f} | Val Acc: {best_val_acc:.4f})")
+            else:
+                print(f"  [Optimal Checkpoint Restored] Best Epoch: {best_epoch} ({score_label}: {best_val_score:.4f} | Val Macro-F1: {best_val_f1:.4f} | Val Acc: {best_val_acc:.4f})")
 
         calibrated_offset = None
         if self.threshold_calibration and val_loader is not None:
@@ -1266,6 +1297,7 @@ class IndoBERTClassifierEvaluator:
                 device=str(self.device),
                 seed=(seed or self.seed) + idx * 7,
                 early_stopping=early_stopping if early_stopping is not None else self.early_stopping,
+                early_stopping_metric=self.early_stopping_metric,
                 patience=patience if patience is not None else self.patience,
                 min_delta=self.min_delta,
                 use_preprocessing=self.use_preprocessing,
@@ -1367,10 +1399,12 @@ class IndoBERTClassifierEvaluator:
         seed: int = 42,
         epochs: Optional[int] = None,
         early_stopping: Optional[bool] = None,
+        early_stopping_metric: Optional[str] = None,
         patience: Optional[int] = None,
         evaluate_raw_erm: bool = True,
     ) -> pd.DataFrame:
         """Runs comprehensive benchmark comparing all baseline and augmented variants."""
+        es_metric = early_stopping_metric if early_stopping_metric is not None else self.early_stopping_metric
         resolved_output = resolve_path(output_results_path)
 
         base_text_set = set(str(t).strip() for t in base_train_df["text"].dropna())
@@ -1402,6 +1436,7 @@ class IndoBERTClassifierEvaluator:
                 device=str(self.device),
                 seed=seed,
                 early_stopping=early_stopping if early_stopping is not None else self.early_stopping,
+                early_stopping_metric=es_metric,
                 patience=patience if patience is not None else self.patience,
                 min_delta=self.min_delta,
                 use_preprocessing=self.use_preprocessing,
@@ -1426,6 +1461,7 @@ class IndoBERTClassifierEvaluator:
                 seed=seed,
                 epochs=epochs,
                 early_stopping=early_stopping,
+                early_stopping_metric=es_metric,
                 patience=patience,
             )
             results.append(raw_erm_res)
@@ -1444,6 +1480,7 @@ class IndoBERTClassifierEvaluator:
             seed=seed,
             epochs=epochs,
             early_stopping=early_stopping,
+            early_stopping_metric=es_metric,
             patience=patience,
         )
         if raw_erm_res is not None:
@@ -1468,6 +1505,7 @@ class IndoBERTClassifierEvaluator:
                 seed=seed,
                 epochs=epochs,
                 early_stopping=early_stopping,
+                early_stopping_metric=es_metric,
                 patience=patience,
             )
             f1_gain = res["macro_f1"] - ref_base_res["macro_f1"]
@@ -1480,7 +1518,12 @@ class IndoBERTClassifierEvaluator:
                 torch.cuda.empty_cache()
 
         if self.ensemble_configs:
-            aug_results = [r for r in results if "Augmented" in r["dataset_name"] and not r["dataset_name"].endswith("Ensemble")]
+            aug_results = [
+                r for r in results
+                if "Augmented" in r["dataset_name"]
+                and "NotAugmented" not in r["dataset_name"]
+                and not r["dataset_name"].endswith("Ensemble")
+            ]
             if aug_results and len(cleaned_aug_dfs) > 0:
                 best_aug_res = max(aug_results, key=lambda x: x["macro_f1"])
                 best_variant_key = best_aug_res["dataset_name"].split("-")[-1]

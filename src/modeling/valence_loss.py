@@ -183,10 +183,6 @@ class ValenceWeightedCostLoss(nn.Module):
         else:
             self.class_weights = None
 
-    def get_cost_matrix(self) -> torch.Tensor:
-        """Returns the active cost matrix tensor."""
-        return self.cost_matrix
-
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
         Computes the valence-cost-weighted loss.

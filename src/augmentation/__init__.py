@@ -33,7 +33,6 @@ from src.augmentation.filtering import (
     check_threshold,
     build_augmented_datasets,
     filter_augmented_data,
-    purge_hallucinations_from_existing_csv,
     export_augmented_datasets,
 )
 from src.augmentation.augmenter import (
@@ -71,7 +70,6 @@ __all__ = [
     "check_threshold",
     "build_augmented_datasets",
     "filter_augmented_data",
-    "purge_hallucinations_from_existing_csv",
     "export_augmented_datasets",
     "IndonesianAugmenter",
     "ContrastiveAspectPrefixGenerator",

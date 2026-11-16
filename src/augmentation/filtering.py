@@ -331,33 +331,6 @@ def build_augmented_datasets(
 filter_augmented_data = build_augmented_datasets
 
 
-def purge_hallucinations_from_existing_csv(csv_path: str, raw_base_texts: Optional[set] = None) -> int:
-    """
-    Surgically removes Wikipedia hallucinations and corrupt sequences from an existing augmented CSV file.
-    Preserves authentic raw baseline training samples.
-    """
-    resolved_path = resolve_path(csv_path)
-    if not os.path.exists(resolved_path):
-        return 0
-
-    df = pd.read_csv(resolved_path)
-    initial_len = len(df)
-
-    if raw_base_texts:
-        is_raw = df["text"].astype(str).str.strip().isin(raw_base_texts)
-        is_corrupt = df["text"].apply(is_hallucinatory_or_corrupt)
-        drop_mask = (~is_raw) & is_corrupt
-    else:
-        drop_mask = df["text"].apply(is_hallucinatory_or_corrupt)
-
-    purged_count = int(drop_mask.sum())
-    if purged_count > 0:
-        cleaned_df = df[~drop_mask].copy().reset_index(drop=True)
-        cleaned_df.to_csv(resolved_path, index=False)
-        print(f"  [SCRUBBED] {os.path.basename(resolved_path)}: Purged {purged_count} hallucinated samples ({initial_len} -> {len(cleaned_df)})")
-    return purged_count
-
-
 def export_augmented_datasets(
     dataset_name: str,
     all_text_dfs: Dict[str, pd.DataFrame],

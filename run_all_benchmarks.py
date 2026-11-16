@@ -902,6 +902,9 @@ def run_benchmark_pipeline(
         extended_results_dir="data/results/extended",
     )
 
+    if force_generation:
+        run_generation = True
+
     mode_desc = "PLOT-ONLY (Visualizations from existing results)" if plot_only else (
         "FULL END-TO-END PIPELINE (Phase 1 Generation + Phase 2 Filtering + Phase 3 Training + Phase 4 Visualizations)"
         if run_generation else "BENCHMARK EVALUATION (Phase 3 Training + Phase 4 Visualizations)"
@@ -997,12 +1000,12 @@ def run_benchmark_pipeline(
         else:
             # Check if Step 1 (Generation) and Step 2 (Filtering) are requested or needed
             existing_aug = load_augmented_datasets(ds_name, augmented_dir=augmented_dir)
-            if existing_aug and len(existing_aug) == 4 and not force_generation:
+            if existing_aug and len(existing_aug) == 4 and not force_generation and not run_generation:
                 print(f"\n  [Cache Hit] Complete augmented datasets already exist for {ds_name} ({list(existing_aug.keys())}).")
                 print("  Reusing existing augmented data to preserve GPU VRAM and skip redundant generation.")
                 print("  (Pass '--force_generation' to override and force fresh generation).")
                 aug_dfs = existing_aug
-            elif run_generation or not existing_aug:
+            elif run_generation or force_generation or not existing_aug:
                 print(f"\n  >>> STEP 1: Running Text Generation & Similarity Scoring for {ds_name}...")
                 minority_classes = cfg.get("minority_classes", ds.label_list)
                 use_contrastive = getattr(args, "use_contrastive_prefix", None)
@@ -1097,6 +1100,7 @@ def run_benchmark_pipeline(
                 device=device,
                 seed=seed,
                 early_stopping=cfg["early_stopping"],
+                early_stopping_metric=cfg.get("early_stopping_metric", "harmonic"),
                 patience=cfg["patience"],
                 use_preprocessing=cfg["use_preprocessing"],
                 use_class_weights=cfg.get("use_class_weights", True),
