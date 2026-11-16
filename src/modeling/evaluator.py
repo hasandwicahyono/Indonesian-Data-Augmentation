@@ -1518,7 +1518,12 @@ class IndoBERTClassifierEvaluator:
                 torch.cuda.empty_cache()
 
         if self.ensemble_configs:
-            aug_results = [r for r in results if "Augmented" in r["dataset_name"] and not r["dataset_name"].endswith("Ensemble")]
+            aug_results = [
+                r for r in results
+                if "Augmented" in r["dataset_name"]
+                and "NotAugmented" not in r["dataset_name"]
+                and not r["dataset_name"].endswith("Ensemble")
+            ]
             if aug_results and len(cleaned_aug_dfs) > 0:
                 best_aug_res = max(aug_results, key=lambda x: x["macro_f1"])
                 best_variant_key = best_aug_res["dataset_name"].split("-")[-1]
