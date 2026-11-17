@@ -169,7 +169,10 @@ Let $\phi: \mathcal{X} \to \mathcal{H}$ map sequences into an RKHS $\mathcal{H}$
 
 The admissible candidate space $\Omega_k$ is governed by adaptive distribution cutoffs:
 \begin{equation}
-    \Omega_k = \Big\{ \tilde{x} \in \mathcal{X} \;\Big|\; S_{\text{COS}}(x, \tilde{x}) \ge \mu_{\text{COS}} + \sigma_{\text{COS}}, \quad \text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}} \Big\}
+\begin{aligned}
+    \Omega_k = \Big\{ \tilde{x} \in \mathcal{X} \;\Big|\; & S_{\text{COS}}(x, \tilde{x}) \ge \mu_{\text{COS}} + \sigma_{\text{COS}}, \\
+    & \text{BLEU}(x, \tilde{x}) \ge \mu_{\text{BLEU}} + \sigma_{\text{BLEU}} \Big\}
+\end{aligned}
 \end{equation}
 
 \begin{theorem}[Wasserstein Semantic Manifold Drift Bound]
@@ -230,7 +233,10 @@ proving that $\ell_{\text{ALA}}$ is asymptotically Fisher consistent for balance
 \begin{proof}
 For a fixed instance $X=x$, the conditional surrogate risk is:
 \begin{equation}
-    \mathcal{L}_x(\mathbf{f}) = \sum_{k=1}^K P(Y=k \mid X=x) \left[ -(f_k(x) + \tau \log \pi_k) + \log \sum_{j=1}^K \mathrm{e}^{f_j(x) + \tau \log \pi_j} \right]
+\begin{aligned}
+    \mathcal{L}_x(\mathbf{f}) = \sum_{k=1}^K P(Y=k \mid X=x) \Big[ & -(f_k(x) + \tau \log \pi_k) \\
+    & + \log \sum_{j=1}^K \mathrm{e}^{f_j(x) + \tau \log \pi_j} \Big]
+\end{aligned}
 \end{equation}
 Differentiating with respect to $f_k(x)$ and setting to zero yields:
 \begin{equation}
