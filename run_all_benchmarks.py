@@ -1340,7 +1340,15 @@ if __name__ == "__main__":
         "--datasets",
         nargs="+",
         default=default_datasets,
-        help=f"Datasets to evaluate (choices: {', '.join(default_datasets)}, all)",
+        help=f"Datasets to evaluate (choices: {', '.join(default_datasets)}, arabic, indonesian, all)",
+    )
+    parser.add_argument(
+        "--language",
+        "-lang",
+        type=str,
+        default=None,
+        choices=["all", "indonesian", "arabic", "id", "ar"],
+        help="Target language partition to evaluate ('indonesian'/'id', 'arabic'/'ar', or 'all')",
     )
     parser.add_argument(
         "--run_all",
@@ -1650,10 +1658,34 @@ if __name__ == "__main__":
         IndonesianAugmenter.display_model_comparisons()
         sys.exit(0)
 
-    if args.run_all or "all" in [s.lower() for s in args.datasets]:
-        selected = get_investigated_datasets()
+    indonesian_datasets = ["SmSA", "HoASA", "EmoT", "NusaX-Indonesian"]
+    arabic_datasets = ["ASTD", "ATT", "ArSarcasm", "MOV"]
+    all_datasets_pool = indonesian_datasets + arabic_datasets
+
+    if args.language:
+        lang_norm = str(args.language).lower().strip()
+        if lang_norm in ["indonesian", "id"]:
+            selected = indonesian_datasets
+        elif lang_norm in ["arabic", "ar"]:
+            selected = arabic_datasets
+        else:
+            selected = all_datasets_pool
+    elif args.run_all:
+        selected = all_datasets_pool
     else:
-        selected = args.datasets
+        # Expand any group aliases in args.datasets
+        expanded = []
+        for ds in args.datasets:
+            ds_low = ds.lower().strip()
+            if ds_low in ["all"]:
+                expanded.extend(all_datasets_pool)
+            elif ds_low in ["indonesian", "id"]:
+                expanded.extend(indonesian_datasets)
+            elif ds_low in ["arabic", "ar"]:
+                expanded.extend(arabic_datasets)
+            else:
+                expanded.append(ds)
+        selected = list(dict.fromkeys(expanded))
 
     run_benchmark_pipeline(
         target_datasets=selected,
