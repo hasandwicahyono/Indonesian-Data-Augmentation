@@ -1,10 +1,13 @@
 """
-Indonesian Text Preprocessor for Data Augmentation and Classification.
-Adapted for Bahasa Indonesia to replace ArabertPreprocessor from the original research.
-Handles social media text, reviews, casing, elongation, URLs, mentions, emojis, and slang normalization.
-Loads default vocabulary and mapping dictionaries dynamically from configs/preprocessor.yaml.
+Text Preprocessor Suite for Data Augmentation and Classification.
+Provides modular, language-aware preprocessors:
+- IndonesianPreprocessor: Social media, reviews, casing, elongation, URLs, mentions, emojis, and slang normalization.
+- ArabicPreprocessor: Diacritics stripping, tatweel removal, alef/hamza normalization, elongation reduction, URLs, mentions.
+- PassThroughPreprocessor: Language-agnostic baseline preprocessor.
+- get_preprocessor: Dynamic factory matching language string to the appropriate preprocessor instance.
 """
 
+import abc
 import os
 import re
 import string
@@ -12,6 +15,15 @@ from typing import Optional, Dict
 
 from src.utils.config import load_preprocessor_config
 from src.utils.path_utils import resolve_path
+
+
+class BasePreprocessor(abc.ABC):
+    """Abstract base class for all language preprocessors."""
+
+    @abc.abstractmethod
+    def preprocess(self, text: str) -> str:
+        """Applies language-specific preprocessing to the input string."""
+        pass
 
 
 def load_mle_emoji_lexicon(
@@ -180,7 +192,7 @@ EMOJI_SENTIMENT_DICT: Dict[str, str] = _DEFAULT_EMOJI
 EMOTICON_DICT: Dict[str, str] = _DEFAULT_EMOTICON
 
 
-class IndonesianPreprocessor:
+class IndonesianPreprocessor(BasePreprocessor):
     def __init__(
         self,
         lower: bool = True,
@@ -266,3 +278,114 @@ class IndonesianPreprocessor:
             text = re.sub(r"\s+", " ", text).strip()
 
         return text
+
+
+class ArabicPreprocessor(BasePreprocessor):
+    """
+    Arabic Text Preprocessor for Data Augmentation and Classification.
+    Provides standard Arabic normalization:
+    - Diacritics (tashkeel) removal
+    - Tatweel (kashida) stripping
+    - Alef / Hamza normalization
+    - URL and user mention removal
+    - Character elongation reduction
+    - Whitespace normalization
+    """
+
+    def __init__(
+        self,
+        remove_diacritics: bool = True,
+        remove_tatweel: bool = True,
+        normalize_alef: bool = True,
+        normalize_elongation: bool = True,
+        remove_urls: bool = True,
+        remove_mentions: bool = True,
+        remove_extra_whitespace: bool = True,
+    ):
+        self.remove_diacritics = remove_diacritics
+        self.remove_tatweel = remove_tatweel
+        self.normalize_alef = normalize_alef
+        self.normalize_elongation = normalize_elongation
+        self.remove_urls = remove_urls
+        self.remove_mentions = remove_mentions
+        self.remove_extra_whitespace = remove_extra_whitespace
+
+    def preprocess(self, text: str) -> str:
+        """Applies comprehensive Arabic preprocessing to the input string."""
+        if not isinstance(text, str):
+            text = str(text)
+
+        # 1. URL removal
+        if self.remove_urls:
+            text = re.sub(r"https?://\S+|www\.\S+", "", text)
+
+        # 2. Mention removal
+        if self.remove_mentions:
+            text = re.sub(r"@\w+", "", text)
+
+        # 3. Tashkeel / diacritics removal (Fathatan, Dammatan, Kasratan, Fatha, Damma, Kasra, Shadda, Sukun)
+        if self.remove_diacritics:
+            text = re.sub(r"[\u064B-\u0652\u0670]", "", text)
+
+        # 4. Tatweel / kashida removal
+        if self.remove_tatweel:
+            text = re.sub(r"\u0640+", "", text)
+
+        # 5. Alef and Hamza normalization
+        if self.normalize_alef:
+            # Normalize [إأآا] to ا
+            text = re.sub(r"[إأآ]", "ا", text)
+            # Normalize final ى to ي
+            text = re.sub(r"ى\b", "ي", text)
+            # Normalize ة to ه
+            text = re.sub(r"ة\b", "ه", text)
+
+        # 6. Character elongation reduction (e.g. جمييييل -> جميل)
+        if self.normalize_elongation:
+            text = re.sub(r"(.)\1{2,}", r"\1\1", text)
+
+        # 7. Clean up extra whitespaces
+        if self.remove_extra_whitespace:
+            text = re.sub(r"\s+", " ", text).strip()
+
+        return text
+
+
+class PassThroughPreprocessor(BasePreprocessor):
+    """Fallback preprocessor for generic languages."""
+
+    def __init__(
+        self,
+        lower: bool = False,
+        remove_urls: bool = True,
+        remove_mentions: bool = True,
+        remove_extra_whitespace: bool = True,
+    ):
+        self.lower = lower
+        self.remove_urls = remove_urls
+        self.remove_mentions = remove_mentions
+        self.remove_extra_whitespace = remove_extra_whitespace
+
+    def preprocess(self, text: str) -> str:
+        if not isinstance(text, str):
+            text = str(text)
+        if self.remove_urls:
+            text = re.sub(r"https?://\S+|www\.\S+", "", text)
+        if self.remove_mentions:
+            text = re.sub(r"@\w+", "", text)
+        if self.lower:
+            text = text.lower()
+        if self.remove_extra_whitespace:
+            text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+
+def get_preprocessor(language: str = "indonesian", **kwargs) -> BasePreprocessor:
+    """Factory returning the appropriate preprocessor for the specified language."""
+    lang = str(language).lower().strip()
+    if lang in ["indonesian", "id", "indo"]:
+        return IndonesianPreprocessor(**kwargs)
+    elif lang in ["arabic", "ar"]:
+        return ArabicPreprocessor(**kwargs)
+    else:
+        return PassThroughPreprocessor(**kwargs)

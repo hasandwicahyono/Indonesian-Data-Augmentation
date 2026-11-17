@@ -48,6 +48,7 @@ investigated_settings:
 datasets:
   SmSA:
     name: "SmSA"
+    language: "indonesian"
     domain: "Document Sentiment"
     task: "Sentiment Analysis"
     model_name: "indobenchmark/indobert-base-p1"
@@ -73,6 +74,7 @@ datasets:
 
   MovieOpini:
     name: "MovieOpini"
+    language: "indonesian"
     domain: "Film Review Sentiment"
     task: "Sentiment Analysis"
     model_name: "indolem/indobertweet-base-uncased"
@@ -93,6 +95,7 @@ datasets:
 
   HoASA:
     name: "HoASA"
+    language: "indonesian"
     domain: "Aspect Hotel Sentiment"
     task: "Aspect-Based Sentiment Analysis"
     model_name: "indobenchmark/indobert-base-p1"
@@ -133,6 +136,7 @@ datasets:
 
   EmoT:
     name: "EmoT"
+    language: "indonesian"
     domain: "Twitter Emotion Analysis"
     task: "Emotion Classification"
     model_name: "indolem/indobertweet-base-uncased"
@@ -166,6 +170,7 @@ datasets:
 
   NusaX-Indonesian:
     name: "NusaX-Indonesian"
+    language: "indonesian"
     domain: "Multi-Topic Sentiment"
     task: "Sentiment Analysis"
     model_name: "indobenchmark/indobert-base-p1"
@@ -193,3 +198,91 @@ datasets:
       - model_name: "indobenchmark/indobert-base-p1"
       - model_name: "cahya/bert-base-indonesian-522M"
       - model_name: "indolem/indobertweet-base-uncased"
+
+  ASTD:
+    name: "ASTD"
+    language: "arabic"
+    domain: "Arabic Sentiment Tweets"
+    task: "Sentiment Analysis"
+    model_name: "aubmindlab/bert-base-arabertv02-twitter"
+    max_len: 128
+    batch_size: 16
+    epochs: 50
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 5
+    early_stopping: true
+    early_stopping_metric: "harmonic"
+    use_preprocessing: true
+    use_fgm: true
+    fgm_epsilon: 0.5
+    best_aug_metric: "COS"
+    classes: ["NEG", "NEUTRAL", "POS"]
+    description: "ASTD: Arabic Sentiment Tweets Dataset (3 imbalanced classes: NEG 1640, NEUTRAL 805, POS 777)"
+    run_ensemble: false
+
+  ATT:
+    name: "ATT"
+    language: "arabic"
+    domain: "Arabic Tourism Tweets"
+    task: "Sentiment Analysis"
+    model_name: "aubmindlab/bert-base-arabertv02-twitter"
+    max_len: 128
+    batch_size: 16
+    epochs: 50
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 5
+    early_stopping: true
+    early_stopping_metric: "harmonic"
+    use_preprocessing: true
+    use_fgm: true
+    fgm_epsilon: 0.5
+    best_aug_metric: "COS"
+    classes: ["NEG", "POS"]
+    description: "ATT: Arabic Tourism Tweets / Reviews (Binary: POS 2071, NEG 81 - severe imbalance)"
+    run_ensemble: false
+
+  ArSarcasm:
+    name: "ArSarcasm"
+    language: "arabic"
+    domain: "Arabic Sarcasm & Sentiment"
+    task: "Sentiment Analysis"
+    model_name: "aubmindlab/bert-base-arabertv02-twitter"
+    max_len: 128
+    batch_size: 16
+    epochs: 50
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 5
+    early_stopping: true
+    early_stopping_metric: "harmonic"
+    use_preprocessing: true
+    use_fgm: true
+    fgm_epsilon: 0.5
+    best_aug_metric: "COS"
+    classes: ["negative", "neutral", "positive"]
+    description: "ArSarcasm: Arabic Sarcasm & Sentiment (3 classes: neutral 5340, negative 3528, positive 1678)"
+    run_ensemble: false
+
+  MOV:
+    name: "MOV"
+    language: "arabic"
+    domain: "Arabic Movie Reviews"
+    task: "Sentiment Analysis"
+    model_name: "aubmindlab/bert-base-arabertv02-twitter"
+    max_len: 128
+    batch_size: 16
+    epochs: 50
+    lr: 2.0e-5
+    weight_decay: 0.01
+    patience: 5
+    early_stopping: true
+    early_stopping_metric: "harmonic"
+    use_preprocessing: true
+    use_fgm: true
+    fgm_epsilon: 0.5
+    best_aug_metric: "COS"
+    classes: ["NEG", "NEUTRAL", "POS"]
+    description: "MOV: Arabic Movie Reviews (3 classes: POS 967, NEG 381, NEUTRAL 170)"
+    run_ensemble: false

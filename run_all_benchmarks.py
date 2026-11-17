@@ -222,7 +222,7 @@ DATASET_CONFIGS = load_dataset_config()
 # Dataset and File Helpers
 # =====================================================================
 def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> CustomDataset:
-    """Loads dataset partitions using IndonesianDatasetsManager with generic fallback."""
+    """Loads dataset partitions using IndonesianDatasetsManager / MultilingualDatasetsManager with generic fallback."""
     if dataset_name == "SmSA":
         return manager.load_smsa()
     elif dataset_name == "MovieOpini":
@@ -234,6 +234,14 @@ def load_dataset_data(manager: IndonesianDatasetsManager, dataset_name: str) -> 
     elif dataset_name in ["NusaX", "NusaX-Indonesian"]:
         # Standard 3-class curated benchmark (500 train, 100 val, 400 test)
         return manager.load_nusax_indonesian(binary_only=False)
+    elif dataset_name == "ASTD":
+        return manager.load_astd()
+    elif dataset_name in ["ArSarcasm", "ArSarcasem"]:
+        return manager.load_arsarcasm()
+    elif dataset_name == "ATT":
+        return manager.load_att()
+    elif dataset_name == "MOV":
+        return manager.load_mov()
     else:
         return manager.load_generic_dataset(dataset_name)
 
@@ -251,14 +259,33 @@ def load_augmented_datasets(
         if os.path.exists(cand):
             resolved_dir = cand
 
+    ds_aliases = [dataset_name]
+    if dataset_name == "ArSarcasm":
+        ds_aliases.append("ArSarcasem")
+    elif dataset_name == "ArSarcasem":
+        ds_aliases.append("ArSarcasm")
+
     for m in metrics:
-        fname = f"{dataset_name}-Augmented-{m}-ALL-Text-Final.csv"
-        fpath = os.path.join(resolved_dir, fname)
-        if os.path.exists(fpath):
-            aug_dfs[m] = pd.read_csv(fpath)
-            print(f"  Loaded {m}-Augmented data from {fpath} ({len(aug_dfs[m])} rows)")
-        else:
-            print(f"  [Notice] Augmented file not found: {fpath}")
+        m_aliases = [m]
+        if m == "JAC":
+            m_aliases.append("JACC")
+        elif m == "BLEU":
+            m_aliases.append("BLE")
+
+        found = False
+        for ds in ds_aliases:
+            for met in m_aliases:
+                fname = f"{ds}-Augmented-{met}-ALL-Text-Final.csv"
+                fpath = os.path.join(resolved_dir, fname)
+                if os.path.exists(fpath):
+                    aug_dfs[m] = pd.read_csv(fpath)
+                    print(f"  Loaded {m}-Augmented data from {fpath} ({len(aug_dfs[m])} rows)")
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            print(f"  [Notice] Augmented file not found for metric {m} in {resolved_dir}")
 
     return aug_dfs
 
@@ -1126,6 +1153,7 @@ def run_benchmark_pipeline(
                 mbr_accuracy_tolerance=cfg.get("mbr_accuracy_tolerance", 0.003),
                 mbr_alpha=cfg.get("mbr_alpha", 0.25),
                 mbr_max_minority_cost=cfg.get("mbr_max_minority_cost", 5.0),
+                language=cfg.get("language", "indonesian"),
             )
 
             results_df = evaluator.evaluate_all_variants(

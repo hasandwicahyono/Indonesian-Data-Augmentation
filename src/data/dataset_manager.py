@@ -151,6 +151,69 @@ class IndonesianDatasetsManager:
         name = "NusaX-Indonesian-Binary" if binary_only else "NusaX-Indonesian"
         return CustomDataset(name, train_df, test_df, labels, val=val_df)
 
+    def _load_arabic_dataset_file(self, filename: str, fallback_master: str) -> pd.DataFrame:
+        candidates = [
+            os.path.join(resolve_path("data/arabic"), filename),
+            os.path.join(resolve_path("data/raw"), filename),
+            os.path.join(self.data_dir, filename),
+            os.path.join(resolve_path("data/arabic"), fallback_master),
+        ]
+        for cand in candidates:
+            if os.path.exists(cand):
+                try:
+                    df = pd.read_csv(cand)
+                    if "text" in df.columns and "label" in df.columns:
+                        return df[["text", "label"]].dropna()
+                except Exception:
+                    pass
+                try:
+                    df = pd.read_csv(cand, sep="\t", header=None)
+                    df = df.iloc[:, :2]
+                    df.columns = ["text", "label"]
+                    return df.dropna()
+                except Exception:
+                    pass
+        raise FileNotFoundError(f"Could not find Arabic dataset {filename} in {candidates}")
+
+    def _split_dataframe_to_custom_dataset(
+        self,
+        name: str,
+        df: pd.DataFrame,
+        test_size: float = 0.2,
+        val_size: float = 0.1,
+        random_state: int = 42,
+    ) -> CustomDataset:
+        strat = df["label"] if (df["label"].nunique() > 1 and df["label"].value_counts().min() >= 2) else None
+        train_val_df, test_df = train_test_split(df, test_size=test_size, random_state=random_state, stratify=strat)
+        if val_size > 0:
+            rel_val = val_size / (1.0 - test_size)
+            strat_tv = train_val_df["label"] if (train_val_df["label"].nunique() > 1 and train_val_df["label"].value_counts().min() >= 2) else None
+            train_df, val_df = train_test_split(train_val_df, test_size=rel_val, random_state=random_state, stratify=strat_tv)
+        else:
+            train_df, val_df = train_val_df, None
+        labels = sorted(list(train_df["label"].unique()))
+        return CustomDataset(name, train_df, test_df, labels, val=val_df)
+
+    def load_astd(self, test_size: float = 0.2, val_size: float = 0.1, random_state: int = 42) -> CustomDataset:
+        """ASTD (Arabic Sentiment Tweets Dataset): 3 classes (POS, NEG, NEUTRAL)."""
+        df = self._load_arabic_dataset_file("astd.csv", "ASTD-Unbalanced-Augmented-aragpt2-base.csv")
+        return self._split_dataframe_to_custom_dataset("ASTD", df, test_size=test_size, val_size=val_size, random_state=random_state)
+
+    def load_att(self, test_size: float = 0.2, val_size: float = 0.1, random_state: int = 42) -> CustomDataset:
+        """ATT (Arabic Tourism Tweets / Reviews): Binary (POS, NEG)."""
+        df = self._load_arabic_dataset_file("att.csv", "ATT-Augmented-aragpt2-base.csv")
+        return self._split_dataframe_to_custom_dataset("ATT", df, test_size=test_size, val_size=val_size, random_state=random_state)
+
+    def load_arsarcasm(self, test_size: float = 0.2, val_size: float = 0.1, random_state: int = 42) -> CustomDataset:
+        """ArSarcasm: 3 classes (positive, negative, neutral)."""
+        df = self._load_arabic_dataset_file("arsarcasm.csv", "ArSarcasm-Unbalanced-Augmented-aragpt2-base.csv")
+        return self._split_dataframe_to_custom_dataset("ArSarcasm", df, test_size=test_size, val_size=val_size, random_state=random_state)
+
+    def load_mov(self, test_size: float = 0.2, val_size: float = 0.1, random_state: int = 42) -> CustomDataset:
+        """MOV (Arabic Movie Reviews): 3 classes (POS, NEG, NEUTRAL)."""
+        df = self._load_arabic_dataset_file("mov.csv", "MOV-Augmented-aragpt2-base.csv")
+        return self._split_dataframe_to_custom_dataset("MOV", df, test_size=test_size, val_size=val_size, random_state=random_state)
+
     def load_all_datasets(self, include_movie_opini: bool = False) -> Dict[str, CustomDataset]:
         """Loads and returns all investigated Indonesian datasets according to canonical config."""
         from src.utils.config import get_investigated_datasets, get_investigated_settings
@@ -319,4 +382,8 @@ class IndonesianDatasetsManager:
         labels = sorted(list(train_df["label"].unique()))
         print(f"  [GENERIC DATASET LOADED] '{dname}': Train={len(train_df)}, Val={len(val_df) if val_df is not None else 0}, Test={len(test_df)}, Classes ({len(labels)})={labels}")
         return CustomDataset(dname, train_df, test_df, labels, val=val_df)
+
+
+# Backward-compatible and multilingual alias
+MultilingualDatasetsManager = IndonesianDatasetsManager
 

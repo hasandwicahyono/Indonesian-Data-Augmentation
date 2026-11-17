@@ -34,6 +34,10 @@ Thumbs.db
 *.safetensors
 *.onnx
 
+# Large raw augmentation intermediate dumps (>100MB)
+*-aragpt2-base.csv
+*.spl
+
 # LaTeX auxiliary files
 *.aux
 *.log

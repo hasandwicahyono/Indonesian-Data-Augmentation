@@ -216,6 +216,7 @@ def build_augmented_datasets(
     new_text_column: str = "new_text",
     threshold_relaxation_factor: Optional[float] = None,
     custom_thresholds: Optional[Dict[str, float]] = None,
+    language: str = "indonesian",
 ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame], Dict[str, float]]:
     """
     Constructs augmented datasets for All-Text and New-Text variants across the 4 similarity metrics.
@@ -262,22 +263,34 @@ def build_augmented_datasets(
             effective_thresholds[m] = max(floor, thresholds[m] * 0.75)
         print(f"  [SMALL CORPUS ADAPTIVE] Scaled thresholds by 0.75x -> {effective_thresholds}")
 
+    is_indo = str(language).lower() in ["indonesian", "id", "indo"]
+
     for _, row in df.iterrows():
         label = row[label_column]
         all_text = clean_and_truncate_continuation(row.get(all_text_column, row.get(text_column, "")))
         new_text = clean_and_truncate_continuation(row.get(new_text_column, ""))
 
-        if is_hallucinatory_or_corrupt(all_text) or is_hallucinatory_or_corrupt(new_text):
-            hallucination_filtered_count += 1
+        # Universal checks
+        if not str(all_text).strip() and not str(new_text).strip():
             continue
 
-        if not is_valence_consistent(label, all_text) or not is_valence_consistent(label, new_text):
-            valence_filtered_count += 1
-            continue
+        if is_indo:
+            if is_hallucinatory_or_corrupt(all_text) or is_hallucinatory_or_corrupt(new_text):
+                hallucination_filtered_count += 1
+                continue
 
-        if is_degenerate_jaccard_slang(all_text) or is_degenerate_jaccard_slang(new_text):
-            slang_loop_filtered_count += 1
-            continue
+            if not is_valence_consistent(label, all_text) or not is_valence_consistent(label, new_text):
+                valence_filtered_count += 1
+                continue
+
+            if is_degenerate_jaccard_slang(all_text) or is_degenerate_jaccard_slang(new_text):
+                slang_loop_filtered_count += 1
+                continue
+        else:
+            # Language-agnostic degenerate loop check
+            words_all = str(all_text).lower().split()
+            if len(words_all) >= 5 and (len(set(words_all)) / len(words_all) < 0.35):
+                continue
 
         if test_texts:
             if str(all_text).strip() in test_texts or str(new_text).strip() in test_texts:

@@ -48,7 +48,7 @@ hf_logging.set_verbosity_error()
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 from src.data.classification import ClassificationDataset
-from src.data.preprocessor import IndonesianPreprocessor
+from src.data.preprocessor import IndonesianPreprocessor, BasePreprocessor, get_preprocessor
 from src.modeling.calibrator import AutoImbalanceCalibrator
 from src.modeling.adversarial import FGM
 from src.augmentation.filtering import is_hallucinatory_or_corrupt
@@ -215,7 +215,10 @@ class IndoBERTClassifierEvaluator:
         mbr_accuracy_tolerance: float = 0.003,
         mbr_alpha: float = 0.25,
         mbr_max_minority_cost: float = 5.0,
+        language: str = "indonesian",
+        preprocessor: Optional[BasePreprocessor] = None,
     ):
+        self.language = str(language).lower()
         self.model_name = model_name
         self.max_len = max_len
         self.batch_size = batch_size
@@ -263,9 +266,14 @@ class IndoBERTClassifierEvaluator:
         else:
             self.device = torch.device("cpu")
 
-        self.preprocessor = IndonesianPreprocessor(map_emojis=True, map_emoticons=True)
+        if preprocessor is not None:
+            self.preprocessor = preprocessor
+        elif self.language in ["indonesian", "id", "indo"]:
+            self.preprocessor = IndonesianPreprocessor(map_emojis=True, map_emoticons=True)
+        else:
+            self.preprocessor = get_preprocessor(language=self.language)
         device_desc = f"Multi-GPU ({self.num_gpus} GPUs via Model Sharding / Accelerate)" if (self.device.type == "cuda" and self.num_gpus > 1) else str(self.device)
-        print(f"IndoBERT Evaluator initialized on device: {device_desc} | Model: {self.model_name}")
+        print(f"Classifier Evaluator [{self.language.upper()}] initialized on device: {device_desc} | Model: {self.model_name}")
         extra_desc = f", Logit-Adj: {self.use_logit_adjustment} (tau={self.logit_adj_tau})" if self.use_logit_adjustment else ""
         if self.target_oversample:
             extra_desc += f", Oversample: {self.target_oversample}"
@@ -1588,4 +1596,8 @@ class IndoBERTClassifierEvaluator:
         available_summary_cols = [c for c in summary_cols if c in results_df.columns]
         print(results_df[available_summary_cols])
         return results_df
+
+
+# Multilingual alias for international / cross-lingual benchmarks
+MultilingualClassifierEvaluator = IndoBERTClassifierEvaluator
 
