@@ -1,4 +1,4 @@
 Method,ECE,MCE,Brier Score,NLL
-Baseline ERM (Cross-Entropy),0.4541,0.95,0.3031,0.9967
-Temperature Scaling (T=1.45),0.4528,0.884,0.2702,0.8564
-Proposed (Dual-Space + AIC),0.4498,0.95,0.2956,0.9851
+Baseline ERM (Cross-Entropy),0.4466,0.95,0.2956,0.9927
+Temperature Scaling (T=1.45),0.4466,0.884,0.2629,0.8537
+Proposed (Dual-Space + AIC),0.4435,0.95,0.2893,0.9831
