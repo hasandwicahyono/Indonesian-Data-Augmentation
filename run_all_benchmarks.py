@@ -1035,9 +1035,20 @@ def run_benchmark_pipeline(
             elif run_generation or force_generation or not existing_aug:
                 print(f"\n  >>> STEP 1: Running Text Generation & Similarity Scoring for {ds_name}...")
                 minority_classes = cfg.get("minority_classes", ds.label_list)
+                ds_lang = cfg.get("language", "indonesian").lower()
+
+                # Determine generative backbone model appropriate for language
+                active_gen_model = gen_model
+                if ds_lang in ["arabic", "ar"] and gen_model == "cahya/gpt2-small-indonesian-522M":
+                    active_gen_model = cfg.get("gen_model", "aubmindlab/aragpt2-base")
+
                 use_contrastive = getattr(args, "use_contrastive_prefix", None)
                 if use_contrastive is None:
-                    use_contrastive = cfg.get("use_contrastive_prefix", True)
+                    # Contrastive aspect prefix is by default enabled for Indonesian domain datasets
+                    use_contrastive = cfg.get("use_contrastive_prefix", True if ds_lang == "indonesian" else False)
+                if ds_lang in ["arabic", "ar"]:
+                    use_contrastive = False  # Avoid Indonesian contrastive prefixes on Arabic text
+
                 contrastive_domain = cfg.get(
                     "contrastive_domain",
                     "hotel" if "hoasa" in ds_name.lower() else ("emotion" if "emot" in ds_name.lower() else "sentiment"),
@@ -1050,13 +1061,14 @@ def run_benchmark_pipeline(
                     contrastive_cands = cfg.get("contrastive_num_candidates", 3)
 
                 augmenter = IndonesianAugmenter(
-                    gen_model_name=gen_model,
+                    gen_model_name=active_gen_model,
                     embed_model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
                     device=device,
                     use_contrastive_prefix=use_contrastive,
                     contrastive_domain=contrastive_domain,
                     contrastive_margin_threshold=contrastive_thresh,
                     contrastive_num_candidates=contrastive_cands,
+                    language=ds_lang,
                 )
                 gen_df = augmenter.process_dataset(
                     ds.train,
@@ -1072,6 +1084,7 @@ def run_benchmark_pipeline(
                     test_df=ds.test,  # Strict zero-leakage check against test set
                     threshold_relaxation_factor=cfg.get("threshold_relaxation_factor", None),
                     custom_thresholds=cfg.get("custom_similarity_thresholds", None),
+                    language=ds_lang,
                 )
                 base_aug_dir = os.path.dirname(augmented_dir.rstrip("/"))
                 export_augmented_datasets(

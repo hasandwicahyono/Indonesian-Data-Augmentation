@@ -18,7 +18,7 @@ try:
 except ImportError:
     SentenceTransformer = None
 
-from src.data.preprocessor import IndonesianPreprocessor
+from src.data.preprocessor import IndonesianPreprocessor, BasePreprocessor, get_preprocessor
 from src.augmentation.similarity import (
     euclidean_distance,
     cos_similarity,
@@ -66,6 +66,7 @@ class IndonesianAugmenter:
         contrastive_margin_threshold: float = 0.0,
         contrastive_num_candidates: int = 3,
         strip_contrastive_prefix: bool = True,
+        language: str = "indonesian",
     ):
         """
         Args:
@@ -136,7 +137,8 @@ class IndonesianAugmenter:
         else:
             self.device = device
 
-        self.preprocessor = IndonesianPreprocessor()
+        self.language = str(language).lower().strip()
+        self.preprocessor = get_preprocessor(language=self.language)
         self.use_contrastive_prefix = use_contrastive_prefix
         self.contrastive_domain = contrastive_domain
         self.contrastive_margin_threshold = float(contrastive_margin_threshold)
@@ -411,5 +413,9 @@ class IndonesianAugmenter:
             self.cleanup()
         except Exception:
             pass
+
+
+# Multilingual alias for international / cross-lingual text augmentation
+MultilingualAugmenter = IndonesianAugmenter
 
 
